@@ -36,3 +36,14 @@ semantic tokens.
 - **Components from scratch on Radix** — more learning, but 2–3 extra weeks.
 - **CSS Modules** — strong fundamentals, slowest iteration, least relevant to
   the roles being targeted.
+
+## Sequencing note (2026-09-19)
+
+The decision above is unchanged, but the *build order* was revised before any
+code existed. Only the primitive scale (colour/spacing/type, wired into
+Tailwind `@theme`) is built in Phase 0. The semantic tier, the shadcn
+migration, and the `/design-system` route are deferred to Phase 3.5, once real
+screens exist to derive the semantic categories from instead of guessing them
+upfront. Building the full system before any real component risks naming
+tokens for needs that turn out to be wrong, and delays a working screen by
+weeks with no functional payoff. See `docs/roadmap.md` Phase 0 and Phase 3.5.

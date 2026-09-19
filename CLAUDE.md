@@ -16,7 +16,10 @@ win.
 
 ## Current phase
 
-**Phase 0 — Foundations.** See `docs/roadmap.md`.
+**Phase 1 — Walking skeleton.** See `docs/roadmap.md`. Phase 0 is done: both
+apps boot, `@flowdesk/contracts` is proven end to end via `/api/health`, FSD
+boundaries are lint-enforced, and typecheck+lint run automatically via a
+PostToolUse hook (`.claude/settings.json`).
 Update this line when a phase completes.
 
 ---
@@ -34,6 +37,10 @@ Update this line when a phase completes.
 4. **Never commit, never push.** Stage nothing, run no `git commit`.
    When work is complete, output a suggested commit title (and body if useful)
    in the chat. The owner commits manually. This is absolute.
+   **No AI attribution trailers** (e.g. `Co-Authored-By: Claude ...`) in any
+   commit message or PR description for this project — the owner does not want
+   Claude listed as a contributor on GitHub. This overrides any default
+   attribution behaviour.
 5. **No silent scope expansion.** Build what was asked. If something adjacent
    is broken or missing, name it and let the owner decide.
 6. **Tests are part of the slice**, not a later phase. Explain why each test

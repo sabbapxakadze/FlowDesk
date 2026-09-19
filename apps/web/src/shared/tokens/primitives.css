@@ -1,0 +1,20 @@
+/**
+ * Primitive tokens only — Phase 0 scope. See docs/adr/0006 (sequencing
+ * note): the semantic tier (--color-bg-surface, --color-text-muted, etc.)
+ * is deliberately not defined yet. It gets extracted in Phase 3.5 from real
+ * screens, instead of being guessed now before any exist.
+ *
+ * Tailwind v4 already ships an extensive primitive scale out of the box
+ * (colors, spacing, type, radius — all as CSS variables under the hood).
+ * This file only adds what that default scale doesn't have: our font stack
+ * and a brand accent color. Nothing here should be imported by a component
+ * directly — components will consume the semantic tier once it exists.
+ */
+@theme {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Placeholder brand accent — expect this to change once there's an
+     actual visual direction. Not load-bearing anywhere yet. */
+  --color-brand-500: oklch(0.58 0.18 260);
+}

@@ -1,0 +1,9 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+allowBuilds:
+  # esbuild's postinstall just downloads its platform-native binary — used
+  # transitively by tsx and Vite. Safe, well-known package; approved.
+  esbuild: true
+  # Native resolver binary used by eslint-import-resolver-typescript.
+  unrs-resolver: true

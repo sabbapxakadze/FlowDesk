@@ -11,14 +11,15 @@ Mark slices `[x]` as they land. Update "Current phase" in `CLAUDE.md`.
 
 Goal: the rules, the skeleton, and the design language exist before any feature.
 
-- [ ] pnpm workspace, TypeScript project references, shared eslint/prettier
-- [ ] `apps/api` boots: Express, pino, request IDs, Zod-validated env, `/health`
-- [ ] `apps/web` boots: Vite, React Router, Tailwind v4
-- [ ] `packages/contracts` wired into both, proven by one shared schema
-- [ ] Design tokens: primitive + semantic tiers, light/dark
-- [ ] `/design-system` route rendering every token and base component
-- [ ] `eslint-plugin-boundaries` enforcing FSD layers
-- [ ] Hooks: typecheck + lint run automatically after edits
+- [x] pnpm workspace, TypeScript project references, shared eslint/prettier
+- [x] `apps/api` boots: Express, pino, request IDs, Zod-validated env, `/health`
+- [x] `apps/web` boots: Vite, React Router, Tailwind v4
+- [x] `packages/contracts` wired into both, proven by one shared schema
+- [x] Token scaffold (primitives only): color/spacing/type scale wired into
+      Tailwind `@theme`. No semantic layer yet, no component library — this is
+      config so raw Tailwind values aren't hardcoded from the first component.
+- [x] `eslint-plugin-boundaries` enforcing FSD layers
+- [x] Hooks: typecheck + lint run automatically after edits
 
 **Done when** both apps run, share one Zod schema, and a layer-boundary
 violation fails the build.
@@ -59,6 +60,24 @@ Goal: prove the architecture end to end before building on it.
 - [ ] Activity timeline reading `issue_events`
 - [ ] Comments
 - [ ] Issue detail page
+
+## Phase 3.5 — Design system extraction
+
+Goal: by now there are real screens (auth forms, project list, issue detail,
+activity timeline) to draw a design system *from*, instead of guessing one
+upfront. This is a deliberate pause to consolidate, not new product features.
+
+- [ ] Audit components built so far; extract repeated patterns into semantic
+      tokens (`--color-bg-surface`, `--color-text-muted`, `--radius-card`, ...)
+- [ ] Rewrite existing components to consume semantic tokens only, remove any
+      raw Tailwind values that snuck in
+- [ ] Pull in shadcn-derived components into `shared/ui` as actually needed,
+      rewritten onto our semantic tokens
+- [ ] Dark mode: redefine the semantic tier, verify nothing else needed to change
+- [ ] `/design-system` route documenting every token and base component
+
+**Done when** dark mode is a ~20-variable change and every component so far
+uses only semantic tokens.
 
 ## Phase 4 — React depth
 

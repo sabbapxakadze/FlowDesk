@@ -11,3 +11,8 @@ coverage/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Personal Claude Code overrides — .claude/settings.json (the hooks/config
+# above) IS committed and shared with the team.
+.claude/settings.local.json
+.playwright-mcp/

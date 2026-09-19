@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "../shared/tokens/primitives.css";
+
+body {
+  font-family: var(--font-sans);
+}
