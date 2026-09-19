@@ -15,7 +15,10 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:generate": "pnpm --filter @flowdesk/api db:generate",
+    "db:migrate": "pnpm --filter @flowdesk/api db:migrate",
+    "db:seed": "pnpm --filter @flowdesk/api db:seed"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

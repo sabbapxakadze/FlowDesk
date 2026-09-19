@@ -51,3 +51,49 @@ Why it's done this way and not another way:
 What I'd struggle to explain in an interview:
 - [fill this in honestly — if nothing comes to mind, that's the part to
   re-read before moving on]
+
+---
+
+## 2026-09-19 — Phase 1: walking skeleton (DRAFT — rewrite in your own words)
+
+What I built:
+A real read path through every layer: Postgres tables (organizations,
+projects) with a migration, an API endpoint that goes routes → controller
+→ service → repository, and a React page that fetches it with TanStack
+Query and renders it. Also wrote the first automated test — one that hits
+a real database, not a mock — and a seed script so there's actual data to
+look at.
+
+What was new to me:
+- Drizzle: writing the schema in TypeScript, generating a SQL migration
+  file from it, and applying that migration to a real database.
+- Why the projects table has an index on organization_id and a unique
+  index on (organization_id, key) instead of just a foreign key — the FK
+  alone doesn't make "find all of org X's projects" fast, and doesn't stop
+  two different orgs from colliding on a key they're each allowed to reuse.
+- TanStack Query: a hook (`useProjects`) that fetches, caches, and tracks
+  loading/error state, instead of hand-rolling that with useState/useEffect
+  like the Phase 0 health check did.
+- Least-privilege database roles: the app connects as a dedicated
+  `flowdesk` role that owns exactly two databases, not as the Postgres
+  superuser — same as what a real deployment needs, done from day one
+  because it's cheap now and expensive to retrofit.
+- Nesting the route under the organization
+  (`/organizations/:id/projects`, not a flat `/projects`) because that id
+  isn't an optional filter — it's what scopes the data to one tenant.
+
+Why it's done this way and not another way:
+- The integration test hits a real Postgres database instead of mocking
+  the query — a mock would still pass if the WHERE clause were deleted.
+  Proved this to myself by actually deleting it and watching the test fail,
+  then putting it back.
+- List responses come back as `{ data: [...] }`, not a bare array, so
+  pagination can be added to that same envelope later without changing the
+  shape every existing caller depends on.
+- No create/edit endpoints yet — only reading. Organizations and projects
+  exist because a seed script put them there. Writing them is a real
+  feature (validation, who's allowed to) that belongs in its own slice.
+
+What I'd struggle to explain in an interview:
+- [fill this in honestly — if nothing comes to mind, that's the part to
+  re-read before moving on]

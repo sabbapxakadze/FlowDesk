@@ -28,12 +28,16 @@ violation fails the build.
 
 Goal: prove the architecture end to end before building on it.
 
-- [ ] Drizzle connected to local Postgres 16; first migration
-- [ ] `organizations` + `projects` tables
-- [ ] `GET /api/v1/projects` through routes → controller → service → repository
-- [ ] Contract-typed response consumed by a TanStack Query hook
-- [ ] Projects list page composed per FSD
-- [ ] First integration test hitting a real database
+- [x] Drizzle connected to local Postgres 16; first migration
+- [x] `organizations` + `projects` tables
+- [x] `GET /api/v1/organizations/:organizationId/projects` through routes →
+      controller → service → repository. Nested under the organization
+      rather than flat `/api/v1/projects` — `organizationId` is tenant
+      scoping, not a filter; see ADR 0004 and CLAUDE.md's repository rule.
+- [x] Contract-typed response consumed by a TanStack Query hook
+- [x] Projects list page composed per FSD
+- [x] First integration test hitting a real database (tenant-isolation
+      shaped: proves org A never sees org B's projects)
 
 **Done when** one trivial feature exists in every layer and is tested.
 

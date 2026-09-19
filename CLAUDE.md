@@ -16,10 +16,15 @@ win.
 
 ## Current phase
 
-**Phase 1 — Walking skeleton.** See `docs/roadmap.md`. Phase 0 is done: both
-apps boot, `@flowdesk/contracts` is proven end to end via `/api/health`, FSD
-boundaries are lint-enforced, and typecheck+lint run automatically via a
-PostToolUse hook (`.claude/settings.json`).
+**Phase 2 — Auth & multi-tenancy.** See `docs/roadmap.md`. Phase 1 is done:
+Postgres is live (dedicated `flowdesk` role, `flowdesk_dev`/`flowdesk_test`
+databases), `organizations`/`projects` exist with a real migration,
+`GET /api/v1/organizations/:organizationId/projects` runs through all four
+API layers, an integration test proves tenant-scoped queries actually
+isolate data, and the web app renders it live via a real TanStack Query
+hook (`entities/project`). `organizationId` is still a path param / hardcoded
+constant on the frontend — Phase 2 is exactly what replaces that with real
+auth-derived org context.
 Update this line when a phase completes.
 
 ---
@@ -135,12 +140,23 @@ Filled in as the project is scaffolded. Keep this section accurate.
 
 ```
 pnpm dev            # run api + web
-pnpm typecheck      # tsc --noEmit across the workspace
+pnpm typecheck      # tsc -b (project references) across the workspace
 pnpm lint
-pnpm test
-pnpm db:generate    # drizzle migration from schema changes
-pnpm db:migrate
-pnpm db:seed
+pnpm test           # vitest — apps/api's suite needs Postgres, see below
+pnpm db:generate    # drizzle migration from a schema change (apps/api)
+pnpm db:migrate     # apply migrations to $DATABASE_URL
+pnpm db:seed        # idempotent local demo data
+```
+
+Local Postgres setup (one-time, not automated — a fresh clone needs this
+before `pnpm db:migrate` works): create a least-privilege role and the two
+databases, then put the connection strings in `apps/api/.env` (copy
+`.env.example`, never commit the real file):
+
+```sql
+CREATE ROLE flowdesk WITH LOGIN PASSWORD '<pick one>';
+CREATE DATABASE flowdesk_dev  OWNER flowdesk;
+CREATE DATABASE flowdesk_test OWNER flowdesk;
 ```
 
 ## Before you start any task
