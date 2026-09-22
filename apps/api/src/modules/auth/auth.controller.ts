@@ -1,9 +1,12 @@
 import type { Request, Response } from "express";
 import {
   authSessionSchema,
+  confirmPasswordResetRequestSchema,
   loginRequestSchema,
   registerRequestSchema,
   registerResponseSchema,
+  requestPasswordResetRequestSchema,
+  verifyEmailRequestSchema,
 } from "@flowdesk/contracts";
 import { env } from "../../config/env.js";
 import { AppError } from "../../shared/errors.js";
@@ -114,5 +117,52 @@ export async function logoutAll(req: Request, res: Response) {
   const refreshToken = readRefreshCookie(req);
   await authService.logoutAll(refreshToken);
   res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions());
+  res.status(204).end();
+}
+
+export async function verifyEmail(req: Request, res: Response) {
+  const parsed = verifyEmailRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError(
+      "validation_error",
+      400,
+      "Invalid verification request",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+
+  await authService.verifyEmail(parsed.data.token);
+  res.status(204).end();
+}
+
+export async function requestPasswordReset(req: Request, res: Response) {
+  const parsed = requestPasswordResetRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError(
+      "validation_error",
+      400,
+      "Invalid request",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+
+  await authService.requestPasswordReset(parsed.data.email);
+  // Always 204, whether or not the email exists — see auth.service.ts's
+  // requestPasswordReset for why (non-enumeration, same as login).
+  res.status(204).end();
+}
+
+export async function confirmPasswordReset(req: Request, res: Response) {
+  const parsed = confirmPasswordResetRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError(
+      "validation_error",
+      400,
+      "Invalid password reset request",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+
+  await authService.confirmPasswordReset(parsed.data);
   res.status(204).end();
 }

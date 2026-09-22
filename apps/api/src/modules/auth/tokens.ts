@@ -29,10 +29,12 @@ export function verifyAccessToken(token: string): { userId: string } {
 }
 
 /**
- * The refresh token itself — 256 bits of randomness, base64url so it's
- * cookie-safe with no extra encoding. Never stored raw; see hashToken.
+ * 256 bits of randomness, base64url-encoded so it's cookie-safe and
+ * URL-safe with no extra encoding — used for refresh tokens, and (Slice 4)
+ * email-verification and password-reset tokens too. Never stored raw; see
+ * hashToken.
  */
-export function generateRefreshToken(): string {
+export function generateOpaqueToken(): string {
   return randomBytes(32).toString("base64url");
 }
 
@@ -40,7 +42,7 @@ export function generateRefreshToken(): string {
  * sha256, not argon2 — this hashes 256 bits of already-random data, not a
  * human password. The threat here is a database leak, not brute-force
  * guessing, so a fast cryptographic hash is correct; argon2 would just be
- * slow for no benefit on every single refresh call. See ADR 0003.
+ * slow for no benefit on every lookup. See ADR 0003.
  */
 export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");

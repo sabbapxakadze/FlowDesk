@@ -1,6 +1,12 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { organizationMembers, organizations, sessions, users } from "../../db/schema/index.js";
+import {
+  authTokens,
+  organizationMembers,
+  organizations,
+  sessions,
+  users,
+} from "../../db/schema/index.js";
 
 export async function findUserByEmail(email: string) {
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -104,4 +110,52 @@ export async function revokeAllForUser(userId: string) {
     .update(sessions)
     .set({ revokedAt: new Date() })
     .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
+}
+
+export async function createAuthToken(input: {
+  userId: string;
+  purpose: "email_verification" | "password_reset";
+  tokenHash: string;
+  expiresAt: Date;
+}) {
+  const [token] = await db.insert(authTokens).values(input).returning();
+  if (!token) throw new Error("Failed to create auth token");
+  return token;
+}
+
+/**
+ * "Valid" means all three at once: right purpose, not already used, not
+ * expired. Any one of those failing is the same outcome to the caller —
+ * see auth.service.ts's INVALID_TOKEN_ERROR — so there's no need to
+ * distinguish them here.
+ */
+export async function findValidAuthToken(
+  tokenHash: string,
+  purpose: "email_verification" | "password_reset",
+) {
+  const [token] = await db
+    .select()
+    .from(authTokens)
+    .where(
+      and(
+        eq(authTokens.tokenHash, tokenHash),
+        eq(authTokens.purpose, purpose),
+        isNull(authTokens.usedAt),
+        gt(authTokens.expiresAt, new Date()),
+      ),
+    )
+    .limit(1);
+  return token;
+}
+
+export async function markAuthTokenUsed(id: string) {
+  await db.update(authTokens).set({ usedAt: new Date() }).where(eq(authTokens.id, id));
+}
+
+export async function verifyUserEmail(userId: string) {
+  await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, userId));
+}
+
+export async function updateUserPassword(userId: string, passwordHash: string) {
+  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
 }

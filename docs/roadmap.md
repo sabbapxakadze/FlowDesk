@@ -41,10 +41,9 @@ Goal: prove the architecture end to end before building on it.
 
 **Done when** one trivial feature exists in every layer and is tested.
 
-## Phase 2 — Auth & multi-tenancy
+## Phase 2 — Auth & multi-tenancy ✅ complete
 
-Split into four ordered slices. Checkboxes below reflect Slices 1–3;
-Hardening & recovery is still open.
+Split into four ordered slices, all shipped.
 
 - [x] `users`, `organizations` (Phase 1), `organization_members`,
       `sessions` schema — all four tables now exist
@@ -73,10 +72,24 @@ Hardening & recovery is still open.
       superseding the Phase 1 repository-level version. Verified live: a
       real, validly-logged-in user from Org A gets a genuine 403 hitting
       Org B's URL, not just a repository-query check.
-- [x] Auth UI: login, register — React Hook Form + Zod. (Verify/reset are
-      Slice 4's — no email sending exists yet.)
-- [ ] Email verification + password reset (single-use hashed tokens)
-- [ ] Rate limiting on auth routes
+- [x] Auth UI: login, register, verify-email, forgot/reset-password —
+      React Hook Form + Zod throughout.
+- [x] Email verification + password reset (single-use hashed tokens) — one
+      unified `auth_tokens` table (`purpose` enum) for both, not two
+      near-identical tables. Real email via Resend, verified with a real
+      inbox: registered with a real address, received the actual email
+      (landed in spam — expected for an unverified sandbox sender, not a
+      bug), clicked through, confirmed `emailVerifiedAt` set server-side.
+      Password reset verified the same way end to end, including
+      confirming every prior session was revoked and the new password
+      actually works.
+- [x] Rate limiting on auth routes — `express-rate-limit`, strict on
+      login, moderate on register/password-reset-request. Skipped under
+      `NODE_ENV=test` (a shared in-process app would otherwise trip on
+      legitimate test traffic) — the mechanism itself is proven by an
+      isolated test app, and the real config was independently confirmed
+      live: 11 rapid login attempts in dev mode, first 10 return 401, the
+      11th returns a genuine 429.
 
 ## Phase 3 — Issues core + event system
 

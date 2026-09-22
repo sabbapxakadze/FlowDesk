@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { Link } from "react-router";
 import { registerRequestSchema, type RegisterRequest } from "@flowdesk/contracts";
 import { ApiError } from "../../../shared/api/client";
 import { registerUser } from "../api/registerUser";
@@ -39,8 +40,12 @@ export function RegisterForm() {
   if (mutation.isSuccess) {
     return (
       <p className="text-sm">
-        Account created for <strong>{mutation.data.organization.name}</strong>. Login isn't
-        built yet — that's Phase 2's next slice.
+        Account created for <strong>{mutation.data.organization.name}</strong>. Check your
+        email for a verification link, then{" "}
+        <Link to="/login" className="text-blue-600 underline">
+          log in
+        </Link>
+        .
       </p>
     );
   }

@@ -61,3 +61,22 @@ export const authSessionSchema = z.object({
 });
 
 export type AuthSession = z.infer<typeof authSessionSchema>;
+
+export const verifyEmailRequestSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+});
+
+export type VerifyEmailRequest = z.infer<typeof verifyEmailRequestSchema>;
+
+export const requestPasswordResetRequestSchema = z.object({
+  email: z.email(),
+});
+
+export type RequestPasswordResetRequest = z.infer<typeof requestPasswordResetRequestSchema>;
+
+export const confirmPasswordResetRequestSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+export type ConfirmPasswordResetRequest = z.infer<typeof confirmPasswordResetRequestSchema>;

@@ -22,6 +22,13 @@
       "when": 1790085443279,
       "tag": "0002_gifted_sage",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790095565699,
+      "tag": "0003_normal_cerebro",
+      "breakpoints": true
     }
   ]
 }

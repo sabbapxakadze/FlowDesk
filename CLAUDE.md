@@ -16,50 +16,21 @@ win.
 
 ## Current phase
 
-**Phase 2 — Auth & multi-tenancy, Slices 1–3 of 4 done ("Accounts",
-"Sessions", "Authorization").** See `docs/roadmap.md`. Phase 2 is split
-into four ordered slices — Accounts → Sessions → Authorization →
-Hardening & recovery — each one only makes sense once the one before it
-exists. Only Hardening & recovery (email verification, password reset,
-rate limiting) remains.
+**Phase 3 — Issues core + event system.** See `docs/roadmap.md`.
 
-Slice 1 ("Accounts"): `users` and `organization_members` (with an
-`organization_role` enum) exist; `POST /api/v1/auth/register` creates a
-user + a personal organization + an owner membership in one transaction
-(verified rollback on failure); `/register` is a real form.
+Phase 2 (Auth & multi-tenancy) is fully done — accounts, sessions with
+rotation + reuse detection, `requireAuth → requireOrgMembership →
+requirePermission` authorization, rate limiting, and real email
+verification/password reset (Resend), all verified end to end including
+against a real inbox. Full detail lives in `docs/roadmap.md`'s Phase 2
+checklist and `docs/adr/0003`; don't duplicate it here.
 
-Slice 2 ("Sessions"): `sessions` table (append-only, one row per issued
-refresh token, same shape as `issue_events` — ADR 0005). Login issues a
-15-minute access JWT (held in memory on the frontend, never localStorage)
-plus an opaque refresh token in an httpOnly cookie, hashed at rest.
-`/auth/refresh` rotates on every use, and reusing an already-rotated token
-revokes the whole session family — verified on real Postgres, over real
-HTTP with a cookie jar, and in the browser (deliberately broke the
-family-revocation logic once to confirm the test actually catches it, not
-just the reused-token rejection). Logout and logout-all both derive the
-caller from the refresh cookie itself, not the access token. The web app
-has a minimal `shared/auth/` context and a silent refresh-on-load, so a
-page reload doesn't lose the session even though the access token lives
-only in memory.
-
-Slice 3 ("Authorization"): three composable middlewares —
-`requireAuth` (verifies the JWT, sets `req.auth.userId`) →
-`requireOrgMembership` (looks up a real membership row for
-`:organizationId`, sets `req.ctx = { userId, organizationId, role }`, 403
-if none — never trusts the URL alone) → `requirePermission(permission)`
-(403 if the role lacks it). Permission map is deliberately small
-(`view_project` all roles, `manage_project` owner/admin only) — grows with
-the features that need more. `POST .../projects` (create a project) was
-added specifically to give `requirePermission` a real route to gate, not
-just a unit-tested helper. `ProjectsPage.tsx`'s hardcoded org id is gone —
-`organizationId` now comes from `useAuth().organization`, populated by
-login/refresh. The Phase 1 tenant-isolation test was superseded by an
-HTTP-level one (`supertest`, driving the real middleware chain end to
-end); `apps/api/src/index.ts` split into `app.ts` (the exported Express
-app) + `index.ts` (just `.listen()`) to make that possible.
-
-Slice 4 ("Hardening & recovery") is what's left: rate limiting on auth
-routes, email verification, password reset.
+What Phase 3 inherits from it: every tenant-scoped route goes through the
+three-middleware chain, `req.ctx.organizationId` is the only trustworthy
+source of "which org," the access token is a `Bearer` header the frontend
+attaches via `shared/auth/token-store.ts`, and the append-only-table +
+single-purpose-column pattern (`sessions`, `auth_tokens`) is the template
+for `issue_events` — Phase 3's own audit trail.
 Update this line when a phase completes.
 
 ---

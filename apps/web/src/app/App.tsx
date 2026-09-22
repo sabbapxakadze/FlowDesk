@@ -3,6 +3,9 @@ import { HomePage } from "../pages/home/HomePage";
 import { ProjectsPage } from "../pages/projects/ProjectsPage";
 import { RegisterPage } from "../pages/register/RegisterPage";
 import { LoginPage } from "../pages/login/LoginPage";
+import { VerifyEmailPage } from "../pages/verify-email/VerifyEmailPage";
+import { ForgotPasswordPage } from "../pages/forgot-password/ForgotPasswordPage";
+import { ResetPasswordPage } from "../pages/reset-password/ResetPasswordPage";
 import { RequireAuth } from "../shared/auth/RequireAuth";
 
 export function App() {
@@ -20,6 +23,9 @@ export function App() {
         />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { loginRequestSchema, type LoginRequest } from "@flowdesk/contracts";
 import { useAuth } from "../../../shared/auth/useAuth";
 import { loginUser } from "../api/loginUser";
@@ -62,6 +62,10 @@ export function LoginForm() {
       >
         {mutation.isPending ? "Logging in…" : "Log in"}
       </button>
+
+      <Link to="/forgot-password" className="text-sm text-blue-600 underline">
+        Forgot password?
+      </Link>
     </form>
   );
 }

@@ -3,7 +3,8 @@ import argon2 from "argon2";
 import { AppError } from "../../shared/errors.js";
 import * as authRepository from "./auth.repository.js";
 import * as organizationsRepository from "../organizations/organizations.repository.js";
-import { generateRefreshToken, hashToken, signAccessToken } from "./tokens.js";
+import { generateOpaqueToken, hashToken, signAccessToken } from "./tokens.js";
+import { sendPasswordResetEmail, sendVerificationEmail } from "../../lib/email.js";
 
 function toSlug(name: string): string {
   const slug = name
@@ -49,6 +50,30 @@ function isUniqueViolation(err: unknown, constraint: string): boolean {
 const EMAIL_TAKEN_ERROR = () =>
   new AppError("email_already_registered", 409, "An account with this email already exists.");
 
+const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+/**
+ * Shared by email verification and password reset — both are a single-use,
+ * hashed, expiring token tied to a user, stored in the same auth_tokens
+ * table with a `purpose`. Returns the raw token; only its hash is stored,
+ * same pattern as refresh tokens (see tokens.ts and ADR 0003).
+ */
+async function issueAuthToken(
+  userId: string,
+  purpose: "email_verification" | "password_reset",
+  ttlMs: number,
+): Promise<string> {
+  const token = generateOpaqueToken();
+  await authRepository.createAuthToken({
+    userId,
+    purpose,
+    tokenHash: hashToken(token),
+    expiresAt: new Date(Date.now() + ttlMs),
+  });
+  return token;
+}
+
 export async function register(input: {
   email: string;
   password: string;
@@ -70,8 +95,9 @@ export async function register(input: {
   const passwordHash = await argon2.hash(input.password, { type: argon2.argon2id });
   const organizationSlug = await generateUniqueSlug(input.organizationName);
 
+  let result;
   try {
-    return await authRepository.createUserWithOrganization({
+    result = await authRepository.createUserWithOrganization({
       email,
       passwordHash,
       name: input.name,
@@ -84,6 +110,19 @@ export async function register(input: {
     }
     throw err;
   }
+
+  // Not inside the transaction above on purpose — sending an email is an
+  // external call with its own failure modes, and a flaky email provider
+  // should never be the reason an account fails to create. lib/email.ts's
+  // sendEmail already logs-not-throws for the same reason.
+  const verificationToken = await issueAuthToken(
+    result.user.id,
+    "email_verification",
+    EMAIL_VERIFICATION_TTL_MS,
+  );
+  await sendVerificationEmail(result.user.email, verificationToken);
+
+  return result;
 }
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -101,7 +140,7 @@ const INVALID_REFRESH_ERROR = () =>
  * use: login starts a new one, refresh continues the caller's existing one.
  */
 async function issueSession(userId: string, familyId: string) {
-  const refreshToken = generateRefreshToken();
+  const refreshToken = generateOpaqueToken();
   await authRepository.createSession({
     userId,
     familyId,
@@ -216,4 +255,53 @@ export async function logoutAll(refreshToken: string) {
   if (session) {
     await authRepository.revokeAllForUser(session.userId);
   }
+}
+
+const INVALID_TOKEN_ERROR = (message: string) => new AppError("invalid_token", 400, message);
+
+export async function verifyEmail(token: string): Promise<void> {
+  const authToken = await authRepository.findValidAuthToken(
+    hashToken(token),
+    "email_verification",
+  );
+  if (!authToken) {
+    throw INVALID_TOKEN_ERROR("This verification link is invalid or has expired.");
+  }
+
+  await authRepository.markAuthTokenUsed(authToken.id);
+  await authRepository.verifyUserEmail(authToken.userId);
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  const normalizedEmail = email.toLowerCase().trim();
+  const user = await authRepository.findUserByEmail(normalizedEmail);
+
+  // Always the same outcome whether or not the account exists — same
+  // non-enumeration pattern as login (see INVALID_CREDENTIALS_ERROR above).
+  // The caller (controller) always responds the same way regardless.
+  if (user) {
+    const token = await issueAuthToken(user.id, "password_reset", PASSWORD_RESET_TTL_MS);
+    await sendPasswordResetEmail(user.email, token);
+  }
+}
+
+export async function confirmPasswordReset(input: {
+  token: string;
+  newPassword: string;
+}): Promise<void> {
+  const authToken = await authRepository.findValidAuthToken(
+    hashToken(input.token),
+    "password_reset",
+  );
+  if (!authToken) {
+    throw INVALID_TOKEN_ERROR("This reset link is invalid or has expired.");
+  }
+
+  const passwordHash = await argon2.hash(input.newPassword, { type: argon2.argon2id });
+  await authRepository.markAuthTokenUsed(authToken.id);
+  await authRepository.updateUserPassword(authToken.userId, passwordHash);
+
+  // A password reset is treated as "possible compromise" — every existing
+  // session dies, not just the device the reset happened on.
+  await authRepository.revokeAllForUser(authToken.userId);
 }
