@@ -108,4 +108,16 @@ export default tseslint.config(
     files: ["apps/api/src/**/*.ts", "packages/**/src/**/*.ts"],
     rules: {},
   },
+
+  // Root-level plain-JS tooling scripts (not part of any workspace
+  // package, so no tsconfig covers them) — TS files never hit this
+  // problem because typescript-eslint's recommended config disables the
+  // base no-undef rule for .ts/.tsx (the compiler already checks that,
+  // more accurately). Plain .mjs still needs the runtime globals named.
+  {
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { process: "readonly", console: "readonly", URL: "readonly" },
+    },
+  },
 );
