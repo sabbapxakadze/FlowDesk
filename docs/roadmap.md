@@ -43,8 +43,16 @@ Goal: prove the architecture end to end before building on it.
 
 ## Phase 2 — Auth & multi-tenancy
 
-- [ ] `users`, `sessions`, `organizations`, `organization_members` schema
-- [ ] Register + Argon2id hashing
+Split into four ordered slices — see the "Sequencing note" ADR reference
+below. Checkboxes reflect Slice 1 only; `sessions` and everything from
+login onward is still open.
+
+- [x] `users`, `organizations` (Phase 1), `organization_members` schema —
+      `sessions` is Slice 2's, not built yet
+- [x] Register + Argon2id hashing — registering does **not** log you in;
+      that's Slice 2. Register auto-creates a personal organization
+      (owner role) in one transaction — verified the transaction actually
+      rolls back on a mid-way failure, not just the happy path.
 - [ ] Login → short-lived access JWT (memory only) + opaque refresh cookie
 - [ ] Refresh rotation with reuse detection (revoke session family)
 - [ ] Logout, single-session and all-sessions

@@ -7,5 +7,7 @@ import { db } from "./client.js";
  * projects -> organizations foreign key without needing table order.
  */
 export async function resetDatabase() {
-  await db.execute(sql`TRUNCATE TABLE organizations, projects RESTART IDENTITY CASCADE`);
+  await db.execute(
+    sql`TRUNCATE TABLE organizations, projects, users, organization_members RESTART IDENTITY CASCADE`,
+  );
 }

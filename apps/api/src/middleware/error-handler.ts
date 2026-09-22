@@ -21,7 +21,12 @@ export function errorHandler(
   if (err instanceof AppError) {
     req.log.warn({ err, code: err.code }, "request failed");
     res.status(err.status).json({
-      error: { code: err.code, message: err.message, requestId: req.id },
+      error: {
+        code: err.code,
+        message: err.message,
+        requestId: req.id,
+        ...(err.details ? { details: err.details } : {}),
+      },
     });
     return;
   }

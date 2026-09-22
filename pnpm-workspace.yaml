@@ -2,6 +2,8 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
+  # Native password-hashing binary (node-argon2). Well-known, safe; approved.
+  argon2: true
   # esbuild's postinstall just downloads its platform-native binary — used
   # transitively by tsx and Vite. Safe, well-known package; approved.
   esbuild: true

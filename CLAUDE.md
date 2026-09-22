@@ -16,15 +16,20 @@ win.
 
 ## Current phase
 
-**Phase 2 — Auth & multi-tenancy.** See `docs/roadmap.md`. Phase 1 is done:
-Postgres is live (dedicated `flowdesk` role, `flowdesk_dev`/`flowdesk_test`
-databases), `organizations`/`projects` exist with a real migration,
-`GET /api/v1/organizations/:organizationId/projects` runs through all four
-API layers, an integration test proves tenant-scoped queries actually
-isolate data, and the web app renders it live via a real TanStack Query
-hook (`entities/project`). `organizationId` is still a path param / hardcoded
-constant on the frontend — Phase 2 is exactly what replaces that with real
-auth-derived org context.
+**Phase 2 — Auth & multi-tenancy, Slice 1 of 4 done ("Accounts").** See
+`docs/roadmap.md`. Phase 2 is split into four ordered slices — Accounts →
+Sessions → Authorization → Hardening & recovery — each one only makes sense
+once the one before it exists. Slice 1 shipped: `users` and
+`organization_members` (with an `organization_role` enum) exist,
+`POST /api/v1/auth/register` creates a user + a personal organization +
+an owner membership in one database transaction (verified the transaction
+actually rolls back on a mid-way failure, not just the happy path), and
+`/register` is a real form (React Hook Form + the same Zod schema the API
+enforces). Registering does **not** log you in — no session, no token,
+nothing auth-related beyond "an account now exists" — that's Slice 2
+entirely.  `organizationId` is still a hardcoded constant in
+`ProjectsPage.tsx` — Slice 3 (Authorization) is what replaces it with real
+auth-derived context.
 Update this line when a phase completes.
 
 ---
@@ -115,8 +120,10 @@ a duplicate type on the frontend.
 ## Conventions
 
 - **Errors**: one `AppError` type with a machine-readable `code`, an HTTP
-  status, and a client-safe message. No raw throws reaching the client.
-  Every request carries a request ID, present in logs and error responses.
+  status, a client-safe message, and an optional `details` map for
+  field-level validation errors (added Phase 2, for form-shaped requests).
+  No raw throws reaching the client. Every request carries a request ID,
+  present in logs and error responses.
 - **Logging**: `pino`, structured, no `console.log` in committed code.
 - **Config**: all env vars validated by Zod at boot. Misconfiguration must
   crash at startup, never at request time.
