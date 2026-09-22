@@ -1,9 +1,14 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { organizationMembers, organizations, users } from "../../db/schema/index.js";
+import { organizationMembers, organizations, sessions, users } from "../../db/schema/index.js";
 
 export async function findUserByEmail(email: string) {
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return user;
+}
+
+export async function findUserById(id: string) {
+  const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return user;
 }
 
@@ -50,4 +55,53 @@ export async function createUserWithOrganization(input: {
 
     return { user, organization };
   });
+}
+
+export async function createSession(input: {
+  userId: string;
+  familyId: string;
+  refreshTokenHash: string;
+  expiresAt: Date;
+}) {
+  const [session] = await db.insert(sessions).values(input).returning();
+  if (!session) throw new Error("Failed to create session");
+  return session;
+}
+
+export async function findSessionByTokenHash(refreshTokenHash: string) {
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.refreshTokenHash, refreshTokenHash))
+    .limit(1);
+  return session;
+}
+
+/**
+ * Marks one session used/revoked without touching the rest of its family —
+ * the normal outcome of a successful rotation (the old token is spent, the
+ * new one just replaces it).
+ */
+export async function revokeSession(sessionId: string) {
+  await db.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.id, sessionId));
+}
+
+/**
+ * Revokes every still-valid session sharing a family — used both for
+ * deliberate logout and for reuse detection. A reused refresh token is a
+ * stolen-token signal: the whole lineage dies, not just the one request
+ * that triggered it.
+ */
+export async function revokeFamily(familyId: string) {
+  await db
+    .update(sessions)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(sessions.familyId, familyId), isNull(sessions.revokedAt)));
+}
+
+export async function revokeAllForUser(userId: string) {
+  await db
+    .update(sessions)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
 }

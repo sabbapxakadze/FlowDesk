@@ -1,4 +1,5 @@
 import express from "express";
+import cookieParser from "cookie-parser";
 import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { requestLogger } from "./middleware/request-logger.js";
@@ -11,6 +12,7 @@ const app = express();
 
 app.use(requestLogger);
 app.use(express.json());
+app.use(cookieParser());
 
 // Health check is intentionally unversioned — it's infrastructure, not API
 // surface. Everything else lives under /api/v1.

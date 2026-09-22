@@ -16,20 +16,36 @@ win.
 
 ## Current phase
 
-**Phase 2 — Auth & multi-tenancy, Slice 1 of 4 done ("Accounts").** See
-`docs/roadmap.md`. Phase 2 is split into four ordered slices — Accounts →
-Sessions → Authorization → Hardening & recovery — each one only makes sense
-once the one before it exists. Slice 1 shipped: `users` and
-`organization_members` (with an `organization_role` enum) exist,
-`POST /api/v1/auth/register` creates a user + a personal organization +
-an owner membership in one database transaction (verified the transaction
-actually rolls back on a mid-way failure, not just the happy path), and
-`/register` is a real form (React Hook Form + the same Zod schema the API
-enforces). Registering does **not** log you in — no session, no token,
-nothing auth-related beyond "an account now exists" — that's Slice 2
-entirely.  `organizationId` is still a hardcoded constant in
-`ProjectsPage.tsx` — Slice 3 (Authorization) is what replaces it with real
-auth-derived context.
+**Phase 2 — Auth & multi-tenancy, Slices 1–2 of 4 done ("Accounts",
+"Sessions").** See `docs/roadmap.md`. Phase 2 is split into four ordered
+slices — Accounts → Sessions → Authorization → Hardening & recovery — each
+one only makes sense once the one before it exists.
+
+Slice 1 ("Accounts"): `users` and `organization_members` (with an
+`organization_role` enum) exist; `POST /api/v1/auth/register` creates a
+user + a personal organization + an owner membership in one transaction
+(verified rollback on failure); `/register` is a real form.
+
+Slice 2 ("Sessions"): `sessions` table (append-only, one row per issued
+refresh token, same shape as `issue_events` — ADR 0005). Login issues a
+15-minute access JWT (held in memory on the frontend, never localStorage)
+plus an opaque refresh token in an httpOnly cookie, hashed at rest.
+`/auth/refresh` rotates on every use, and reusing an already-rotated token
+revokes the whole session family — verified on real Postgres, over real
+HTTP with a cookie jar, and in the browser (deliberately broke the
+family-revocation logic once to confirm the test actually catches it, not
+just the reused-token rejection). Logout and logout-all both derive the
+caller from the refresh cookie itself, not the access token. The web app
+has a minimal `shared/auth/` context and a silent refresh-on-load, so a
+page reload doesn't lose the session even though the access token lives
+only in memory.
+
+There is still **no `requireAuth` middleware and no protected route** —
+Slice 2 stops at authentication ("who are you"), not authorization ("what
+are you allowed to do"). `organizationId` is still a hardcoded constant in
+`ProjectsPage.tsx` — Slice 3 (Authorization) is what adds the middleware,
+resolves real org/role context from the access token, and replaces that
+constant.
 Update this line when a phase completes.
 
 ---

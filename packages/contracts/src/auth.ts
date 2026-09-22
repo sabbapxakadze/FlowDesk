@@ -28,3 +28,28 @@ export const registerResponseSchema = z.object({
 });
 
 export type RegisterResponse = z.infer<typeof registerResponseSchema>;
+
+export const loginRequestSchema = z.object({
+  email: z.email(),
+  password: z.string().min(1, "Password is required"),
+});
+
+export type LoginRequest = z.infer<typeof loginRequestSchema>;
+
+/**
+ * Shared by login and refresh — both hand back a fresh access token plus
+ * who it belongs to, and nothing else. Not shared with register: signing
+ * up deliberately does not log you in (see auth.service.ts), so its
+ * response has no token to speak of — a different shape for a genuinely
+ * different result, not two schemas that happen to drift apart.
+ */
+export const authSessionSchema = z.object({
+  accessToken: z.string(),
+  user: z.object({
+    id: z.uuid(),
+    email: z.email(),
+    name: z.string(),
+  }),
+});
+
+export type AuthSession = z.infer<typeof authSessionSchema>;

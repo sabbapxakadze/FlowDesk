@@ -43,19 +43,23 @@ Goal: prove the architecture end to end before building on it.
 
 ## Phase 2 — Auth & multi-tenancy
 
-Split into four ordered slices — see the "Sequencing note" ADR reference
-below. Checkboxes reflect Slice 1 only; `sessions` and everything from
-login onward is still open.
+Split into four ordered slices. Checkboxes below reflect Slices 1 and 2;
+Authorization and Hardening & recovery are still open.
 
-- [x] `users`, `organizations` (Phase 1), `organization_members` schema —
-      `sessions` is Slice 2's, not built yet
+- [x] `users`, `organizations` (Phase 1), `organization_members`,
+      `sessions` schema — all four tables now exist
 - [x] Register + Argon2id hashing — registering does **not** log you in;
-      that's Slice 2. Register auto-creates a personal organization
-      (owner role) in one transaction — verified the transaction actually
-      rolls back on a mid-way failure, not just the happy path.
-- [ ] Login → short-lived access JWT (memory only) + opaque refresh cookie
-- [ ] Refresh rotation with reuse detection (revoke session family)
-- [ ] Logout, single-session and all-sessions
+      that's what Slice 2 added. Register auto-creates a personal
+      organization (owner role) in one transaction — verified the
+      transaction actually rolls back on a mid-way failure, not just the
+      happy path.
+- [x] Login → short-lived access JWT (memory only) + opaque refresh cookie
+- [x] Refresh rotation with reuse detection (revoke session family) —
+      verified on real Postgres and over real HTTP (curl with a cookie
+      jar): a reused refresh token fails *and* takes the whole family down
+      with it, including tokens that were never themselves reused.
+- [x] Logout, single-session and all-sessions — both derived from the
+      refresh cookie itself, no access token required
 - [ ] Email verification + password reset (single-use hashed tokens)
 - [ ] Rate limiting on auth routes
 - [ ] Roles (Owner/Admin/Member/Viewer) → permission map → `requirePermission`

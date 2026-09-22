@@ -14,8 +14,10 @@
   "dependencies": {
     "@flowdesk/contracts": "workspace:*",
     "argon2": "^0.45.1",
+    "cookie-parser": "^1.4.7",
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
@@ -23,7 +25,9 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.6.1",
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.10",

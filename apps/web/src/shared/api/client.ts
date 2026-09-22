@@ -55,6 +55,19 @@ export async function apiPost<T>(path: string, body: unknown, schema: z.ZodType<
   return schema.parse(await res.json());
 }
 
+/** For endpoints that return 204 No Content — nothing to parse or validate. */
+export async function apiPostVoid(path: string, body?: unknown): Promise<void> {
+  const res = await fetch(`/api${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw await toApiError(res, path, "POST");
+  }
+}
+
 async function toApiError(res: Response, path: string, method: string): Promise<Error> {
   const body: unknown = await res.json().catch(() => null);
   const error =

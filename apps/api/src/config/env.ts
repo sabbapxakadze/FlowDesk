@@ -14,6 +14,9 @@ const envSchema = z.object({
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .default("info"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  JWT_SECRET: z
+    .string()
+    .min(32, "JWT_SECRET must be at least 32 characters — this signs every access token"),
 });
 
 function loadEnv() {

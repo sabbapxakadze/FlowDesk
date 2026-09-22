@@ -15,6 +15,13 @@
       "when": 1790084545279,
       "tag": "0001_demonic_union_jack",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790085443279,
+      "tag": "0002_gifted_sage",
+      "breakpoints": true
     }
   ]
 }
