@@ -16,10 +16,12 @@ win.
 
 ## Current phase
 
-**Phase 2 — Auth & multi-tenancy, Slices 1–2 of 4 done ("Accounts",
-"Sessions").** See `docs/roadmap.md`. Phase 2 is split into four ordered
-slices — Accounts → Sessions → Authorization → Hardening & recovery — each
-one only makes sense once the one before it exists.
+**Phase 2 — Auth & multi-tenancy, Slices 1–3 of 4 done ("Accounts",
+"Sessions", "Authorization").** See `docs/roadmap.md`. Phase 2 is split
+into four ordered slices — Accounts → Sessions → Authorization →
+Hardening & recovery — each one only makes sense once the one before it
+exists. Only Hardening & recovery (email verification, password reset,
+rate limiting) remains.
 
 Slice 1 ("Accounts"): `users` and `organization_members` (with an
 `organization_role` enum) exist; `POST /api/v1/auth/register` creates a
@@ -40,12 +42,24 @@ has a minimal `shared/auth/` context and a silent refresh-on-load, so a
 page reload doesn't lose the session even though the access token lives
 only in memory.
 
-There is still **no `requireAuth` middleware and no protected route** —
-Slice 2 stops at authentication ("who are you"), not authorization ("what
-are you allowed to do"). `organizationId` is still a hardcoded constant in
-`ProjectsPage.tsx` — Slice 3 (Authorization) is what adds the middleware,
-resolves real org/role context from the access token, and replaces that
-constant.
+Slice 3 ("Authorization"): three composable middlewares —
+`requireAuth` (verifies the JWT, sets `req.auth.userId`) →
+`requireOrgMembership` (looks up a real membership row for
+`:organizationId`, sets `req.ctx = { userId, organizationId, role }`, 403
+if none — never trusts the URL alone) → `requirePermission(permission)`
+(403 if the role lacks it). Permission map is deliberately small
+(`view_project` all roles, `manage_project` owner/admin only) — grows with
+the features that need more. `POST .../projects` (create a project) was
+added specifically to give `requirePermission` a real route to gate, not
+just a unit-tested helper. `ProjectsPage.tsx`'s hardcoded org id is gone —
+`organizationId` now comes from `useAuth().organization`, populated by
+login/refresh. The Phase 1 tenant-isolation test was superseded by an
+HTTP-level one (`supertest`, driving the real middleware chain end to
+end); `apps/api/src/index.ts` split into `app.ts` (the exported Express
+app) + `index.ts` (just `.listen()`) to make that possible.
+
+Slice 4 ("Hardening & recovery") is what's left: rate limiting on auth
+routes, email verification, password reset.
 Update this line when a phase completes.
 
 ---

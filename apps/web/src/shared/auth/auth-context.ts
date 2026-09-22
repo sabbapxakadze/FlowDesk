@@ -2,9 +2,11 @@ import { createContext } from "react";
 import type { AuthSession } from "@flowdesk/contracts";
 
 export type AuthUser = AuthSession["user"];
+export type AuthOrganization = AuthSession["organization"];
 
 export interface AuthContextValue {
   user: AuthUser | null;
+  organization: AuthOrganization | null;
   accessToken: string | null;
   /** True only while the initial silent refresh (on page load) is in flight. */
   isLoading: boolean;

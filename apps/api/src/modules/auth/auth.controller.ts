@@ -75,10 +75,10 @@ export async function login(req: Request, res: Response) {
     );
   }
 
-  const { accessToken, refreshToken, user } = await authService.login(parsed.data);
+  const { accessToken, refreshToken, user, organization } = await authService.login(parsed.data);
   setRefreshCookie(res, refreshToken);
 
-  const body = authSessionSchema.parse({ accessToken, user });
+  const body = authSessionSchema.parse({ accessToken, user, organization });
   res.status(200).json(body);
 }
 
@@ -88,7 +88,11 @@ export async function refresh(req: Request, res: Response) {
   try {
     const result = await authService.refresh(refreshToken);
     setRefreshCookie(res, result.refreshToken);
-    const body = authSessionSchema.parse({ accessToken: result.accessToken, user: result.user });
+    const body = authSessionSchema.parse({
+      accessToken: result.accessToken,
+      user: result.user,
+      organization: result.organization,
+    });
     res.status(200).json(body);
   } catch (err) {
     // Any failure here (expired, reused, revoked) means the cookie the

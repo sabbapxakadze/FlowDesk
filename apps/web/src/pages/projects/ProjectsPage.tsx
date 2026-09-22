@@ -1,16 +1,18 @@
 import { ProjectCard, useProjects } from "../../entities/project";
+import { CreateProjectForm } from "../../features/create-project";
+import { useAuth } from "../../shared/auth/useAuth";
 
 /**
- * TEMPORARY: there's no auth yet, so there's no real "current organization"
- * to read this from. This is the id `pnpm db:seed` creates locally — it's
- * a random UUID, regenerated per database, so this constant only works
- * against your own local flowdesk_dev. Phase 2 replaces this entirely with
- * real org context (from a session), not a smarter constant.
+ * organizationId now comes from the real, auth-derived session
+ * (AuthContext, populated from /auth/login or /auth/refresh) instead of
+ * the hardcoded constant Phase 1 left here. This page is wrapped in
+ * RequireAuth (see App.tsx), so `organization` is guaranteed non-null by
+ * the time this renders — a signed-in user always has exactly one, per
+ * Slice 1's auto-create-on-signup design.
  */
-const SEEDED_DEMO_ORG_ID = "09c3b461-3c3e-40fd-9a52-10b858b045b2";
-
 export function ProjectsPage() {
-  const { data: projects, isPending, isError, error } = useProjects(SEEDED_DEMO_ORG_ID);
+  const { organization } = useAuth();
+  const { data: projects, isPending, isError, error } = useProjects(organization!.id);
 
   if (isPending) {
     return <p className="p-8 text-gray-400">Loading projects…</p>;
@@ -23,6 +25,9 @@ export function ProjectsPage() {
   return (
     <main className="p-8">
       <h1 className="mb-4 text-2xl font-semibold">Projects</h1>
+
+      <CreateProjectForm organizationId={organization!.id} />
+
       {projects.length === 0 ? (
         <p className="text-gray-400">No projects yet.</p>
       ) : (

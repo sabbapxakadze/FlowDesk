@@ -33,6 +33,9 @@ export function HomePage() {
       {!isLoading && user && (
         <p className="text-sm">
           Logged in as <span className="font-medium">{user.name}</span>{" "}
+          <Link to="/projects" className="text-blue-600 underline">
+            projects
+          </Link>{" "}
           <button onClick={logout} className="text-blue-600 underline">
             log out
           </button>

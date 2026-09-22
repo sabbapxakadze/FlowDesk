@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { getStoredAccessToken } from "../auth/token-store";
 
 /**
  * Mirrors the API's AppError shape (apps/api/src/shared/errors.ts) on the
@@ -31,8 +32,19 @@ export class ApiError extends Error {
  * throws instead of handing the rest of the app a shape it doesn't
  * actually have.
  */
+/**
+ * Reads whatever's currently in the token store (see shared/auth/token-store.ts)
+ * and attaches it as a Bearer header. Harmless to send on the auth
+ * endpoints themselves (login/register/refresh) — they don't check it —
+ * and required on everything req.ctx-gated (see apps/api's middleware).
+ */
+function authHeaders(): HeadersInit {
+  const token = getStoredAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function apiGet<T>(path: string, schema: z.ZodType<T>): Promise<T> {
-  const res = await fetch(`/api${path}`);
+  const res = await fetch(`/api${path}`, { headers: authHeaders() });
 
   if (!res.ok) {
     throw await toApiError(res, path, "GET");
@@ -44,7 +56,7 @@ export async function apiGet<T>(path: string, schema: z.ZodType<T>): Promise<T> 
 export async function apiPost<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
   });
 
@@ -59,7 +71,7 @@ export async function apiPost<T>(path: string, body: unknown, schema: z.ZodType<
 export async function apiPostVoid(path: string, body?: unknown): Promise<void> {
   const res = await fetch(`/api${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 

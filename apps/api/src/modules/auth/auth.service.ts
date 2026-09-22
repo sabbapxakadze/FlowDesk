@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import argon2 from "argon2";
 import { AppError } from "../../shared/errors.js";
 import * as authRepository from "./auth.repository.js";
+import * as organizationsRepository from "../organizations/organizations.repository.js";
 import { generateRefreshToken, hashToken, signAccessToken } from "./tokens.js";
 
 function toSlug(name: string): string {
@@ -110,6 +111,21 @@ async function issueSession(userId: string, familyId: string) {
   return { accessToken: signAccessToken(userId), refreshToken };
 }
 
+/**
+ * Every user has exactly one organization today (see
+ * organizations.repository.ts) — this just surfaces that assumption at
+ * the one place it could ever legitimately fail (data corruption, not a
+ * real user-facing case), rather than letting a missing org silently
+ * become `undefined` in the response.
+ */
+async function getPrimaryOrganization(userId: string) {
+  const organization = await organizationsRepository.findPrimaryOrganizationForUser(userId);
+  if (!organization) {
+    throw new Error(`User ${userId} has no organization — this should be impossible`);
+  }
+  return organization;
+}
+
 export async function login(input: { email: string; password: string }) {
   const email = input.email.toLowerCase().trim();
   const user = await authRepository.findUserByEmail(email);
@@ -126,12 +142,16 @@ export async function login(input: { email: string; password: string }) {
   }
 
   const familyId = randomUUID();
-  const { accessToken, refreshToken } = await issueSession(user.id, familyId);
+  const [{ accessToken, refreshToken }, organization] = await Promise.all([
+    issueSession(user.id, familyId),
+    getPrimaryOrganization(user.id),
+  ]);
 
   return {
     accessToken,
     refreshToken,
     user: { id: user.id, email: user.email, name: user.name },
+    organization,
   };
 }
 
@@ -159,12 +179,12 @@ export async function refresh(refreshToken: string) {
   // same family.
   await authRepository.revokeSession(session.id);
 
-  const { accessToken, refreshToken: newRefreshToken } = await issueSession(
-    session.userId,
-    session.familyId,
-  );
+  const [{ accessToken, refreshToken: newRefreshToken }, user, organization] = await Promise.all([
+    issueSession(session.userId, session.familyId),
+    authRepository.findUserById(session.userId),
+    getPrimaryOrganization(session.userId),
+  ]);
 
-  const user = await authRepository.findUserById(session.userId);
   if (!user) {
     throw INVALID_REFRESH_ERROR();
   }
@@ -173,6 +193,7 @@ export async function refresh(refreshToken: string) {
     accessToken,
     refreshToken: newRefreshToken,
     user: { id: user.id, email: user.email, name: user.name },
+    organization,
   };
 }
 

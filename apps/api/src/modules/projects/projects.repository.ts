@@ -12,3 +12,9 @@ import { projects } from "../../db/schema/index.js";
 export async function listByOrganization(organizationId: string) {
   return db.select().from(projects).where(eq(projects.organizationId, organizationId));
 }
+
+export async function create(input: { organizationId: string; name: string; key: string }) {
+  const [project] = await db.insert(projects).values(input).returning();
+  if (!project) throw new Error("Failed to create project");
+  return project;
+}

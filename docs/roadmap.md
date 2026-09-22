@@ -43,8 +43,8 @@ Goal: prove the architecture end to end before building on it.
 
 ## Phase 2 — Auth & multi-tenancy
 
-Split into four ordered slices. Checkboxes below reflect Slices 1 and 2;
-Authorization and Hardening & recovery are still open.
+Split into four ordered slices. Checkboxes below reflect Slices 1–3;
+Hardening & recovery is still open.
 
 - [x] `users`, `organizations` (Phase 1), `organization_members`,
       `sessions` schema — all four tables now exist
@@ -60,12 +60,23 @@ Authorization and Hardening & recovery are still open.
       with it, including tokens that were never themselves reused.
 - [x] Logout, single-session and all-sessions — both derived from the
       refresh cookie itself, no access token required
+- [x] Roles (Owner/Admin/Member/Viewer) → permission map → `requirePermission`
+      — map kept intentionally small (`view_project`, `manage_project`);
+      grows with the features that need more, same pattern as the
+      `organization_role` enum itself.
+- [x] `req.ctx` membership resolution middleware — `requireAuth` →
+      `requireOrgMembership` → `requirePermission`, three composable
+      pieces. This is what replaced the Phase 1 `TEMPORARY` hardcoded org
+      id in `ProjectsPage.tsx` with real auth-derived context.
+- [x] **Tenant isolation test suite**: prove Org A cannot read Org B — now
+      at the HTTP level (supertest, driving the real middleware chain),
+      superseding the Phase 1 repository-level version. Verified live: a
+      real, validly-logged-in user from Org A gets a genuine 403 hitting
+      Org B's URL, not just a repository-query check.
+- [x] Auth UI: login, register — React Hook Form + Zod. (Verify/reset are
+      Slice 4's — no email sending exists yet.)
 - [ ] Email verification + password reset (single-use hashed tokens)
 - [ ] Rate limiting on auth routes
-- [ ] Roles (Owner/Admin/Member/Viewer) → permission map → `requirePermission`
-- [ ] `req.ctx` membership resolution middleware
-- [ ] **Tenant isolation test suite**: prove Org A cannot read Org B
-- [ ] Auth UI: login, register, verify, reset — React Hook Form + Zod
 
 ## Phase 3 — Issues core + event system
 

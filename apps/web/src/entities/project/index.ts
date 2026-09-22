@@ -3,4 +3,5 @@
 // That's what keeps entities/project's internal structure free to change.
 export type { Project } from "./model";
 export { useProjects } from "./api/useProjects";
+export { projectKeys } from "./api/queryKeys";
 export { ProjectCard } from "./ui/ProjectCard";
