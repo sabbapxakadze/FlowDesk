@@ -293,3 +293,73 @@ describe("issue labels (HTTP level)", () => {
       .expect(403);
   });
 });
+
+describe("comments and activity timeline (HTTP level)", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("lets a member post a comment and then see it in the events timeline", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Original");
+
+    const commentRes = await request(app)
+      .post(
+        `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/comments`,
+      )
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ body: "Looking into this" })
+      .expect(201);
+
+    expect(commentRes.body.data.body).toBe("Looking into this");
+
+    const eventsRes = await request(app)
+      .get(
+        `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/events`,
+      )
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .expect(200);
+
+    const types = eventsRes.body.data.map((e: { type: string }) => e.type);
+    expect(types).toEqual(["issue.created", "issue.commented"]);
+    expect(eventsRes.body.data[1].payload.body).toBe("Looking into this");
+    expect(eventsRes.body.data[1].actorName).toBe("Test User");
+  });
+
+  it("blocks a valid user from another organization from posting a comment", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const userB = await registerAndLogIn("b@example.com", "Org B");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Original");
+
+    await request(app)
+      .post(
+        `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/comments`,
+      )
+      .set("Authorization", `Bearer ${userB.accessToken}`)
+      .send({ body: "Intruder comment" })
+      .expect(403);
+  });
+
+  it("404s for events on an issueId that doesn't belong to the project in the URL", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const otherProjectId = await createProject(userA.accessToken, userA.organizationId, "BBB");
+    const issueElsewhere = await createIssue(
+      userA.accessToken,
+      userA.organizationId,
+      otherProjectId,
+      "Elsewhere",
+    );
+
+    const res = await request(app)
+      .get(
+        `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issueElsewhere.id}/events`,
+      )
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .expect(404);
+
+    expect(res.body.error.code).toBe("issue_not_found");
+  });
+});

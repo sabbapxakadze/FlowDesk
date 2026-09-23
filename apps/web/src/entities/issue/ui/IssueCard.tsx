@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import type { Issue } from "../model";
 
 /**
@@ -22,13 +23,13 @@ export function IssueCard({
 }) {
   return (
     <li className="flex items-start justify-between gap-2 rounded-lg border border-gray-200 px-4 py-3">
-      <div>
+      <Link to={`/projects/${issue.projectId}/issues/${issue.id}`}>
         <p className="text-sm text-gray-500">
           {projectKey}-{issue.number}
         </p>
         <p className="font-medium">{issue.title}</p>
         <p className="text-xs text-gray-400">{issue.status}</p>
-      </div>
+      </Link>
       {onEdit && (
         <button onClick={onEdit} className="text-sm text-blue-600 underline">
           Edit

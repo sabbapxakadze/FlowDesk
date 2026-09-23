@@ -43,6 +43,13 @@
       "when": 1790176677763,
       "tag": "0005_elite_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790178013928,
+      "tag": "0006_noisy_tempest",
+      "breakpoints": true
     }
   ]
 }

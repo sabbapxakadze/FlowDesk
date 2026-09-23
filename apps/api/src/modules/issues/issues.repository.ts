@@ -1,6 +1,6 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { issueEvents, issueLabels, issues, labels, projects } from "../../db/schema/index.js";
+import { comments, issueEvents, issueLabels, issues, labels, projects, users } from "../../db/schema/index.js";
 import type { IssueStatus } from "@flowdesk/contracts";
 
 /**
@@ -230,4 +230,53 @@ export async function detachLabel(input: {
 
     return { status: "detached" };
   });
+}
+
+/**
+ * The comment body lives in both comments (source of truth, future
+ * edit/delete would touch this) and the issue_events payload (so the
+ * timeline never has to join back to comments to render a "commented"
+ * line) — see the Phase 3 slice 4 plan's "Decisions" section.
+ */
+export async function addComment(input: { issueId: string; authorId: string; body: string }) {
+  return db.transaction(async (tx) => {
+    const [comment] = await tx
+      .insert(comments)
+      .values({ issueId: input.issueId, authorId: input.authorId, body: input.body })
+      .returning();
+    if (!comment) throw new Error("Failed to create comment");
+
+    await tx.insert(issueEvents).values({
+      issueId: input.issueId,
+      actorId: input.authorId,
+      type: "issue.commented",
+      payload: { commentId: comment.id, body: comment.body },
+    });
+
+    return comment;
+  });
+}
+
+/**
+ * Joined to users for actorName (a timeline that just says a UUID
+ * commented isn't readable) and to issues for organizationId scoping —
+ * issue_events itself has no organizationId column, same shape as
+ * listLabelsForIssue's join through labels.
+ */
+export async function listEvents(organizationId: string, issueId: string) {
+  return db
+    .select({
+      id: issueEvents.id,
+      issueId: issueEvents.issueId,
+      actorId: issueEvents.actorId,
+      actorName: users.name,
+      type: issueEvents.type,
+      payload: issueEvents.payload,
+      createdAt: issueEvents.createdAt,
+    })
+    .from(issueEvents)
+    .innerJoin(users, eq(issueEvents.actorId, users.id))
+    .innerJoin(issues, eq(issueEvents.issueId, issues.id))
+    .where(and(eq(issueEvents.issueId, issueId), eq(issues.organizationId, organizationId)))
+    .orderBy(asc(issueEvents.createdAt));
 }

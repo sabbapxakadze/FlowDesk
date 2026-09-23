@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router";
 import { HomePage } from "../pages/home/HomePage";
 import { ProjectsPage } from "../pages/projects/ProjectsPage";
 import { ProjectDetailPage } from "../pages/project-detail/ProjectDetailPage";
+import { IssueDetailPage } from "../pages/issue-detail/IssueDetailPage";
 import { RegisterPage } from "../pages/register/RegisterPage";
 import { LoginPage } from "../pages/login/LoginPage";
 import { VerifyEmailPage } from "../pages/verify-email/VerifyEmailPage";
@@ -27,6 +28,14 @@ export function App() {
           element={
             <RequireAuth>
               <ProjectDetailPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/projects/:projectId/issues/:issueId"
+          element={
+            <RequireAuth>
+              <IssueDetailPage />
             </RequireAuth>
           }
         />

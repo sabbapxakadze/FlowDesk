@@ -91,7 +91,7 @@ Split into four ordered slices, all shipped.
       live: 11 rapid login attempts in dev mode, first 10 return 401, the
       11th returns a genuine 429.
 
-## Phase 3 — Issues core + event system
+## Phase 3 — Issues core + event system ✅ complete
 
 Slice 1 (create + read) shipped:
 
@@ -127,6 +127,7 @@ Slice 2 (update + optimistic concurrency) shipped:
       verified live (edited an issue in the UI, updated it via `curl`
       behind the scenes to bump its version, then saved the stale UI edit
       and confirmed the 409 path end to end)
+
 Slice 3 (labels) shipped:
 
 - [x] `labels` (org-scoped, not project-scoped) + `issue_labels` schema —
@@ -149,10 +150,30 @@ Slice 3 (labels) shipped:
       project key silently fell through to a raw 500 instead of the
       intended 409. Fixed in all three places; added the test that would
       have caught it (`projects.repository.test.ts`).
-- [ ] Activity timeline reading `issue_events`
-- [ ] Comments
-- [ ] Issue detail page (a minimal project-detail/issue-list page exists;
-      the fuller issue detail view comes with slice 4)
+Slice 4 (comments + activity timeline + issue detail page) shipped:
+
+- [x] `comments` schema — source of truth for a comment's body (future
+      edit/delete would touch this table), but the *read* surface for
+      this slice is entirely the activity timeline: no separate
+      `GET .../comments` endpoint. Comment creation lives in the `issues`
+      module, same call as labels' attach/detach.
+- [x] `issue.commented` events, with the comment body in the payload so
+      the timeline never has to join back to `comments` to render it —
+      fourth and last use of the transactional event pattern this phase.
+- [x] Real activity timeline (`GET .../issues/:issueId/events`, joined to
+      `users` for the actor's name) — the ADR 0005 payoff: one feed for
+      created/updated/label-added/label-removed/commented. Existing
+      mutations (`EditIssueForm`, `LabelPicker`) now also invalidate the
+      events query so the timeline updates live without a refresh —
+      verified in the browser (edited the issue, attached a label,
+      posted a comment; all three appeared in the timeline immediately).
+- [x] Real issue detail page (`/projects/:projectId/issues/:issueId`),
+      reusing `EditIssueForm` (with its label picker) exactly as
+      `ProjectDetailPage` already does, plus the timeline and a comment
+      box. `IssueCard`'s title now links to it.
+- [x] A real "one issue's whole life" test: create → update → attach
+      label → comment, asserting the four resulting events come back in
+      chronological order with the correct actor name on each.
 
 ## Phase 3.5 — Design system extraction
 

@@ -70,3 +70,23 @@ issuesRouter.delete(
   requirePermission("manage_issue"),
   issuesController.detachLabel,
 );
+
+issuesRouter.post(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId/comments",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("manage_issue"),
+  issuesController.createComment,
+);
+
+issuesRouter.get(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId/events",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("view_issue"),
+  issuesController.listIssueEvents,
+);

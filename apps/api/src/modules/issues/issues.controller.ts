@@ -2,8 +2,11 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import {
   attachLabelRequestSchema,
+  createCommentRequestSchema,
+  createCommentResponseSchema,
   createIssueRequestSchema,
   createIssueResponseSchema,
+  listIssueEventsResponseSchema,
   listIssuesResponseSchema,
   listLabelsResponseSchema,
   updateIssueRequestSchema,
@@ -16,6 +19,13 @@ import * as issuesService from "./issues.service.js";
 // returns Date objects, the wire format is ISO strings (see contracts).
 function toWireFormat(row: { createdAt: Date; updatedAt: Date; [key: string]: unknown }) {
   return { ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };
+}
+
+// issue_events has no updatedAt (append-only, never modified) — a
+// separate helper rather than making toWireFormat's updatedAt optional
+// and having every other caller need to handle that case too.
+function eventToWireFormat(row: { createdAt: Date; [key: string]: unknown }) {
+  return { ...row, createdAt: row.createdAt.toISOString() };
 }
 
 export async function listIssues(req: Request, res: Response) {
@@ -105,6 +115,41 @@ export async function listIssueLabels(req: Request, res: Response) {
 
   const rows = await issuesService.listIssueLabels(req.ctx.organizationId, req.ctx.issueId);
   const body = listLabelsResponseSchema.parse({ data: rows.map(toWireFormat) });
+  res.json(body);
+}
+
+export async function createComment(req: Request, res: Response) {
+  if (!req.ctx?.issueId) {
+    throw new Error("createComment requires requireIssue to have run first");
+  }
+
+  const parsed = createCommentRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError(
+      "validation_error",
+      400,
+      "Invalid comment",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+
+  const comment = await issuesService.addComment({
+    issueId: req.ctx.issueId,
+    authorId: req.ctx.userId,
+    body: parsed.data.body,
+  });
+
+  const body = createCommentResponseSchema.parse({ data: toWireFormat(comment) });
+  res.status(201).json(body);
+}
+
+export async function listIssueEvents(req: Request, res: Response) {
+  if (!req.ctx?.issueId) {
+    throw new Error("listIssueEvents requires requireIssue to have run first");
+  }
+
+  const rows = await issuesService.listIssueEvents(req.ctx.organizationId, req.ctx.issueId);
+  const body = listIssueEventsResponseSchema.parse({ data: rows.map(eventToWireFormat) });
   res.json(body);
 }
 

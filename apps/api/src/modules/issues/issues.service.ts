@@ -75,3 +75,11 @@ export async function detachLabel(input: {
 }) {
   return issuesRepository.detachLabel(input);
 }
+
+export async function addComment(input: { issueId: string; authorId: string; body: string }) {
+  return issuesRepository.addComment(input);
+}
+
+export async function listIssueEvents(organizationId: string, issueId: string) {
+  return issuesRepository.listEvents(organizationId, issueId);
+}

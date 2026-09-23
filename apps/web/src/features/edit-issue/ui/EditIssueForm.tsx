@@ -52,6 +52,9 @@ export function EditIssueForm({
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: issueKeys.list(projectId) });
+      // A successful update just wrote an issue.updated event — the
+      // timeline (if anything is showing it) needs to pick that up too.
+      void queryClient.invalidateQueries({ queryKey: issueKeys.events(issue.id) });
       onDone();
     },
     onError: (error) => {

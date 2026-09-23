@@ -10,4 +10,5 @@ export const issueKeys = {
   all: [...projectKeys.all, "issues"] as const,
   list: (projectId: string) => [...issueKeys.all, projectId] as const,
   labels: (issueId: string) => [...issueKeys.all, issueId, "labels"] as const,
+  events: (issueId: string) => [...issueKeys.all, issueId, "events"] as const,
 };

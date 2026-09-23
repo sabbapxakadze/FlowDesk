@@ -16,21 +16,21 @@ win.
 
 ## Current phase
 
-**Phase 3 — Issues core + event system.** See `docs/roadmap.md`.
+**Phase 3.5 — Design system extraction.** See `docs/roadmap.md`.
 
-Phase 2 (Auth & multi-tenancy) is fully done — accounts, sessions with
-rotation + reuse detection, `requireAuth → requireOrgMembership →
-requirePermission` authorization, rate limiting, and real email
-verification/password reset (Resend), all verified end to end including
-against a real inbox. Full detail lives in `docs/roadmap.md`'s Phase 2
-checklist and `docs/adr/0003`; don't duplicate it here.
+Phase 3 (Issues core + event system) is fully done across four slices —
+issue create/read/update with optimistic concurrency (`version` + 409),
+labels (org-scoped, attach/detach), comments, and a real activity
+timeline reading `issue_events` end to end. Full detail lives in
+`docs/roadmap.md`'s Phase 3 checklist; don't duplicate it here.
 
-What Phase 3 inherits from it: every tenant-scoped route goes through the
-three-middleware chain, `req.ctx.organizationId` is the only trustworthy
-source of "which org," the access token is a `Bearer` header the frontend
-attaches via `shared/auth/token-store.ts`, and the append-only-table +
-single-purpose-column pattern (`sessions`, `auth_tokens`) is the template
-for `issue_events` — Phase 3's own audit trail.
+What Phase 3.5 inherits from it: real screens now exist (auth forms,
+projects list, project detail, issue detail with its edit form/label
+picker/timeline/comments) to draw a design system *from* — the whole
+point of this phase being sequenced after Phase 3 instead of before it.
+The transactional event-log pattern (`issue_events`, four event types)
+is done for this iteration; new event types get added the same way when
+a future feature needs one, not preemptively.
 Update this line when a phase completes.
 
 ---

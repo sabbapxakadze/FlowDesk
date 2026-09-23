@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { resetDatabase } from "../../db/test-utils.js";
-import { issueEvents, labels, organizations, projects, users } from "../../db/schema/index.js";
+import { comments, issueEvents, labels, organizations, projects, users } from "../../db/schema/index.js";
 import * as issuesRepository from "./issues.repository.js";
 import * as issuesService from "./issues.service.js";
 
@@ -423,5 +423,106 @@ describe("issues repository — labels", () => {
       .from(issueEvents)
       .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.label_removed")));
     expect(removeEvents).toHaveLength(0);
+  });
+});
+
+describe("issues repository — comments and activity timeline", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("posts a comment and writes exactly one issue.commented event with the body in its payload", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const comment = await issuesRepository.addComment({
+      issueId: issue.id,
+      authorId: user.id,
+      body: "This is a comment",
+    });
+
+    expect(comment.body).toBe("This is a comment");
+
+    const stored = await db.select().from(comments).where(eq(comments.id, comment.id));
+    expect(stored).toHaveLength(1);
+
+    const commentEvents = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.commented")));
+    expect(commentEvents).toHaveLength(1);
+    expect(commentEvents[0]?.payload).toEqual({ commentId: comment.id, body: "This is a comment" });
+  });
+
+  it("lists a real issue's whole life in chronological order with actor names", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const [label] = await db
+      .insert(labels)
+      .values({ organizationId: org.id, name: "bug", color: "#FF0000" })
+      .returning();
+    if (!label) throw new Error("setup failed");
+
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+    await issuesRepository.update({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: issue.id,
+      expectedVersion: issue.version,
+      changes: { status: "in_progress" },
+      actorId: user.id,
+    });
+    await issuesRepository.attachLabel({
+      organizationId: org.id,
+      issueId: issue.id,
+      labelId: label.id,
+      actorId: user.id,
+    });
+    await issuesRepository.addComment({
+      issueId: issue.id,
+      authorId: user.id,
+      body: "Looking into this",
+    });
+
+    const events = await issuesRepository.listEvents(org.id, issue.id);
+
+    expect(events.map((e) => e.type)).toEqual([
+      "issue.created",
+      "issue.updated",
+      "issue.label_added",
+      "issue.commented",
+    ]);
+    expect(events.every((e) => e.actorName === "Test User")).toBe(true);
+    // Chronological, not just "same order they were created in the test" —
+    // each event's createdAt should be non-decreasing.
+    const timestamps = events.map((e) => new Date(e.createdAt).getTime());
+    expect(timestamps).toEqual([...timestamps].sort((a, b) => a - b));
+  });
+
+  it("only returns events for the requested organization's issue", async () => {
+    const a = await seedOrgProjectUser("Org A", "org-a", "AAA");
+    const b = await seedOrgProjectUser("Org B", "org-b", "BBB");
+    const issueA = await issuesRepository.create({
+      organizationId: a.org.id,
+      projectId: a.project.id,
+      title: "A issue",
+      description: null,
+      reporterId: a.user.id,
+    });
+
+    const events = await issuesRepository.listEvents(b.org.id, issueA.id);
+
+    expect(events).toEqual([]);
   });
 });

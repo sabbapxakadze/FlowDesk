@@ -8,6 +8,6 @@ import { db } from "./client.js";
  */
 export async function resetDatabase() {
   await db.execute(
-    sql`TRUNCATE TABLE organizations, projects, users, organization_members, sessions, auth_tokens, issues, issue_events, labels, issue_labels RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE TABLE organizations, projects, users, organization_members, sessions, auth_tokens, issues, issue_events, labels, issue_labels, comments RESTART IDENTITY CASCADE`,
   );
 }
