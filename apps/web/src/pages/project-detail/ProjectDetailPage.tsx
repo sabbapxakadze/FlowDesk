@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { useProjects } from "../../entities/project";
 import { IssueCard, useIssues } from "../../entities/issue";
 import { CreateIssueForm } from "../../features/create-issue";
+import { EditIssueForm } from "../../features/edit-issue";
 import { useAuth } from "../../shared/auth/useAuth";
 
 /**
@@ -24,6 +26,12 @@ export function ProjectDetailPage() {
     error,
   } = useIssues(organization!.id, projectId!);
 
+  // Which issue (if any) is currently showing its edit form instead of its
+  // card — page-level state because IssueCard (entities layer) can't
+  // import EditIssueForm (features layer); this is where the two compose.
+  const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
+  const [showConflictNotice, setShowConflictNotice] = useState(false);
+
   if (projectsPending || issuesPending) {
     return <p className="p-8 text-gray-400">Loading…</p>;
   }
@@ -45,13 +53,38 @@ export function ProjectDetailPage() {
 
       <CreateIssueForm organizationId={organization!.id} projectId={project.id} />
 
+      {showConflictNotice && (
+        <p className="mb-2 text-sm text-amber-600">
+          That issue was updated by someone else — showing the latest version.
+        </p>
+      )}
+
       {issues.length === 0 ? (
         <p className="text-gray-400">No issues yet.</p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {issues.map((issue) => (
-            <IssueCard key={issue.id} issue={issue} projectKey={project.key} />
-          ))}
+          {issues.map((issue) =>
+            editingIssueId === issue.id ? (
+              <EditIssueForm
+                key={issue.id}
+                issue={issue}
+                organizationId={organization!.id}
+                projectId={project.id}
+                onDone={() => setEditingIssueId(null)}
+                onConflict={() => setShowConflictNotice(true)}
+              />
+            ) : (
+              <IssueCard
+                key={issue.id}
+                issue={issue}
+                projectKey={project.key}
+                onEdit={() => {
+                  setShowConflictNotice(false);
+                  setEditingIssueId(issue.id);
+                }}
+              />
+            ),
+          )}
         </ul>
       )}
     </main>

@@ -11,13 +11,23 @@ export class ApiError extends Error {
   readonly code: string;
   readonly status: number;
   readonly details?: Record<string, string[]>;
+  // Mirrors AppError's data field — free-form, unlike details. First use:
+  // a 409's { current: <issue> } payload (see the Phase 3 slice 2 plan).
+  readonly data?: Record<string, unknown>;
 
-  constructor(code: string, status: number, message: string, details?: Record<string, string[]>) {
+  constructor(
+    code: string,
+    status: number,
+    message: string,
+    details?: Record<string, string[]>,
+    data?: Record<string, unknown>,
+  ) {
     super(message);
     this.name = "ApiError";
     this.code = code;
     this.status = status;
     this.details = details;
+    this.data = data;
   }
 }
 
@@ -67,6 +77,20 @@ export async function apiPost<T>(path: string, body: unknown, schema: z.ZodType<
   return schema.parse(await res.json());
 }
 
+export async function apiPatch<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
+  const res = await fetch(`/api${path}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw await toApiError(res, path, "PATCH");
+  }
+
+  return schema.parse(await res.json());
+}
+
 /** For endpoints that return 204 No Content — nothing to parse or validate. */
 export async function apiPostVoid(path: string, body?: unknown): Promise<void> {
   const res = await fetch(`/api${path}`, {
@@ -84,11 +108,20 @@ async function toApiError(res: Response, path: string, method: string): Promise<
   const body: unknown = await res.json().catch(() => null);
   const error =
     body && typeof body === "object" && "error" in body
-      ? (body as { error: { code: string; message: string; details?: Record<string, string[]> } }).error
+      ? (
+          body as {
+            error: {
+              code: string;
+              message: string;
+              details?: Record<string, string[]>;
+              data?: Record<string, unknown>;
+            };
+          }
+        ).error
       : null;
 
   if (error) {
-    return new ApiError(error.code, res.status, error.message, error.details);
+    return new ApiError(error.code, res.status, error.message, error.details, error.data);
   }
   return new Error(`${method} ${path} failed with status ${res.status}`);
 }

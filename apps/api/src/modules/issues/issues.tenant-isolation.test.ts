@@ -35,6 +35,20 @@ async function createProject(accessToken: string, organizationId: string, key: s
   return res.body.data.id as string;
 }
 
+async function createIssue(
+  accessToken: string,
+  organizationId: string,
+  projectId: string,
+  title: string,
+) {
+  const res = await request(app)
+    .post(`/api/v1/organizations/${organizationId}/projects/${projectId}/issues`)
+    .set("Authorization", `Bearer ${accessToken}`)
+    .send({ title })
+    .expect(201);
+  return res.body.data as { id: string; version: number };
+}
+
 describe("issues tenant isolation (HTTP level)", () => {
   beforeEach(async () => {
     await resetDatabase();
@@ -99,5 +113,84 @@ describe("issues tenant isolation (HTTP level)", () => {
       .expect(404);
 
     expect(res.body.error.code).toBe("project_not_found");
+  });
+});
+
+describe("issue update (HTTP level)", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("lets a member update an issue with the correct version", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Original");
+
+    const res = await request(app)
+      .patch(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}`)
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ version: issue.version, title: "Updated" })
+      .expect(200);
+
+    expect(res.body.data.title).toBe("Updated");
+    expect(res.body.data.version).toBe(issue.version + 1);
+  });
+
+  it("returns a 409 with the current state when the version is stale", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Original");
+
+    // First update succeeds and moves the version forward.
+    await request(app)
+      .patch(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}`)
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ version: issue.version, title: "First update" })
+      .expect(200);
+
+    // Second update still carries the now-stale original version.
+    const res = await request(app)
+      .patch(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}`)
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ version: issue.version, title: "Should not apply" })
+      .expect(409);
+
+    expect(res.body.error.code).toBe("version_conflict");
+    expect(res.body.error.data.current.title).toBe("First update");
+  });
+
+  it("blocks a valid user from another organization from updating an issue", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const userB = await registerAndLogIn("b@example.com", "Org B");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Original");
+
+    await request(app)
+      .patch(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}`)
+      .set("Authorization", `Bearer ${userB.accessToken}`)
+      .send({ version: issue.version, title: "Intruder edit" })
+      .expect(403);
+  });
+
+  it("404s for an issueId that doesn't belong to the project in the URL", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const otherProjectId = await createProject(userA.accessToken, userA.organizationId, "BBB");
+    const issueInOtherProject = await createIssue(
+      userA.accessToken,
+      userA.organizationId,
+      otherProjectId,
+      "Elsewhere",
+    );
+
+    const res = await request(app)
+      .patch(
+        `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issueInOtherProject.id}`,
+      )
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ version: issueInOtherProject.version, title: "Should not apply" })
+      .expect(404);
+
+    expect(res.body.error.code).toBe("issue_not_found");
   });
 });

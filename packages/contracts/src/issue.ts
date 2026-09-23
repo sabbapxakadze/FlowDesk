@@ -39,3 +39,26 @@ export const createIssueResponseSchema = z.object({
 });
 
 export type CreateIssueResponse = z.infer<typeof createIssueResponseSchema>;
+
+// version is required (the value the client read, per CLAUDE.md's
+// concurrency convention), everything else is an optional partial update.
+// The refine guards against a pointless PATCH that only carries a version
+// and nothing to actually change.
+export const updateIssueRequestSchema = z
+  .object({
+    version: z.number().int(),
+    title: z.string().min(1, "Title is required").max(500, "Title is too long").optional(),
+    description: z.string().max(10000, "Description is too long").nullable().optional(),
+    status: issueStatusSchema.optional(),
+  })
+  .refine((data) => data.title !== undefined || data.description !== undefined || data.status !== undefined, {
+    message: "At least one of title, description, or status must be provided.",
+  });
+
+export type UpdateIssueRequest = z.infer<typeof updateIssueRequestSchema>;
+
+export const updateIssueResponseSchema = z.object({
+  data: issueSchema,
+});
+
+export type UpdateIssueResponse = z.infer<typeof updateIssueResponseSchema>;

@@ -12,17 +12,24 @@ export class AppError extends Error {
   readonly code: string;
   readonly status: number;
   readonly details?: Record<string, string[]>;
+  // Free-form, unlike details (which is always field -> messages). Added
+  // for the first case that needed it: a 409 handing back "the current
+  // server state" per CLAUDE.md's concurrency convention. Reusable by any
+  // future error that needs to carry structured data, not just a message.
+  readonly data?: Record<string, unknown>;
 
   constructor(
     code: string,
     status: number,
     message: string,
     details?: Record<string, string[]>,
+    data?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "AppError";
     this.code = code;
     this.status = status;
     this.details = details;
+    this.data = data;
   }
 }

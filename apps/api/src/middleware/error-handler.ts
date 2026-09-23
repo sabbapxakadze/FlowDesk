@@ -26,6 +26,7 @@ export function errorHandler(
         message: err.message,
         requestId: req.id,
         ...(err.details ? { details: err.details } : {}),
+        ...(err.data ? { data: err.data } : {}),
       },
     });
     return;

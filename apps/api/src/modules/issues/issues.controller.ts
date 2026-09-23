@@ -3,6 +3,8 @@ import {
   createIssueRequestSchema,
   createIssueResponseSchema,
   listIssuesResponseSchema,
+  updateIssueRequestSchema,
+  updateIssueResponseSchema,
 } from "@flowdesk/contracts";
 import { AppError } from "../../shared/errors.js";
 import * as issuesService from "./issues.service.js";
@@ -48,4 +50,47 @@ export async function createIssue(req: Request, res: Response) {
 
   const body = createIssueResponseSchema.parse({ data: toWireFormat(issue) });
   res.status(201).json(body);
+}
+
+export async function updateIssue(req: Request, res: Response) {
+  if (!req.ctx?.projectId || !req.ctx.issueId) {
+    throw new Error("updateIssue requires requireIssue to have run first");
+  }
+
+  const parsed = updateIssueRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError(
+      "validation_error",
+      400,
+      "Invalid issue update",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+
+  const { version, ...changes } = parsed.data;
+  const result = await issuesService.updateIssue({
+    organizationId: req.ctx.organizationId,
+    projectId: req.ctx.projectId,
+    issueId: req.ctx.issueId,
+    expectedVersion: version,
+    changes,
+    actorId: req.ctx.userId,
+  });
+
+  if (result.status === "conflict") {
+    throw new AppError(
+      "version_conflict",
+      409,
+      "This issue was changed by someone else since you loaded it.",
+      undefined,
+      { current: toWireFormat(result.current) },
+    );
+  }
+
+  if (result.status === "not_found") {
+    throw new AppError("issue_not_found", 404, "Issue not found.");
+  }
+
+  const body = updateIssueResponseSchema.parse({ data: toWireFormat(result.issue) });
+  res.json(body);
 }

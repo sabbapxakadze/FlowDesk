@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { resetDatabase } from "../../db/test-utils.js";
 import { issueEvents, organizations, projects, users } from "../../db/schema/index.js";
@@ -119,5 +119,140 @@ describe("issues repository", () => {
     expect(events).toHaveLength(1);
     expect(events[0]?.type).toBe("issue.created");
     expect(events[0]?.actorId).toBe(user.id);
+  });
+});
+
+/**
+ * The concurrent-update test is the important one here, same reasoning as
+ * slice 1's concurrent-create test: the conditional UPDATE...WHERE version
+ * is only actually safe if Postgres genuinely refuses the second of two
+ * concurrent updates starting from the same version, and that's not
+ * provable by reading the code, only by racing it for real.
+ */
+describe("issues repository — update", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("applies the change and bumps the version on a matching version", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Original title",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const result = await issuesRepository.update({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: issue.id,
+      expectedVersion: issue.version,
+      changes: { title: "Updated title" },
+      actorId: user.id,
+    });
+
+    expect(result.status).toBe("updated");
+    if (result.status !== "updated") throw new Error("expected updated");
+    expect(result.issue.title).toBe("Updated title");
+    expect(result.issue.version).toBe(issue.version + 1);
+  });
+
+  it("writes exactly one issue.updated event with the changed fields as payload", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Original title",
+      description: null,
+      reporterId: user.id,
+    });
+
+    await issuesRepository.update({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: issue.id,
+      expectedVersion: issue.version,
+      changes: { status: "in_progress" },
+      actorId: user.id,
+    });
+
+    // create() already wrote an issue.created event for this issue —
+    // filter to the update event specifically rather than asserting a
+    // total count.
+    const updateEvents = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.updated")));
+
+    expect(updateEvents).toHaveLength(1);
+    expect(updateEvents[0]?.payload).toEqual({ status: "in_progress" });
+  });
+
+  it("returns a conflict without mutating the row when the version is stale", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Original title",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const staleResult = await issuesRepository.update({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: issue.id,
+      expectedVersion: issue.version + 5, // never actually reached
+      changes: { title: "Should not apply" },
+      actorId: user.id,
+    });
+
+    expect(staleResult.status).toBe("conflict");
+    if (staleResult.status !== "conflict") throw new Error("expected conflict");
+    expect(staleResult.current.title).toBe("Original title");
+    expect(staleResult.current.version).toBe(issue.version);
+
+    // Only the create's issue.created event should exist — no
+    // issue.updated event for a change that never applied.
+    const updateEvents = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.updated")));
+    expect(updateEvents).toHaveLength(0);
+  });
+
+  it("lets exactly one of two concurrent updates starting from the same version succeed", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Original title",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const [resultA, resultB] = await Promise.all([
+      issuesRepository.update({
+        organizationId: org.id,
+        projectId: project.id,
+        issueId: issue.id,
+        expectedVersion: issue.version,
+        changes: { title: "Title from A" },
+        actorId: user.id,
+      }),
+      issuesRepository.update({
+        organizationId: org.id,
+        projectId: project.id,
+        issueId: issue.id,
+        expectedVersion: issue.version,
+        changes: { title: "Title from B" },
+        actorId: user.id,
+      }),
+    ]);
+
+    const statuses = [resultA.status, resultB.status].sort();
+    expect(statuses).toEqual(["conflict", "updated"]);
   });
 });

@@ -108,8 +108,25 @@ Slice 1 (create + read) shipped:
       same defense-in-depth shape as `requireOrgMembership`)
 - [x] Domain events written in the mutation's transaction — `issue.created`
       proven with a real Postgres test (one event row per created issue)
-- [ ] `version` column + 409 on conflict — column exists, slice 2 wires up
-      the update path
+
+Slice 2 (update + optimistic concurrency) shipped:
+
+- [x] Update issue (title/description/status) + `version` column + 409 on
+      conflict — conditional `UPDATE ... WHERE version = $expected`, same
+      atomic-write pattern as slice 1's counter, verified with a real
+      concurrent-update test (two `Promise.all` updates from the same
+      version, exactly one succeeds) and the same "break it, watch the
+      test fail, revert" rigor as slice 1's counter check. 409 responses
+      carry the current server state (`AppError`/`ApiError` gained a
+      reusable `data` field for this). New `requireIssue` middleware,
+      same shape as `requireProject`.
+- [x] `issue.updated` events — payload is the changed fields' new values,
+      same minimal-payload precedent as `issue.created`
+- [x] Edit UI: inline edit form on the project detail page; a stale save
+      is rejected, the list refetches, and a conflict notice shows —
+      verified live (edited an issue in the UI, updated it via `curl`
+      behind the scenes to bump its version, then saved the stale UI edit
+      and confirmed the 409 path end to end)
 - [ ] Activity timeline reading `issue_events`
 - [ ] Comments, labels
 - [ ] Issue detail page (a minimal project-detail/issue-list page exists;
