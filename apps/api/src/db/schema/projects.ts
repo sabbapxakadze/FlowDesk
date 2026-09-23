@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, integer, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { organizations } from "./organizations.js";
 
 /**
@@ -18,6 +18,11 @@ export const projects = pgTable(
     name: varchar("name", { length: 255 }).notNull(),
     // Short project code used in issue keys later (e.g. "AUTH" -> AUTH-23).
     key: varchar("key", { length: 10 }).notNull(),
+    // The number the *next* issue created in this project will get.
+    // Incremented atomically (UPDATE ... RETURNING inside the create
+    // transaction — see issues.repository.ts) so two concurrent creates
+    // can never collide; see docs/adr and the Phase 3 slice 1 plan.
+    nextIssueNumber: integer("next_issue_number").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

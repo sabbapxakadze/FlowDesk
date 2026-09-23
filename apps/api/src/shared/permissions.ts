@@ -7,13 +7,18 @@
  */
 export type Role = "owner" | "admin" | "member" | "viewer";
 
-export type Permission = "view_project" | "manage_project";
+export type Permission = "view_project" | "manage_project" | "view_issue" | "manage_issue";
 
+// manage_issue is deliberately broader than manage_project: creating a
+// project is an admin-level action, but filing/editing issues is the
+// normal day-to-day action every member takes. Collapsing the two onto
+// one permission would block regular members from using the tracker at
+// all — see the Phase 3 slice 1 plan's "Decisions" section.
 const ROLE_PERMISSIONS: Record<Role, ReadonlySet<Permission>> = {
-  owner: new Set(["view_project", "manage_project"]),
-  admin: new Set(["view_project", "manage_project"]),
-  member: new Set(["view_project"]),
-  viewer: new Set(["view_project"]),
+  owner: new Set(["view_project", "manage_project", "view_issue", "manage_issue"]),
+  admin: new Set(["view_project", "manage_project", "view_issue", "manage_issue"]),
+  member: new Set(["view_project", "view_issue", "manage_issue"]),
+  viewer: new Set(["view_project", "view_issue"]),
 };
 
 export function hasPermission(role: Role, permission: Permission): boolean {

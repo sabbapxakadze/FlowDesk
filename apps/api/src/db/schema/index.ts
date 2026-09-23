@@ -4,3 +4,5 @@ export * from "./users.js";
 export * from "./organization-members.js";
 export * from "./sessions.js";
 export * from "./auth-tokens.js";
+export * from "./issues.js";
+export * from "./issue-events.js";

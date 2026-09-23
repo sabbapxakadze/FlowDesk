@@ -4,6 +4,7 @@ import { requestLogger } from "./middleware/request-logger.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { healthRouter } from "./modules/health/health.routes.js";
 import { projectsRouter } from "./modules/projects/projects.routes.js";
+import { issuesRouter } from "./modules/issues/issues.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 
 /**
@@ -22,6 +23,7 @@ app.use(cookieParser());
 // surface. Everything else lives under /api/v1.
 app.use("/api", healthRouter);
 app.use("/api/v1", projectsRouter);
+app.use("/api/v1", issuesRouter);
 app.use("/api/v1", authRouter);
 
 // Must be registered after every route — see error-handler.ts.

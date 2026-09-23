@@ -12,7 +12,7 @@ declare global {
   namespace Express {
     interface Request {
       auth?: { userId: string };
-      ctx?: { userId: string; organizationId: string; role: Role };
+      ctx?: { userId: string; organizationId: string; role: Role; projectId?: string };
     }
   }
 }

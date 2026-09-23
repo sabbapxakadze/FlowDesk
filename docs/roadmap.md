@@ -93,13 +93,27 @@ Split into four ordered slices, all shipped.
 
 ## Phase 3 — Issues core + event system
 
-- [ ] `issues`, `labels`, `issue_labels`, `comments`, `issue_events` schema
-- [ ] Human-readable keys (`AUTH-23`) via per-project counters
-- [ ] Create / read / update issue, `version` column + 409 on conflict
-- [ ] Domain events written in the mutation's transaction
+Slice 1 (create + read) shipped:
+
+- [x] `issues`, `issue_events` schema — `labels`/`issue_labels`/`comments`
+      land in later slices
+- [x] Human-readable keys (`AUTH-23`) via a per-project atomic counter
+      (`projects.nextIssueNumber`, incremented with `UPDATE ... RETURNING`
+      inside the create transaction) — verified safe under concurrent
+      creates with a real `Promise.all` test, and confirmed the test
+      actually catches the race by swapping in a naive `SELECT MAX+1`
+      and watching it fail before reverting
+- [x] Create / read issue, nested under a project via a new
+      `requireProject` middleware (org membership + project-in-org check,
+      same defense-in-depth shape as `requireOrgMembership`)
+- [x] Domain events written in the mutation's transaction — `issue.created`
+      proven with a real Postgres test (one event row per created issue)
+- [ ] `version` column + 409 on conflict — column exists, slice 2 wires up
+      the update path
 - [ ] Activity timeline reading `issue_events`
-- [ ] Comments
-- [ ] Issue detail page
+- [ ] Comments, labels
+- [ ] Issue detail page (a minimal project-detail/issue-list page exists;
+      the fuller issue detail view comes with slice 4)
 
 ## Phase 3.5 — Design system extraction
 

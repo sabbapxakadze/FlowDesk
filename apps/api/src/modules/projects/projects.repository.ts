@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { projects } from "../../db/schema/index.js";
 
@@ -16,5 +16,19 @@ export async function listByOrganization(organizationId: string) {
 export async function create(input: { organizationId: string; name: string; key: string }) {
   const [project] = await db.insert(projects).values(input).returning();
   if (!project) throw new Error("Failed to create project");
+  return project;
+}
+
+/**
+ * Scoped by organizationId even though a project's id alone would already
+ * find the right row — same defense-in-depth reasoning as every other
+ * tenant-scoped query (ADR 0004). Used by requireProject to confirm a
+ * :projectId route param actually belongs to the caller's organization.
+ */
+export async function findById(organizationId: string, projectId: string) {
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.organizationId, organizationId), eq(projects.id, projectId)));
   return project;
 }

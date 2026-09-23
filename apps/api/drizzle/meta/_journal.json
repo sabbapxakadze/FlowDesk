@@ -29,6 +29,13 @@
       "when": 1790095565699,
       "tag": "0003_normal_cerebro",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790174203722,
+      "tag": "0004_quick_exodus",
+      "breakpoints": true
     }
   ]
 }

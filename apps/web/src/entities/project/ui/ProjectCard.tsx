@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import type { Project } from "../model";
 
 /**
@@ -8,8 +9,10 @@ import type { Project } from "../model";
 export function ProjectCard({ project }: { project: Project }) {
   return (
     <li className="rounded-lg border border-gray-200 px-4 py-3">
-      <p className="font-medium">{project.name}</p>
-      <p className="text-sm text-gray-500">{project.key}</p>
+      <Link to={`/projects/${project.id}`} className="block">
+        <p className="font-medium">{project.name}</p>
+        <p className="text-sm text-gray-500">{project.key}</p>
+      </Link>
     </li>
   );
 }
