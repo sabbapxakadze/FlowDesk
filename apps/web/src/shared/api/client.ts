@@ -91,6 +91,19 @@ export async function apiPatch<T>(path: string, body: unknown, schema: z.ZodType
   return schema.parse(await res.json());
 }
 
+export async function apiDelete<T>(path: string, schema: z.ZodType<T>): Promise<T> {
+  const res = await fetch(`/api${path}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+
+  if (!res.ok) {
+    throw await toApiError(res, path, "DELETE");
+  }
+
+  return schema.parse(await res.json());
+}
+
 /** For endpoints that return 204 No Content — nothing to parse or validate. */
 export async function apiPostVoid(path: string, body?: unknown): Promise<void> {
   const res = await fetch(`/api${path}`, {

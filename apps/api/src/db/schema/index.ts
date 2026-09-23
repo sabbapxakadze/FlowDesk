@@ -6,3 +6,5 @@ export * from "./sessions.js";
 export * from "./auth-tokens.js";
 export * from "./issues.js";
 export * from "./issue-events.js";
+export * from "./labels.js";
+export * from "./issue-labels.js";

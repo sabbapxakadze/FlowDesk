@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { issueEvents, issues, projects } from "../../db/schema/index.js";
+import { issueEvents, issueLabels, issues, labels, projects } from "../../db/schema/index.js";
 import type { IssueStatus } from "@flowdesk/contracts";
 
 /**
@@ -140,5 +140,94 @@ export async function update(input: {
       );
 
     return current ? { status: "conflict", current } : { status: "not_found" };
+  });
+}
+
+/**
+ * Joined through labels (not a bare issueId filter) so organizationId is
+ * still part of every tenant-scoped read, per CLAUDE.md's repository
+ * rule — issue_labels itself has no organizationId column, labels does.
+ */
+export async function listLabelsForIssue(organizationId: string, issueId: string) {
+  return db
+    .select({
+      id: labels.id,
+      organizationId: labels.organizationId,
+      name: labels.name,
+      color: labels.color,
+      createdAt: labels.createdAt,
+      updatedAt: labels.updatedAt,
+    })
+    .from(issueLabels)
+    .innerJoin(labels, eq(issueLabels.labelId, labels.id))
+    .where(and(eq(issueLabels.issueId, issueId), eq(labels.organizationId, organizationId)));
+}
+
+/**
+ * Confirms the label actually belongs to this org before attaching it —
+ * defense in depth against a labelId from a different organization, same
+ * reasoning as every other tenant-scoped write in this codebase. Attaching
+ * the same label twice is rejected by issue_labels' composite primary key
+ * (caught and converted to a 409 in issues.service.ts).
+ */
+export async function attachLabel(input: {
+  organizationId: string;
+  issueId: string;
+  labelId: string;
+  actorId: string;
+}): Promise<{ status: "attached" } | { status: "label_not_found" }> {
+  return db.transaction(async (tx) => {
+    const [label] = await tx
+      .select()
+      .from(labels)
+      .where(and(eq(labels.id, input.labelId), eq(labels.organizationId, input.organizationId)));
+    if (!label) return { status: "label_not_found" };
+
+    await tx.insert(issueLabels).values({ issueId: input.issueId, labelId: input.labelId });
+
+    await tx.insert(issueEvents).values({
+      issueId: input.issueId,
+      actorId: input.actorId,
+      type: "issue.label_added",
+      payload: { labelId: label.id, labelName: label.name },
+    });
+
+    return { status: "attached" };
+  });
+}
+
+/**
+ * Idempotent: detaching a label that was never attached still returns
+ * "detached" (the end state the caller wanted is already true) — no
+ * issue_events row is written unless a row was actually removed.
+ */
+export async function detachLabel(input: {
+  organizationId: string;
+  issueId: string;
+  labelId: string;
+  actorId: string;
+}): Promise<{ status: "detached" } | { status: "label_not_found" }> {
+  return db.transaction(async (tx) => {
+    const [label] = await tx
+      .select()
+      .from(labels)
+      .where(and(eq(labels.id, input.labelId), eq(labels.organizationId, input.organizationId)));
+    if (!label) return { status: "label_not_found" };
+
+    const deleted = await tx
+      .delete(issueLabels)
+      .where(and(eq(issueLabels.issueId, input.issueId), eq(issueLabels.labelId, input.labelId)))
+      .returning();
+
+    if (deleted.length > 0) {
+      await tx.insert(issueEvents).values({
+        issueId: input.issueId,
+        actorId: input.actorId,
+        type: "issue.label_removed",
+        payload: { labelId: label.id, labelName: label.name },
+      });
+    }
+
+    return { status: "detached" };
   });
 }

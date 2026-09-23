@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { resetDatabase } from "../../db/test-utils.js";
-import { issueEvents, organizations, projects, users } from "../../db/schema/index.js";
+import { issueEvents, labels, organizations, projects, users } from "../../db/schema/index.js";
 import * as issuesRepository from "./issues.repository.js";
+import * as issuesService from "./issues.service.js";
 
 async function seedOrgProjectUser(orgName: string, orgSlug: string, projectKey: string) {
   const [org] = await db.insert(organizations).values({ name: orgName, slug: orgSlug }).returning();
@@ -254,5 +255,173 @@ describe("issues repository — update", () => {
 
     const statuses = [resultA.status, resultB.status].sort();
     expect(statuses).toEqual(["conflict", "updated"]);
+  });
+});
+
+describe("issues repository — labels", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("attaches a label and writes exactly one issue.label_added event", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+    const [label] = await db
+      .insert(labels)
+      .values({ organizationId: org.id, name: "bug", color: "#FF0000" })
+      .returning();
+    if (!label) throw new Error("setup failed");
+
+    const result = await issuesRepository.attachLabel({
+      organizationId: org.id,
+      issueId: issue.id,
+      labelId: label.id,
+      actorId: user.id,
+    });
+
+    expect(result.status).toBe("attached");
+
+    const attached = await issuesRepository.listLabelsForIssue(org.id, issue.id);
+    expect(attached).toHaveLength(1);
+    expect(attached[0]?.name).toBe("bug");
+
+    const addEvents = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.label_added")));
+    expect(addEvents).toHaveLength(1);
+    expect(addEvents[0]?.payload).toEqual({ labelId: label.id, labelName: "bug" });
+  });
+
+  it("rejects attaching a label from a different organization", async () => {
+    const a = await seedOrgProjectUser("Org A", "org-a", "AAA");
+    const b = await seedOrgProjectUser("Org B", "org-b", "BBB");
+    const issue = await issuesRepository.create({
+      organizationId: a.org.id,
+      projectId: a.project.id,
+      title: "Issue",
+      description: null,
+      reporterId: a.user.id,
+    });
+    const [foreignLabel] = await db
+      .insert(labels)
+      .values({ organizationId: b.org.id, name: "bug", color: "#FF0000" })
+      .returning();
+    if (!foreignLabel) throw new Error("setup failed");
+
+    const result = await issuesRepository.attachLabel({
+      organizationId: a.org.id,
+      issueId: issue.id,
+      labelId: foreignLabel.id,
+      actorId: a.user.id,
+    });
+
+    expect(result.status).toBe("label_not_found");
+  });
+
+  it("detaches a label and writes exactly one issue.label_removed event", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+    const [label] = await db
+      .insert(labels)
+      .values({ organizationId: org.id, name: "bug", color: "#FF0000" })
+      .returning();
+    if (!label) throw new Error("setup failed");
+    await issuesRepository.attachLabel({
+      organizationId: org.id,
+      issueId: issue.id,
+      labelId: label.id,
+      actorId: user.id,
+    });
+
+    const result = await issuesRepository.detachLabel({
+      organizationId: org.id,
+      issueId: issue.id,
+      labelId: label.id,
+      actorId: user.id,
+    });
+
+    expect(result.status).toBe("detached");
+    expect(await issuesRepository.listLabelsForIssue(org.id, issue.id)).toHaveLength(0);
+
+    const removeEvents = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.label_removed")));
+    expect(removeEvents).toHaveLength(1);
+  });
+
+  it("rejects attaching the same label twice with a 409", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+    const [label] = await db
+      .insert(labels)
+      .values({ organizationId: org.id, name: "bug", color: "#FF0000" })
+      .returning();
+    if (!label) throw new Error("setup failed");
+
+    await issuesService.attachLabel({
+      organizationId: org.id,
+      issueId: issue.id,
+      labelId: label.id,
+      actorId: user.id,
+    });
+
+    await expect(
+      issuesService.attachLabel({
+        organizationId: org.id,
+        issueId: issue.id,
+        labelId: label.id,
+        actorId: user.id,
+      }),
+    ).rejects.toMatchObject({ status: 409, code: "label_already_attached" });
+  });
+
+  it("is idempotent when detaching a label that was never attached", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+    const [label] = await db
+      .insert(labels)
+      .values({ organizationId: org.id, name: "bug", color: "#FF0000" })
+      .returning();
+    if (!label) throw new Error("setup failed");
+
+    const result = await issuesRepository.detachLabel({
+      organizationId: org.id,
+      issueId: issue.id,
+      labelId: label.id,
+      actorId: user.id,
+    });
+
+    expect(result.status).toBe("detached");
+    const removeEvents = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.label_removed")));
+    expect(removeEvents).toHaveLength(0);
   });
 });

@@ -5,6 +5,7 @@ import { errorHandler } from "./middleware/error-handler.js";
 import { healthRouter } from "./modules/health/health.routes.js";
 import { projectsRouter } from "./modules/projects/projects.routes.js";
 import { issuesRouter } from "./modules/issues/issues.routes.js";
+import { labelsRouter } from "./modules/labels/labels.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 
 /**
@@ -24,6 +25,7 @@ app.use(cookieParser());
 app.use("/api", healthRouter);
 app.use("/api/v1", projectsRouter);
 app.use("/api/v1", issuesRouter);
+app.use("/api/v1", labelsRouter);
 app.use("/api/v1", authRouter);
 
 // Must be registered after every route — see error-handler.ts.

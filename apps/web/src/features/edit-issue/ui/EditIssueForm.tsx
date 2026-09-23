@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Issue, IssueStatus } from "@flowdesk/contracts";
 import { issueKeys } from "../../../entities/issue";
 import { ApiError } from "../../../shared/api/client";
+import { LabelPicker } from "../../edit-issue-labels";
 import { updateIssue } from "../api/updateIssue";
 
 type FormValues = { title: string; description: string; status: IssueStatus };
@@ -91,6 +92,11 @@ export function EditIssueForm({
           <option value="done">Done</option>
         </select>
       </label>
+
+      <div className="flex flex-col gap-1 text-sm">
+        Labels
+        <LabelPicker organizationId={organizationId} projectId={projectId} issueId={issue.id} />
+      </div>
 
       <div className="flex gap-2">
         <button

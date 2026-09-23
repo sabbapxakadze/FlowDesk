@@ -40,3 +40,33 @@ issuesRouter.patch(
   requirePermission("manage_issue"),
   issuesController.updateIssue,
 );
+
+issuesRouter.get(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId/labels",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("view_issue"),
+  issuesController.listIssueLabels,
+);
+
+issuesRouter.post(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId/labels",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("manage_issue"),
+  issuesController.attachLabel,
+);
+
+issuesRouter.delete(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId/labels/:labelId",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("manage_issue"),
+  issuesController.detachLabel,
+);

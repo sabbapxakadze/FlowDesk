@@ -11,12 +11,21 @@ export async function listProjects(organizationId: string) {
   return projectsRepository.listByOrganization(organizationId);
 }
 
+// This drizzle-orm version wraps the raw pg error in a DrizzleQueryError —
+// code/constraint live on err.cause, not the top-level error. The
+// original top-level check here never actually matched (confirmed by
+// forcing a real duplicate-key insert and inspecting the error shape
+// while building Phase 3 slice 3's identical label-uniqueness check) —
+// a duplicate project key silently fell through to a raw 500 instead of
+// the intended 409. Fixed here and in labels.service.ts / issues.service.ts.
 function isUniqueViolation(err: unknown, constraint: string): boolean {
+  const cause =
+    typeof err === "object" && err !== null ? (err as { cause?: unknown }).cause : undefined;
   return (
-    typeof err === "object" &&
-    err !== null &&
-    (err as { code?: unknown }).code === "23505" &&
-    (err as { constraint?: unknown }).constraint === constraint
+    typeof cause === "object" &&
+    cause !== null &&
+    (cause as { code?: unknown }).code === "23505" &&
+    (cause as { constraint?: unknown }).constraint === constraint
   );
 }
 

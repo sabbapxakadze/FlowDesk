@@ -1,8 +1,11 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 import {
+  attachLabelRequestSchema,
   createIssueRequestSchema,
   createIssueResponseSchema,
   listIssuesResponseSchema,
+  listLabelsResponseSchema,
   updateIssueRequestSchema,
   updateIssueResponseSchema,
 } from "@flowdesk/contracts";
@@ -92,5 +95,72 @@ export async function updateIssue(req: Request, res: Response) {
   }
 
   const body = updateIssueResponseSchema.parse({ data: toWireFormat(result.issue) });
+  res.json(body);
+}
+
+export async function listIssueLabels(req: Request, res: Response) {
+  if (!req.ctx?.issueId) {
+    throw new Error("listIssueLabels requires requireIssue to have run first");
+  }
+
+  const rows = await issuesService.listIssueLabels(req.ctx.organizationId, req.ctx.issueId);
+  const body = listLabelsResponseSchema.parse({ data: rows.map(toWireFormat) });
+  res.json(body);
+}
+
+export async function attachLabel(req: Request, res: Response) {
+  if (!req.ctx?.issueId) {
+    throw new Error("attachLabel requires requireIssue to have run first");
+  }
+
+  const parsed = attachLabelRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError(
+      "validation_error",
+      400,
+      "Invalid label attachment",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+
+  const result = await issuesService.attachLabel({
+    organizationId: req.ctx.organizationId,
+    issueId: req.ctx.issueId,
+    labelId: parsed.data.labelId,
+    actorId: req.ctx.userId,
+  });
+
+  if (result.status === "label_not_found") {
+    throw new AppError("label_not_found", 404, "Label not found.");
+  }
+
+  const rows = await issuesService.listIssueLabels(req.ctx.organizationId, req.ctx.issueId);
+  const body = listLabelsResponseSchema.parse({ data: rows.map(toWireFormat) });
+  res.status(201).json(body);
+}
+
+export async function detachLabel(req: Request, res: Response) {
+  if (!req.ctx?.issueId) {
+    throw new Error("detachLabel requires requireIssue to have run first");
+  }
+
+  const parsedLabelId = z.uuid().safeParse(req.params.labelId);
+  if (!parsedLabelId.success) {
+    throw new AppError("invalid_label_id", 400, "labelId must be a UUID.");
+  }
+
+  const result = await issuesService.detachLabel({
+    organizationId: req.ctx.organizationId,
+    issueId: req.ctx.issueId,
+    labelId: parsedLabelId.data,
+    actorId: req.ctx.userId,
+  });
+
+  if (result.status === "label_not_found") {
+    throw new AppError("label_not_found", 404, "Label not found.");
+  }
+
+  const rows = await issuesService.listIssueLabels(req.ctx.organizationId, req.ctx.issueId);
+  const body = listLabelsResponseSchema.parse({ data: rows.map(toWireFormat) });
   res.json(body);
 }

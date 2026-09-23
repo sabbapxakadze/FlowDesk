@@ -35,6 +35,15 @@ async function createProject(accessToken: string, organizationId: string, key: s
   return res.body.data.id as string;
 }
 
+async function createLabel(accessToken: string, organizationId: string, name: string) {
+  const res = await request(app)
+    .post(`/api/v1/organizations/${organizationId}/labels`)
+    .set("Authorization", `Bearer ${accessToken}`)
+    .send({ name, color: "#FF0000" })
+    .expect(201);
+  return res.body.data.id as string;
+}
+
 async function createIssue(
   accessToken: string,
   organizationId: string,
@@ -192,5 +201,95 @@ describe("issue update (HTTP level)", () => {
       .expect(404);
 
     expect(res.body.error.code).toBe("issue_not_found");
+  });
+});
+
+describe("issue labels (HTTP level)", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("lets a member attach and then list labels on their own issue", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Original");
+    const labelId = await createLabel(userA.accessToken, userA.organizationId, "bug");
+
+    const attachRes = await request(app)
+      .post(
+        `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/labels`,
+      )
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ labelId })
+      .expect(201);
+
+    expect(attachRes.body.data).toHaveLength(1);
+    expect(attachRes.body.data[0].name).toBe("bug");
+
+    const listRes = await request(app)
+      .get(
+        `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/labels`,
+      )
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .expect(200);
+
+    expect(listRes.body.data).toHaveLength(1);
+  });
+
+  it("lets a member detach a label from their own issue", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Original");
+    const labelId = await createLabel(userA.accessToken, userA.organizationId, "bug");
+    await request(app)
+      .post(
+        `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/labels`,
+      )
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ labelId })
+      .expect(201);
+
+    const detachRes = await request(app)
+      .delete(
+        `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/labels/${labelId}`,
+      )
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .expect(200);
+
+    expect(detachRes.body.data).toHaveLength(0);
+  });
+
+  it("blocks attaching a label that belongs to a different organization", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const userB = await registerAndLogIn("b@example.com", "Org B");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Original");
+    const foreignLabelId = await createLabel(userB.accessToken, userB.organizationId, "bug");
+
+    const res = await request(app)
+      .post(
+        `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/labels`,
+      )
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ labelId: foreignLabelId })
+      .expect(404);
+
+    expect(res.body.error.code).toBe("label_not_found");
+  });
+
+  it("blocks a valid user from another organization from attaching a label to someone else's issue", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const userB = await registerAndLogIn("b@example.com", "Org B");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Original");
+    const labelId = await createLabel(userA.accessToken, userA.organizationId, "bug");
+
+    await request(app)
+      .post(
+        `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/labels`,
+      )
+      .set("Authorization", `Bearer ${userB.accessToken}`)
+      .send({ labelId })
+      .expect(403);
   });
 });

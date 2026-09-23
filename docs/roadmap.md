@@ -127,8 +127,30 @@ Slice 2 (update + optimistic concurrency) shipped:
       verified live (edited an issue in the UI, updated it via `curl`
       behind the scenes to bump its version, then saved the stale UI edit
       and confirmed the 409 path end to end)
+Slice 3 (labels) shipped:
+
+- [x] `labels` (org-scoped, not project-scoped) + `issue_labels` schema —
+      attach/detach live in the `issues` module (they're issue mutations,
+      each writes an `issue_events` row) rather than a separate module.
+      `labels` itself gets a minimal org-level create+list surface only.
+- [x] `issue.label_added` / `issue.label_removed` events, same
+      minimal-payload precedent as `issue.created`/`issue.updated`
+- [x] Inline label picker in the issue edit form: attach, detach, and
+      create-a-new-label-on-the-fly — verified live end to end (created a
+      label, attached it, confirmed the duplicate-attach 409 and the
+      cross-org-label 404, detached it, confirmed both `issue_events`
+      rows via `psql`)
+- [x] **Found and fixed a real pre-existing bug** while testing this:
+      `isUniqueViolation()` (used for the 409-on-duplicate-key path in
+      `projects.service.ts`, and copied into `labels.service.ts` /
+      `issues.service.ts` for this slice) checked `err.code`/`err.constraint`
+      at the top level, but this drizzle-orm version wraps the real pg
+      error under `err.cause` — the check never matched, so a duplicate
+      project key silently fell through to a raw 500 instead of the
+      intended 409. Fixed in all three places; added the test that would
+      have caught it (`projects.repository.test.ts`).
 - [ ] Activity timeline reading `issue_events`
-- [ ] Comments, labels
+- [ ] Comments
 - [ ] Issue detail page (a minimal project-detail/issue-list page exists;
       the fuller issue detail view comes with slice 4)
 
