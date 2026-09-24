@@ -69,6 +69,10 @@ export function HomePage() {
           </p>
         </Card>
       )}
+
+      <Link to="/design-system" className="text-sm text-[var(--color-text-link)] underline">
+        Design system
+      </Link>
     </main>
   );
 }

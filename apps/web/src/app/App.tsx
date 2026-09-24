@@ -8,6 +8,7 @@ import { LoginPage } from "../pages/login/LoginPage";
 import { VerifyEmailPage } from "../pages/verify-email/VerifyEmailPage";
 import { ForgotPasswordPage } from "../pages/forgot-password/ForgotPasswordPage";
 import { ResetPasswordPage } from "../pages/reset-password/ResetPasswordPage";
+import { DesignSystemPage } from "../pages/design-system/DesignSystemPage";
 import { RequireAuth } from "../shared/auth/RequireAuth";
 
 export function App() {
@@ -44,6 +45,7 @@ export function App() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/design-system" element={<DesignSystemPage />} />
       </Routes>
     </BrowserRouter>
   );

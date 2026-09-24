@@ -175,7 +175,7 @@ Slice 4 (comments + activity timeline + issue detail page) shipped:
       label → comment, asserting the four resulting events come back in
       chronological order with the correct actor name on each.
 
-## Phase 3.5 — Design system extraction
+## Phase 3.5 — Design system extraction ✅ complete
 
 Goal: by now there are real screens (auth forms, project list, issue detail,
 activity timeline) to draw a design system *from*, instead of guessing one
@@ -245,7 +245,25 @@ Slice 3 (shadcn-derived base components) shipped:
       visual look — then confirmed via `getComputedStyle` that a migrated
       card/button's border, radius, and background match the pre-slice
       values exactly in light mode and still correctly flip in dark mode.
-- [ ] `/design-system` route documenting every token and base component
+
+Slice 4 (`/design-system` route) shipped:
+
+- [x] `/design-system` route documenting every token and base component —
+      public, not behind `RequireAuth` (it documents the UI system, not
+      app data — "portfolio material" per ADR 0006 means anyone can see
+      it). All 11 color tokens + 2 radius tokens as live swatches (a
+      hardcoded, typed list, not parsed from `semantic.css` — small and
+      stable enough that drift would be a visible diff), plus every
+      `shared/ui` component rendered as a real working instance.
+      Found and fixed a real bug before it ever reached the browser:
+      building an arbitrary-value class via a template literal
+      (`` `bg-[var(${token.cssVar})]` ``) doesn't work — Tailwind's JIT
+      scanner reads literal source text, not runtime-evaluated strings,
+      so it can never see the resolved class name. Fixed with a lookup
+      table of complete literal strings per token. Verified live:
+      confirmed the route loads without logging in, and toggled dark mode
+      on the page itself — every swatch and every live component
+      responded, checked via `getComputedStyle`, not just eyeballed.
 
 **Done when** dark mode is a ~20-variable change and every component so far
 uses only semantic tokens. *(True as of slice 2 — confirmed by the grep in

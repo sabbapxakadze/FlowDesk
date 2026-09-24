@@ -16,21 +16,23 @@ win.
 
 ## Current phase
 
-**Phase 3.5 — Design system extraction.** See `docs/roadmap.md`.
+**Phase 4 — React depth.** See `docs/roadmap.md`.
 
-Phase 3 (Issues core + event system) is fully done across four slices —
-issue create/read/update with optimistic concurrency (`version` + 409),
-labels (org-scoped, attach/detach), comments, and a real activity
-timeline reading `issue_events` end to end. Full detail lives in
-`docs/roadmap.md`'s Phase 3 checklist; don't duplicate it here.
+Phase 3.5 (Design system extraction) is fully done across four slices —
+the semantic token tier + dark mode infrastructure, migrating every
+component onto it, a shadcn-derived base component set in `shared/ui`
+(`Button`, `Input`, `Textarea`, `Select`, `Field`, `Card`, `ErrorText`),
+and the public `/design-system` route documenting all of it live. Full
+detail lives in `docs/roadmap.md`'s Phase 3.5 checklist; don't duplicate
+it here.
 
-What Phase 3.5 inherits from it: real screens now exist (auth forms,
-projects list, project detail, issue detail with its edit form/label
-picker/timeline/comments) to draw a design system *from* — the whole
-point of this phase being sequenced after Phase 3 instead of before it.
-The transactional event-log pattern (`issue_events`, four event types)
-is done for this iteration; new event types get added the same way when
-a future feature needs one, not preemptively.
+What Phase 4 inherits from it: every screen already uses semantic tokens
+and the shared component set exclusively — a new list/table/filter UI
+should be built on `shared/ui`'s primitives from the start, not hand-rolled
+and migrated later. `entities/project`'s `useProjects` hook (plain
+`useQuery`, no key factory conventions beyond the ad hoc ones already in
+place) is the concrete thing Phase 4's "TanStack Query conventions" bullet
+means to formalize.
 Update this line when a phase completes.
 
 ---
