@@ -1,6 +1,10 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
 @import "../shared/tokens/primitives.css";
+@import "../shared/tokens/semantic.css";
 
 body {
   font-family: var(--font-sans);
+  background-color: var(--color-bg-page);
+  color: var(--color-text-default);
 }

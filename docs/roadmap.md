@@ -181,8 +181,31 @@ Goal: by now there are real screens (auth forms, project list, issue detail,
 activity timeline) to draw a design system *from*, instead of guessing one
 upfront. This is a deliberate pause to consolidate, not new product features.
 
-- [ ] Audit components built so far; extract repeated patterns into semantic
+Slice 1 (semantic tokens + dark mode infrastructure) shipped:
+
+- [x] Audit components built so far; extract repeated patterns into semantic
       tokens (`--color-bg-surface`, `--color-text-muted`, `--radius-card`, ...)
+      — derived from a real audit of all 21 `className=`-using files, not
+      guessed. Values reference Tailwind v4's own generated primitive
+      variables (`var(--color-gray-500)`, etc.), not hardcoded hex.
+- [x] Dark mode via `@media (prefers-color-scheme: dark)` redefining the
+      same semantic tier, plus a `[data-theme="dark"]` override ready for
+      a future manual toggle (none built yet — no toggle UI in this slice).
+      Verified live: this machine's real OS dark-mode preference made the
+      app render dark automatically, no code path beyond the media query.
+- [x] Inter actually loads now (`@fontsource-variable/inter`, self-hosted)
+      — `--font-sans` already named it since Phase 0, but nothing loaded
+      the font file, so every screen had silently been falling back to a
+      system font. Found and fixed as part of finishing this layer.
+- [x] **Found and fixed a real Tailwind v4 behavior** while verifying this:
+      `@theme` silently tree-shakes declared variables it can't detect a
+      utility-class consumer for via static source scanning — most of the
+      new semantic tokens were silently missing from the compiled CSS
+      output until switched to `@theme static` (confirmed by reading the
+      actual generated stylesheet, not by trusting the source file).
+      Component migration (slice 2) will give these tokens real utility
+      consumers, but `static` is still correct going forward since new
+      tokens will keep getting added before their first consumer exists.
 - [ ] Rewrite existing components to consume semantic tokens only, remove any
       raw Tailwind values that snuck in
 - [ ] Pull in shadcn-derived components into `shared/ui` as actually needed,
