@@ -5,6 +5,7 @@ import {
   requestPasswordResetRequestSchema,
   type RequestPasswordResetRequest,
 } from "@flowdesk/contracts";
+import { Button, ErrorText, Field, Input } from "../../../shared/ui";
 import { requestPasswordReset } from "../api/requestPasswordReset";
 
 /**
@@ -38,27 +39,15 @@ export function RequestPasswordResetForm() {
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
       className="flex max-w-sm flex-col gap-4"
     >
-      <label className="flex flex-col gap-1 text-sm">
-        Email
-        <input
-          type="email"
-          {...register("email")}
-          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
-        />
-        {errors.email && <span className="text-[var(--color-text-danger)]">{errors.email.message}</span>}
-      </label>
+      <Field label="Email" error={errors.email?.message}>
+        <Input type="email" {...register("email")} className="w-full" />
+      </Field>
 
-      {mutation.isError && (
-        <p className="text-sm text-[var(--color-text-danger)]">{mutation.error.message}</p>
-      )}
+      {mutation.isError && <ErrorText>{mutation.error.message}</ErrorText>}
 
-      <button
-        type="submit"
-        disabled={mutation.isPending}
-        className="rounded-[var(--radius-control)] bg-[var(--color-bg-action-primary)] px-4 py-2 text-[var(--color-text-on-action)] disabled:opacity-50"
-      >
+      <Button type="submit" disabled={mutation.isPending}>
         {mutation.isPending ? "Sending…" : "Send reset link"}
-      </button>
+      </Button>
     </form>
   );
 }

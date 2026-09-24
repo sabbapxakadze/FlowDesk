@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { healthResponseSchema, type HealthResponse } from "@flowdesk/contracts";
 import { apiGet } from "../../shared/api/client";
 import { useAuth } from "../../shared/auth/useAuth";
+import { Card } from "../../shared/ui";
 
 /**
  * Plain useEffect + useState here on purpose — this is Phase 0's one job:
@@ -56,7 +57,7 @@ export function HomePage() {
       {error && <p className="text-[var(--color-text-danger)]">API error: {error}</p>}
       {!error && !health && <p className="text-[var(--color-text-muted)]">Checking API…</p>}
       {health && (
-        <div className="rounded-[var(--radius-card)] border border-[var(--color-border-default)] px-4 py-3 text-sm">
+        <Card className="text-sm">
           <p>
             API status: <span className="font-medium">{health.status}</span>
           </p>
@@ -66,7 +67,7 @@ export function HomePage() {
           <p>
             As of: <span className="font-medium">{health.timestamp}</span>
           </p>
-        </div>
+        </Card>
       )}
     </main>
   );

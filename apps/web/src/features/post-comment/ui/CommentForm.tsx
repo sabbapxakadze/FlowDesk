@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { issueKeys } from "../../../entities/issue";
+import { Button, ErrorText, Textarea } from "../../../shared/ui";
 import { createComment } from "../api/createComment";
 
 type FormValues = { body: string };
@@ -30,22 +31,11 @@ export function CommentForm({
       onSubmit={handleSubmit((data) => data.body.trim() && mutation.mutate(data))}
       className="flex flex-col gap-2"
     >
-      <textarea
-        {...register("body", { required: true })}
-        placeholder="Add a comment…"
-        rows={3}
-        className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1 text-sm"
-      />
-      <button
-        type="submit"
-        disabled={mutation.isPending}
-        className="self-start rounded-[var(--radius-control)] bg-[var(--color-bg-action-primary)] px-3 py-1 text-sm text-[var(--color-text-on-action)] disabled:opacity-50"
-      >
+      <Textarea {...register("body", { required: true })} placeholder="Add a comment…" rows={3} />
+      <Button type="submit" size="sm" disabled={mutation.isPending} className="self-start">
         {mutation.isPending ? "Posting…" : "Comment"}
-      </button>
-      {mutation.isError && (
-        <p className="text-sm text-[var(--color-text-danger)]">{mutation.error.message}</p>
-      )}
+      </Button>
+      {mutation.isError && <ErrorText>{mutation.error.message}</ErrorText>}
     </form>
   );
 }

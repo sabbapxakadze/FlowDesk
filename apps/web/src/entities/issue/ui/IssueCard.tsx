@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { Card } from "../../../shared/ui";
 import type { Issue } from "../model";
 
 /**
@@ -22,7 +23,7 @@ export function IssueCard({
   onEdit?: () => void;
 }) {
   return (
-    <li className="flex items-start justify-between gap-2 rounded-[var(--radius-card)] border border-[var(--color-border-default)] px-4 py-3">
+    <Card as="li" className="flex items-start justify-between gap-2">
       <Link to={`/projects/${issue.projectId}/issues/${issue.id}`}>
         <p className="text-sm text-[var(--color-text-muted)]">
           {projectKey}-{issue.number}
@@ -35,6 +36,6 @@ export function IssueCard({
           Edit
         </button>
       )}
-    </li>
+    </Card>
   );
 }

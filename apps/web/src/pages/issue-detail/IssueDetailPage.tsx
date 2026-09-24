@@ -6,6 +6,7 @@ import { useIssues, useIssueEvents } from "../../entities/issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { CommentForm } from "../../features/post-comment";
 import { useAuth } from "../../shared/auth/useAuth";
+import { Card } from "../../shared/ui";
 
 function describeEvent(event: IssueEvent): string {
   switch (event.type) {
@@ -30,10 +31,10 @@ function describeEvent(event: IssueEvent): string {
 function TimelineEntry({ event }: { event: IssueEvent }) {
   if (event.type === "issue.commented") {
     return (
-      <li className="rounded-[var(--radius-control)] border border-[var(--color-border-default)] px-3 py-2">
+      <Card as="li" className="rounded-[var(--radius-control)] px-3 py-2">
         <p className="text-xs text-[var(--color-text-muted)]">{event.actorName} commented</p>
         <p className="text-sm">{String(event.payload.body)}</p>
-      </li>
+      </Card>
     );
   }
 

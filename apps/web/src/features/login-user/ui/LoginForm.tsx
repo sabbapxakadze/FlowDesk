@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router";
 import { loginRequestSchema, type LoginRequest } from "@flowdesk/contracts";
 import { useAuth } from "../../../shared/auth/useAuth";
+import { Button, ErrorText, Field, Input } from "../../../shared/ui";
 import { loginUser } from "../api/loginUser";
 
 export function LoginForm() {
@@ -31,39 +32,19 @@ export function LoginForm() {
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
       className="flex max-w-sm flex-col gap-4"
     >
-      <label className="flex flex-col gap-1 text-sm">
-        Email
-        <input
-          type="email"
-          {...register("email")}
-          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
-        />
-        {errors.email && <span className="text-[var(--color-text-danger)]">{errors.email.message}</span>}
-      </label>
+      <Field label="Email" error={errors.email?.message}>
+        <Input type="email" {...register("email")} className="w-full" />
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Password
-        <input
-          type="password"
-          {...register("password")}
-          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
-        />
-        {errors.password && (
-          <span className="text-[var(--color-text-danger)]">{errors.password.message}</span>
-        )}
-      </label>
+      <Field label="Password" error={errors.password?.message}>
+        <Input type="password" {...register("password")} className="w-full" />
+      </Field>
 
-      {mutation.isError && (
-        <p className="text-sm text-[var(--color-text-danger)]">{mutation.error.message}</p>
-      )}
+      {mutation.isError && <ErrorText>{mutation.error.message}</ErrorText>}
 
-      <button
-        type="submit"
-        disabled={mutation.isPending}
-        className="rounded-[var(--radius-control)] bg-[var(--color-bg-action-primary)] px-4 py-2 text-[var(--color-text-on-action)] disabled:opacity-50"
-      >
+      <Button type="submit" disabled={mutation.isPending}>
         {mutation.isPending ? "Logging in…" : "Log in"}
-      </button>
+      </Button>
 
       <Link to="/forgot-password" className="text-sm text-[var(--color-text-link)] underline">
         Forgot password?

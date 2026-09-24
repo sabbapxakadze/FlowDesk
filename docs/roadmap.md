@@ -225,8 +225,26 @@ Slice 2 (component migration) shipped:
       light mode (zero regression) and correctly flip in dark mode, checked
       via `getComputedStyle` on real rendered elements, not just the token
       file's own custom properties.
-- [ ] Pull in shadcn-derived components into `shared/ui` as actually needed,
-      rewritten onto our semantic tokens
+Slice 3 (shadcn-derived base components) shipped:
+
+- [x] Pull in shadcn-derived components into `shared/ui` as actually needed,
+      rewritten onto our semantic tokens — `Button` (`class-variance-authority`
+      variants, the real shadcn authoring pattern), `Input`, `Textarea`,
+      `Select`, `Field` (lifted from `RegisterForm`'s own local copy of the
+      same pattern), `Card`, `ErrorText`, plus `lib/cn.ts` (`clsx` +
+      `tailwind-merge`, shadcn's standard class-merging helper). No Radix —
+      nothing built yet needs a dialog/portal/combobox.
+      14 forms/cards refactored to use them instead of hand-rolled markup.
+      Two small, named normalizations along the way (not silent): the 4 auth
+      forms' submit buttons now consistently get `text-sm` (they never had
+      it before, an inconsistency, not a choice), and `LabelPicker`'s
+      "Create" button padding now matches every other small button
+      (`px-2`→`px-3`). Verified live: registered/logged in, created a
+      project and an issue, edited it with the label picker, posted a
+      comment — full real behavior through the new components, not just a
+      visual look — then confirmed via `getComputedStyle` that a migrated
+      card/button's border, radius, and background match the pre-slice
+      values exactly in light mode and still correctly flip in dark mode.
 - [ ] `/design-system` route documenting every token and base component
 
 **Done when** dark mode is a ~20-variable change and every component so far

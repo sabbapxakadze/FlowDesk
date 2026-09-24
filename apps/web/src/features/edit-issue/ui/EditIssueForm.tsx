@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Issue, IssueStatus } from "@flowdesk/contracts";
 import { issueKeys } from "../../../entities/issue";
 import { ApiError } from "../../../shared/api/client";
+import { Button, ErrorText, Field, Input, Select } from "../../../shared/ui";
 import { LabelPicker } from "../../edit-issue-labels";
 import { updateIssue } from "../api/updateIssue";
 
@@ -74,33 +75,21 @@ export function EditIssueForm({
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
       className="mb-2 flex flex-col gap-2 rounded-[var(--radius-card)] border border-[var(--color-border-input)] px-4 py-3"
     >
-      <label className="flex flex-col gap-1 text-sm">
-        Title
-        <input
-          {...register("title", { required: true })}
-          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
-        />
-      </label>
+      <Field label="Title">
+        <Input {...register("title", { required: true })} />
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Description
-        <input
-          {...register("description")}
-          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
-        />
-      </label>
+      <Field label="Description">
+        <Input {...register("description")} />
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Status
-        <select
-          {...register("status")}
-          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
-        >
+      <Field label="Status">
+        <Select {...register("status")}>
           <option value="todo">Todo</option>
           <option value="in_progress">In progress</option>
           <option value="done">Done</option>
-        </select>
-      </label>
+        </Select>
+      </Field>
 
       <div className="flex flex-col gap-1 text-sm">
         Labels
@@ -108,25 +97,15 @@ export function EditIssueForm({
       </div>
 
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="rounded-[var(--radius-control)] bg-[var(--color-bg-action-primary)] px-3 py-1 text-sm text-[var(--color-text-on-action)] disabled:opacity-50"
-        >
+        <Button type="submit" size="sm" disabled={mutation.isPending}>
           {mutation.isPending ? "Saving…" : "Save"}
-        </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-3 py-1 text-sm"
-        >
+        </Button>
+        <Button type="button" variant="secondary" size="sm" onClick={onDone}>
           Cancel
-        </button>
+        </Button>
       </div>
 
-      {showGenericError && (
-        <p className="text-sm text-[var(--color-text-danger)]">{mutation.error?.message}</p>
-      )}
+      {showGenericError && <ErrorText>{mutation.error?.message}</ErrorText>}
     </form>
   );
 }

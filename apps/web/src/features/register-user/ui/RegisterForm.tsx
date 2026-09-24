@@ -1,10 +1,10 @@
-import type { ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { registerRequestSchema, type RegisterRequest } from "@flowdesk/contracts";
 import { ApiError } from "../../../shared/api/client";
+import { Button, ErrorText, Field, Input } from "../../../shared/ui";
 import { registerUser } from "../api/registerUser";
 
 /**
@@ -59,64 +59,26 @@ export function RegisterForm() {
       className="flex max-w-sm flex-col gap-4"
     >
       <Field label="Name" error={errors.name?.message}>
-        <input
-          {...register("name")}
-          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
-        />
+        <Input {...register("name")} className="w-full" />
       </Field>
 
       <Field label="Email" error={errors.email?.message}>
-        <input
-          type="email"
-          {...register("email")}
-          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
-        />
+        <Input type="email" {...register("email")} className="w-full" />
       </Field>
 
       <Field label="Password" error={errors.password?.message}>
-        <input
-          type="password"
-          {...register("password")}
-          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
-        />
+        <Input type="password" {...register("password")} className="w-full" />
       </Field>
 
       <Field label="Organization name" error={errors.organizationName?.message}>
-        <input
-          {...register("organizationName")}
-          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
-        />
+        <Input {...register("organizationName")} className="w-full" />
       </Field>
 
-      {showGeneralError && (
-        <p className="text-sm text-[var(--color-text-danger)]">{mutation.error?.message}</p>
-      )}
+      {showGeneralError && <ErrorText>{mutation.error?.message}</ErrorText>}
 
-      <button
-        type="submit"
-        disabled={mutation.isPending}
-        className="rounded-[var(--radius-control)] bg-[var(--color-bg-action-primary)] px-4 py-2 text-[var(--color-text-on-action)] disabled:opacity-50"
-      >
+      <Button type="submit" disabled={mutation.isPending}>
         {mutation.isPending ? "Creating account…" : "Create account"}
-      </button>
+      </Button>
     </form>
-  );
-}
-
-function Field({
-  label,
-  error,
-  children,
-}: {
-  label: string;
-  error?: string;
-  children: ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-1 text-sm">
-      {label}
-      {children}
-      {error && <span className="text-[var(--color-text-danger)]">{error}</span>}
-    </label>
   );
 }

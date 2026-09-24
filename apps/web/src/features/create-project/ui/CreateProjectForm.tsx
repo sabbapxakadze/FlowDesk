@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createProjectRequestSchema, type CreateProjectRequest } from "@flowdesk/contracts";
 import { projectKeys } from "../../../entities/project";
+import { Button, ErrorText, Field, Input } from "../../../shared/ui";
 import { createProject } from "../api/createProject";
 
 /**
@@ -37,37 +38,19 @@ export function CreateProjectForm({ organizationId }: { organizationId: string }
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
       className="mb-6 flex flex-wrap items-end gap-2"
     >
-      <label className="flex flex-col gap-1 text-sm">
-        Name
-        <input
-          {...register("name")}
-          placeholder="Website"
-          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
-        />
-        {errors.name && <span className="text-[var(--color-text-danger)]">{errors.name.message}</span>}
-      </label>
+      <Field label="Name" error={errors.name?.message}>
+        <Input {...register("name")} placeholder="Website" />
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Key
-        <input
-          {...register("key")}
-          placeholder="WEB"
-          className="w-24 rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1 uppercase"
-        />
-        {errors.key && <span className="text-[var(--color-text-danger)]">{errors.key.message}</span>}
-      </label>
+      <Field label="Key" error={errors.key?.message}>
+        <Input {...register("key")} placeholder="WEB" className="w-24 uppercase" />
+      </Field>
 
-      <button
-        type="submit"
-        disabled={mutation.isPending}
-        className="rounded-[var(--radius-control)] bg-[var(--color-bg-action-primary)] px-4 py-2 text-sm text-[var(--color-text-on-action)] disabled:opacity-50"
-      >
+      <Button type="submit" disabled={mutation.isPending}>
         {mutation.isPending ? "Adding…" : "Add project"}
-      </button>
+      </Button>
 
-      {mutation.isError && (
-        <p className="w-full text-sm text-[var(--color-text-danger)]">{mutation.error.message}</p>
-      )}
+      {mutation.isError && <ErrorText className="w-full">{mutation.error.message}</ErrorText>}
     </form>
   );
 }

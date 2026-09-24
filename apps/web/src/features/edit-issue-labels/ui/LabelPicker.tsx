@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLabels, labelKeys, LabelBadge } from "../../../entities/label";
 import { useIssueLabels, issueKeys } from "../../../entities/issue";
+import { Button, Input, Select } from "../../../shared/ui";
 import { attachLabel } from "../api/attachLabel";
 import { detachLabel } from "../api/detachLabel";
 import { createLabel } from "../api/createLabel";
@@ -70,12 +71,11 @@ export function LabelPicker({
       </div>
 
       <div className="flex items-center gap-2 text-sm">
-        <select
+        <Select
           value=""
           onChange={(e) => {
             if (e.target.value) attachMutation.mutate(e.target.value);
           }}
-          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         >
           <option value="">+ Add label</option>
           {available.map((label) => (
@@ -83,7 +83,7 @@ export function LabelPicker({
               {label.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {/*
@@ -92,7 +92,7 @@ export function LabelPicker({
         the name field submits the same way a form's submit would.
       */}
       <div className="flex items-center gap-2 text-sm">
-        <input
+        <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => {
@@ -102,7 +102,6 @@ export function LabelPicker({
             }
           }}
           placeholder="New label name"
-          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         />
         <input
           type="color"
@@ -110,14 +109,15 @@ export function LabelPicker({
           onChange={(e) => setNewColor(e.target.value)}
           className="h-8 w-8"
         />
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={() => newName.trim() && createMutation.mutate()}
           disabled={createMutation.isPending}
-          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1 disabled:opacity-50"
         >
           Create
-        </button>
+        </Button>
       </div>
     </div>
   );
