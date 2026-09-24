@@ -75,7 +75,7 @@ export function LabelPicker({
           onChange={(e) => {
             if (e.target.value) attachMutation.mutate(e.target.value);
           }}
-          className="rounded border border-gray-300 px-2 py-1"
+          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         >
           <option value="">+ Add label</option>
           {available.map((label) => (
@@ -102,7 +102,7 @@ export function LabelPicker({
             }
           }}
           placeholder="New label name"
-          className="rounded border border-gray-300 px-2 py-1"
+          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         />
         <input
           type="color"
@@ -114,7 +114,7 @@ export function LabelPicker({
           type="button"
           onClick={() => newName.trim() && createMutation.mutate()}
           disabled={createMutation.isPending}
-          className="rounded border border-gray-300 px-2 py-1 disabled:opacity-50"
+          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1 disabled:opacity-50"
         >
           Create
         </button>

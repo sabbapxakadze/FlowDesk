@@ -36,9 +36,9 @@ export function LoginForm() {
         <input
           type="email"
           {...register("email")}
-          className="w-full rounded border border-gray-300 px-2 py-1"
+          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         />
-        {errors.email && <span className="text-red-600">{errors.email.message}</span>}
+        {errors.email && <span className="text-[var(--color-text-danger)]">{errors.email.message}</span>}
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
@@ -46,24 +46,26 @@ export function LoginForm() {
         <input
           type="password"
           {...register("password")}
-          className="w-full rounded border border-gray-300 px-2 py-1"
+          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         />
-        {errors.password && <span className="text-red-600">{errors.password.message}</span>}
+        {errors.password && (
+          <span className="text-[var(--color-text-danger)]">{errors.password.message}</span>
+        )}
       </label>
 
       {mutation.isError && (
-        <p className="text-sm text-red-600">{mutation.error.message}</p>
+        <p className="text-sm text-[var(--color-text-danger)]">{mutation.error.message}</p>
       )}
 
       <button
         type="submit"
         disabled={mutation.isPending}
-        className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-50"
+        className="rounded-[var(--radius-control)] bg-[var(--color-bg-action-primary)] px-4 py-2 text-[var(--color-text-on-action)] disabled:opacity-50"
       >
         {mutation.isPending ? "Logging in…" : "Log in"}
       </button>
 
-      <Link to="/forgot-password" className="text-sm text-blue-600 underline">
+      <Link to="/forgot-password" className="text-sm text-[var(--color-text-link)] underline">
         Forgot password?
       </Link>
     </form>

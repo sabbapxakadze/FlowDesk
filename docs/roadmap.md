@@ -206,15 +206,32 @@ Slice 1 (semantic tokens + dark mode infrastructure) shipped:
       Component migration (slice 2) will give these tokens real utility
       consumers, but `static` is still correct going forward since new
       tokens will keep getting added before their first consumer exists.
-- [ ] Rewrite existing components to consume semantic tokens only, remove any
-      raw Tailwind values that snuck in
+Slice 2 (component migration) shipped:
+
+- [x] Rewrite existing components to consume semantic tokens only, remove any
+      raw Tailwind values that snuck in — 17 of 21 `className=`-using files
+      needed the swap (the other 4 — `ForgotPasswordPage`, `LoginPage`,
+      `RegisterPage`, `LabelBadge`'s one intentional exception — already had
+      no raw semantic-category class to migrate). First use of Tailwind's
+      arbitrary-value bracket syntax (`text-[var(--color-text-muted)]`)
+      anywhere in the codebase. Automated proof, not just a visual check: a
+      grep for every raw class in the mapping table returns zero matches
+      outside the two named exceptions (`LabelBadge`'s `text-white`/
+      `rounded-full`, both data-driven, not themed).
+- [x] Dark mode: redefine the semantic tier, verify nothing else needed to
+      change — now actually true, since slice 1 only `body` consumed the
+      tier. Verified live: real card/button computed styles (border color,
+      background, radius) match the original raw Tailwind values exactly in
+      light mode (zero regression) and correctly flip in dark mode, checked
+      via `getComputedStyle` on real rendered elements, not just the token
+      file's own custom properties.
 - [ ] Pull in shadcn-derived components into `shared/ui` as actually needed,
       rewritten onto our semantic tokens
-- [ ] Dark mode: redefine the semantic tier, verify nothing else needed to change
 - [ ] `/design-system` route documenting every token and base component
 
 **Done when** dark mode is a ~20-variable change and every component so far
-uses only semantic tokens.
+uses only semantic tokens. *(True as of slice 2 — confirmed by the grep in
+slice 2's verification, not just assumed from the diff.)*
 
 ## Phase 4 — React depth
 

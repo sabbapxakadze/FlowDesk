@@ -34,17 +34,17 @@ export function VerifyEmailPage() {
   return (
     <main className="p-8">
       <h1 className="mb-4 text-2xl font-semibold">Verify your email</h1>
-      {status === "pending" && <p className="text-gray-400">Verifying…</p>}
+      {status === "pending" && <p className="text-[var(--color-text-muted)]">Verifying…</p>}
       {status === "success" && (
         <p className="text-sm">
           Your email is verified.{" "}
-          <Link to="/login" className="text-blue-600 underline">
+          <Link to="/login" className="text-[var(--color-text-link)] underline">
             Log in
           </Link>
         </p>
       )}
       {status === "error" && (
-        <p className="text-sm text-red-600">
+        <p className="text-sm text-[var(--color-text-danger)]">
           This verification link is invalid or has expired.
         </p>
       )}

@@ -22,16 +22,16 @@ export function IssueCard({
   onEdit?: () => void;
 }) {
   return (
-    <li className="flex items-start justify-between gap-2 rounded-lg border border-gray-200 px-4 py-3">
+    <li className="flex items-start justify-between gap-2 rounded-[var(--radius-card)] border border-[var(--color-border-default)] px-4 py-3">
       <Link to={`/projects/${issue.projectId}/issues/${issue.id}`}>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-[var(--color-text-muted)]">
           {projectKey}-{issue.number}
         </p>
         <p className="font-medium">{issue.title}</p>
-        <p className="text-xs text-gray-400">{issue.status}</p>
+        <p className="text-xs text-[var(--color-text-muted)]">{issue.status}</p>
       </Link>
       {onEdit && (
-        <button onClick={onEdit} className="text-sm text-blue-600 underline">
+        <button onClick={onEdit} className="text-sm text-[var(--color-text-link)] underline">
           Edit
         </button>
       )}

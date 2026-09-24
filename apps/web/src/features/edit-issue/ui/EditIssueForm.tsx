@@ -72,24 +72,30 @@ export function EditIssueForm({
   return (
     <form
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
-      className="mb-2 flex flex-col gap-2 rounded-lg border border-gray-300 px-4 py-3"
+      className="mb-2 flex flex-col gap-2 rounded-[var(--radius-card)] border border-[var(--color-border-input)] px-4 py-3"
     >
       <label className="flex flex-col gap-1 text-sm">
         Title
         <input
           {...register("title", { required: true })}
-          className="rounded border border-gray-300 px-2 py-1"
+          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
         Description
-        <input {...register("description")} className="rounded border border-gray-300 px-2 py-1" />
+        <input
+          {...register("description")}
+          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
+        />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
         Status
-        <select {...register("status")} className="rounded border border-gray-300 px-2 py-1">
+        <select
+          {...register("status")}
+          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
+        >
           <option value="todo">Todo</option>
           <option value="in_progress">In progress</option>
           <option value="done">Done</option>
@@ -105,20 +111,22 @@ export function EditIssueForm({
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="rounded bg-gray-900 px-3 py-1 text-sm text-white disabled:opacity-50"
+          className="rounded-[var(--radius-control)] bg-[var(--color-bg-action-primary)] px-3 py-1 text-sm text-[var(--color-text-on-action)] disabled:opacity-50"
         >
           {mutation.isPending ? "Saving…" : "Save"}
         </button>
         <button
           type="button"
           onClick={onDone}
-          className="rounded border border-gray-300 px-3 py-1 text-sm"
+          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-3 py-1 text-sm"
         >
           Cancel
         </button>
       </div>
 
-      {showGenericError && <p className="text-sm text-red-600">{mutation.error?.message}</p>}
+      {showGenericError && (
+        <p className="text-sm text-[var(--color-text-danger)]">{mutation.error?.message}</p>
+      )}
     </form>
   );
 }

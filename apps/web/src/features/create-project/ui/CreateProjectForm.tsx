@@ -42,9 +42,9 @@ export function CreateProjectForm({ organizationId }: { organizationId: string }
         <input
           {...register("name")}
           placeholder="Website"
-          className="rounded border border-gray-300 px-2 py-1"
+          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         />
-        {errors.name && <span className="text-red-600">{errors.name.message}</span>}
+        {errors.name && <span className="text-[var(--color-text-danger)]">{errors.name.message}</span>}
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
@@ -52,21 +52,21 @@ export function CreateProjectForm({ organizationId }: { organizationId: string }
         <input
           {...register("key")}
           placeholder="WEB"
-          className="w-24 rounded border border-gray-300 px-2 py-1 uppercase"
+          className="w-24 rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1 uppercase"
         />
-        {errors.key && <span className="text-red-600">{errors.key.message}</span>}
+        {errors.key && <span className="text-[var(--color-text-danger)]">{errors.key.message}</span>}
       </label>
 
       <button
         type="submit"
         disabled={mutation.isPending}
-        className="rounded bg-gray-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+        className="rounded-[var(--radius-control)] bg-[var(--color-bg-action-primary)] px-4 py-2 text-sm text-[var(--color-text-on-action)] disabled:opacity-50"
       >
         {mutation.isPending ? "Adding…" : "Add project"}
       </button>
 
       {mutation.isError && (
-        <p className="w-full text-sm text-red-600">{mutation.error.message}</p>
+        <p className="w-full text-sm text-[var(--color-text-danger)]">{mutation.error.message}</p>
       )}
     </form>
   );

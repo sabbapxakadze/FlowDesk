@@ -43,9 +43,9 @@ export function CreateIssueForm({
         <input
           {...register("title")}
           placeholder="Something to do"
-          className="rounded border border-gray-300 px-2 py-1"
+          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         />
-        {errors.title && <span className="text-red-600">{errors.title.message}</span>}
+        {errors.title && <span className="text-[var(--color-text-danger)]">{errors.title.message}</span>}
       </label>
 
       <label className="flex flex-1 flex-col gap-1 text-sm">
@@ -53,21 +53,23 @@ export function CreateIssueForm({
         <input
           {...register("description")}
           placeholder="Optional"
-          className="rounded border border-gray-300 px-2 py-1"
+          className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         />
-        {errors.description && <span className="text-red-600">{errors.description.message}</span>}
+        {errors.description && (
+          <span className="text-[var(--color-text-danger)]">{errors.description.message}</span>
+        )}
       </label>
 
       <button
         type="submit"
         disabled={mutation.isPending}
-        className="rounded bg-gray-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+        className="rounded-[var(--radius-control)] bg-[var(--color-bg-action-primary)] px-4 py-2 text-sm text-[var(--color-text-on-action)] disabled:opacity-50"
       >
         {mutation.isPending ? "Adding…" : "Add issue"}
       </button>
 
       {mutation.isError && (
-        <p className="w-full text-sm text-red-600">{mutation.error.message}</p>
+        <p className="w-full text-sm text-[var(--color-text-danger)]">{mutation.error.message}</p>
       )}
     </form>
   );

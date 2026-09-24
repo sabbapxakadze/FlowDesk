@@ -42,7 +42,7 @@ export function RegisterForm() {
       <p className="text-sm">
         Account created for <strong>{mutation.data.organization.name}</strong>. Check your
         email for a verification link, then{" "}
-        <Link to="/login" className="text-blue-600 underline">
+        <Link to="/login" className="text-[var(--color-text-link)] underline">
           log in
         </Link>
         .
@@ -59,14 +59,17 @@ export function RegisterForm() {
       className="flex max-w-sm flex-col gap-4"
     >
       <Field label="Name" error={errors.name?.message}>
-        <input {...register("name")} className="w-full rounded border border-gray-300 px-2 py-1" />
+        <input
+          {...register("name")}
+          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
+        />
       </Field>
 
       <Field label="Email" error={errors.email?.message}>
         <input
           type="email"
           {...register("email")}
-          className="w-full rounded border border-gray-300 px-2 py-1"
+          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         />
       </Field>
 
@@ -74,25 +77,25 @@ export function RegisterForm() {
         <input
           type="password"
           {...register("password")}
-          className="w-full rounded border border-gray-300 px-2 py-1"
+          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         />
       </Field>
 
       <Field label="Organization name" error={errors.organizationName?.message}>
         <input
           {...register("organizationName")}
-          className="w-full rounded border border-gray-300 px-2 py-1"
+          className="w-full rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1"
         />
       </Field>
 
       {showGeneralError && (
-        <p className="text-sm text-red-600">{mutation.error?.message}</p>
+        <p className="text-sm text-[var(--color-text-danger)]">{mutation.error?.message}</p>
       )}
 
       <button
         type="submit"
         disabled={mutation.isPending}
-        className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-50"
+        className="rounded-[var(--radius-control)] bg-[var(--color-bg-action-primary)] px-4 py-2 text-[var(--color-text-on-action)] disabled:opacity-50"
       >
         {mutation.isPending ? "Creating account…" : "Create account"}
       </button>
@@ -113,7 +116,7 @@ function Field({
     <label className="flex flex-col gap-1 text-sm">
       {label}
       {children}
-      {error && <span className="text-red-600">{error}</span>}
+      {error && <span className="text-[var(--color-text-danger)]">{error}</span>}
     </label>
   );
 }

@@ -34,16 +34,18 @@ export function CommentForm({
         {...register("body", { required: true })}
         placeholder="Add a comment…"
         rows={3}
-        className="rounded border border-gray-300 px-2 py-1 text-sm"
+        className="rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1 text-sm"
       />
       <button
         type="submit"
         disabled={mutation.isPending}
-        className="self-start rounded bg-gray-900 px-3 py-1 text-sm text-white disabled:opacity-50"
+        className="self-start rounded-[var(--radius-control)] bg-[var(--color-bg-action-primary)] px-3 py-1 text-sm text-[var(--color-text-on-action)] disabled:opacity-50"
       >
         {mutation.isPending ? "Posting…" : "Comment"}
       </button>
-      {mutation.isError && <p className="text-sm text-red-600">{mutation.error.message}</p>}
+      {mutation.isError && (
+        <p className="text-sm text-[var(--color-text-danger)]">{mutation.error.message}</p>
+      )}
     </form>
   );
 }

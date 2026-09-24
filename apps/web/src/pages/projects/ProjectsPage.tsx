@@ -15,11 +15,13 @@ export function ProjectsPage() {
   const { data: projects, isPending, isError, error } = useProjects(organization!.id);
 
   if (isPending) {
-    return <p className="p-8 text-gray-400">Loading projects…</p>;
+    return <p className="p-8 text-[var(--color-text-muted)]">Loading projects…</p>;
   }
 
   if (isError) {
-    return <p className="p-8 text-red-600">Failed to load projects: {error.message}</p>;
+    return (
+      <p className="p-8 text-[var(--color-text-danger)]">Failed to load projects: {error.message}</p>
+    );
   }
 
   return (
@@ -29,7 +31,7 @@ export function ProjectsPage() {
       <CreateProjectForm organizationId={organization!.id} />
 
       {projects.length === 0 ? (
-        <p className="text-gray-400">No projects yet.</p>
+        <p className="text-[var(--color-text-muted)]">No projects yet.</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {projects.map((project) => (

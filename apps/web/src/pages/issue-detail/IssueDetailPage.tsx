@@ -30,15 +30,15 @@ function describeEvent(event: IssueEvent): string {
 function TimelineEntry({ event }: { event: IssueEvent }) {
   if (event.type === "issue.commented") {
     return (
-      <li className="rounded border border-gray-200 px-3 py-2">
-        <p className="text-xs text-gray-500">{event.actorName} commented</p>
+      <li className="rounded-[var(--radius-control)] border border-[var(--color-border-default)] px-3 py-2">
+        <p className="text-xs text-[var(--color-text-muted)]">{event.actorName} commented</p>
         <p className="text-sm">{String(event.payload.body)}</p>
       </li>
     );
   }
 
   return (
-    <li className="text-sm text-gray-500">
+    <li className="text-sm text-[var(--color-text-muted)]">
       {event.actorName} {describeEvent(event)}
     </li>
   );
@@ -68,21 +68,21 @@ export function IssueDetailPage() {
   const [showConflictNotice, setShowConflictNotice] = useState(false);
 
   if (projectsPending || issuesPending) {
-    return <p className="p-8 text-gray-400">Loading…</p>;
+    return <p className="p-8 text-[var(--color-text-muted)]">Loading…</p>;
   }
 
   if (!project || !issue) {
-    return <p className="p-8 text-red-600">Issue not found.</p>;
+    return <p className="p-8 text-[var(--color-text-danger)]">Issue not found.</p>;
   }
 
   return (
     <main className="p-8">
-      <Link to={`/projects/${project.id}`} className="text-sm text-blue-600 underline">
+      <Link to={`/projects/${project.id}`} className="text-sm text-[var(--color-text-link)] underline">
         ← {project.name}
       </Link>
 
       {showConflictNotice && (
-        <p className="mt-2 text-sm text-amber-600">
+        <p className="mt-2 text-sm text-[var(--color-text-warning)]">
           This issue was updated by someone else — showing the latest version.
         </p>
       )}
@@ -97,18 +97,18 @@ export function IssueDetailPage() {
         />
       ) : (
         <div className="mt-2 mb-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-[var(--color-text-muted)]">
             {project.key}-{issue.number}
           </p>
           <h1 className="text-2xl font-semibold">{issue.title}</h1>
-          <p className="text-sm text-gray-400">{issue.status}</p>
+          <p className="text-sm text-[var(--color-text-muted)]">{issue.status}</p>
           {issue.description && <p className="mt-2">{issue.description}</p>}
           <button
             onClick={() => {
               setShowConflictNotice(false);
               setIsEditing(true);
             }}
-            className="mt-2 text-sm text-blue-600 underline"
+            className="mt-2 text-sm text-[var(--color-text-link)] underline"
           >
             Edit
           </button>
@@ -117,7 +117,7 @@ export function IssueDetailPage() {
 
       <h2 className="mt-6 mb-2 text-lg font-semibold">Activity</h2>
       {eventsPending ? (
-        <p className="text-gray-400">Loading…</p>
+        <p className="text-[var(--color-text-muted)]">Loading…</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {events?.map((event) => (

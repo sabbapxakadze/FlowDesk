@@ -24,39 +24,39 @@ export function HomePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
       <h1 className="text-2xl font-semibold">FlowDesk</h1>
-      <p className="text-sm text-gray-500">Phase 0 — foundations</p>
+      <p className="text-sm text-[var(--color-text-muted)]">Phase 0 — foundations</p>
 
       {/* Just enough to see the session is real — the silent refresh on
           load (AuthContext) is what makes "Logged in as" survive a page
           reload even though the access token itself lives only in memory. */}
-      {isLoading && <p className="text-sm text-gray-400">Checking session…</p>}
+      {isLoading && <p className="text-sm text-[var(--color-text-muted)]">Checking session…</p>}
       {!isLoading && user && (
         <p className="text-sm">
           Logged in as <span className="font-medium">{user.name}</span>{" "}
-          <Link to="/projects" className="text-blue-600 underline">
+          <Link to="/projects" className="text-[var(--color-text-link)] underline">
             projects
           </Link>{" "}
-          <button onClick={logout} className="text-blue-600 underline">
+          <button onClick={logout} className="text-[var(--color-text-link)] underline">
             log out
           </button>
         </p>
       )}
       {!isLoading && !user && (
         <p className="text-sm">
-          <Link to="/login" className="text-blue-600 underline">
+          <Link to="/login" className="text-[var(--color-text-link)] underline">
             Log in
           </Link>{" "}
           or{" "}
-          <Link to="/register" className="text-blue-600 underline">
+          <Link to="/register" className="text-[var(--color-text-link)] underline">
             register
           </Link>
         </p>
       )}
 
-      {error && <p className="text-red-600">API error: {error}</p>}
-      {!error && !health && <p className="text-gray-400">Checking API…</p>}
+      {error && <p className="text-[var(--color-text-danger)]">API error: {error}</p>}
+      {!error && !health && <p className="text-[var(--color-text-muted)]">Checking API…</p>}
       {health && (
-        <div className="rounded-lg border border-gray-200 px-4 py-3 text-sm">
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-border-default)] px-4 py-3 text-sm">
           <p>
             API status: <span className="font-medium">{health.status}</span>
           </p>

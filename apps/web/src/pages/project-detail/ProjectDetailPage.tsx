@@ -33,20 +33,22 @@ export function ProjectDetailPage() {
   const [showConflictNotice, setShowConflictNotice] = useState(false);
 
   if (projectsPending || issuesPending) {
-    return <p className="p-8 text-gray-400">Loading…</p>;
+    return <p className="p-8 text-[var(--color-text-muted)]">Loading…</p>;
   }
 
   if (!project) {
-    return <p className="p-8 text-red-600">Project not found.</p>;
+    return <p className="p-8 text-[var(--color-text-danger)]">Project not found.</p>;
   }
 
   if (isError) {
-    return <p className="p-8 text-red-600">Failed to load issues: {error.message}</p>;
+    return (
+      <p className="p-8 text-[var(--color-text-danger)]">Failed to load issues: {error.message}</p>
+    );
   }
 
   return (
     <main className="p-8">
-      <Link to="/projects" className="text-sm text-blue-600 underline">
+      <Link to="/projects" className="text-sm text-[var(--color-text-link)] underline">
         ← All projects
       </Link>
       <h1 className="mt-2 mb-4 text-2xl font-semibold">{project.name}</h1>
@@ -54,13 +56,13 @@ export function ProjectDetailPage() {
       <CreateIssueForm organizationId={organization!.id} projectId={project.id} />
 
       {showConflictNotice && (
-        <p className="mb-2 text-sm text-amber-600">
+        <p className="mb-2 text-sm text-[var(--color-text-warning)]">
           That issue was updated by someone else — showing the latest version.
         </p>
       )}
 
       {issues.length === 0 ? (
-        <p className="text-gray-400">No issues yet.</p>
+        <p className="text-[var(--color-text-muted)]">No issues yet.</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {issues.map((issue) =>
