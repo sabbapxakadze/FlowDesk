@@ -1,6 +1,20 @@
 import { ProjectCard, useProjects } from "../../entities/project";
 import { CreateProjectForm } from "../../features/create-project";
 import { useAuth } from "../../shared/auth/useAuth";
+import { Card, EmptyState, ErrorText, Skeleton } from "../../shared/ui";
+
+function ProjectListSkeleton() {
+  return (
+    <ul className="flex flex-col gap-2">
+      {Array.from({ length: 3 }, (_, i) => (
+        <Card key={i} as="li">
+          <Skeleton className="mb-2 h-4 w-40" />
+          <Skeleton className="h-3 w-16" />
+        </Card>
+      ))}
+    </ul>
+  );
+}
 
 /**
  * organizationId now comes from the real, auth-derived session
@@ -14,24 +28,18 @@ export function ProjectsPage() {
   const { organization } = useAuth();
   const { data: projects, isPending, isError, error } = useProjects(organization!.id);
 
-  if (isPending) {
-    return <p className="p-8 text-[var(--color-text-muted)]">Loading projects…</p>;
-  }
-
-  if (isError) {
-    return (
-      <p className="p-8 text-[var(--color-text-danger)]">Failed to load projects: {error.message}</p>
-    );
-  }
-
   return (
     <main className="p-8">
       <h1 className="mb-4 text-2xl font-semibold">Projects</h1>
 
       <CreateProjectForm organizationId={organization!.id} />
 
-      {projects.length === 0 ? (
-        <p className="text-[var(--color-text-muted)]">No projects yet.</p>
+      {isPending ? (
+        <ProjectListSkeleton />
+      ) : isError ? (
+        <ErrorText>Failed to load projects: {error.message}</ErrorText>
+      ) : projects.length === 0 ? (
+        <EmptyState>No projects yet.</EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">
           {projects.map((project) => (

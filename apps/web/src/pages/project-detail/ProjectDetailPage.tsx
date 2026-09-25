@@ -6,12 +6,26 @@ import { IssueCard, useIssues } from "../../entities/issue";
 import { CreateIssueForm } from "../../features/create-issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Button, Select, STATUS_LABELS } from "../../shared/ui";
+import { Button, Card, EmptyState, ErrorText, Select, Skeleton, STATUS_LABELS } from "../../shared/ui";
 
 const STATUS_FILTER_VALUES: IssueStatus[] = ["todo", "in_progress", "done"];
 
 function isIssueStatus(value: string | null): value is IssueStatus {
   return value !== null && (STATUS_FILTER_VALUES as string[]).includes(value);
+}
+
+function IssueListSkeleton() {
+  return (
+    <ul className="flex flex-col gap-2">
+      {Array.from({ length: 3 }, (_, i) => (
+        <Card key={i} as="li">
+          <Skeleton className="mb-2 h-3 w-16" />
+          <Skeleton className="mb-2 h-4 w-48" />
+          <Skeleton className="h-3 w-20" />
+        </Card>
+      ))}
+    </ul>
+  );
 }
 
 /**
@@ -82,18 +96,12 @@ export function ProjectDetailPage() {
     });
   }
 
-  if (projectsPending || issuesPending) {
+  if (projectsPending) {
     return <p className="p-8 text-[var(--color-text-muted)]">Loading…</p>;
   }
 
   if (!project) {
     return <p className="p-8 text-[var(--color-text-danger)]">Project not found.</p>;
-  }
-
-  if (isError) {
-    return (
-      <p className="p-8 text-[var(--color-text-danger)]">Failed to load issues: {error.message}</p>
-    );
   }
 
   return (
@@ -130,10 +138,14 @@ export function ProjectDetailPage() {
         </p>
       )}
 
-      {issues.length === 0 ? (
-        <p className="text-[var(--color-text-muted)]">
+      {issuesPending ? (
+        <IssueListSkeleton />
+      ) : isError ? (
+        <ErrorText>Failed to load issues: {error.message}</ErrorText>
+      ) : issues.length === 0 ? (
+        <EmptyState>
           {status ? `No ${STATUS_LABELS[status].toLowerCase()} issues.` : "No issues yet."}
-        </p>
+        </EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">
           {issues.map((issue) =>

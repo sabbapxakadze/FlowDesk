@@ -10,43 +10,46 @@ import { ForgotPasswordPage } from "../pages/forgot-password/ForgotPasswordPage"
 import { ResetPasswordPage } from "../pages/reset-password/ResetPasswordPage";
 import { DesignSystemPage } from "../pages/design-system/DesignSystemPage";
 import { RequireAuth } from "../shared/auth/RequireAuth";
+import { ErrorBoundary } from "../shared/error-boundary/ErrorBoundary";
 
 export function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route
-          path="/projects"
-          element={
-            <RequireAuth>
-              <ProjectsPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/projects/:projectId"
-          element={
-            <RequireAuth>
-              <ProjectDetailPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/projects/:projectId/issues/:issueId"
-          element={
-            <RequireAuth>
-              <IssueDetailPage />
-            </RequireAuth>
-          }
-        />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/design-system" element={<DesignSystemPage />} />
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/projects"
+            element={
+              <RequireAuth>
+                <ProjectsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId"
+            element={
+              <RequireAuth>
+                <ProjectDetailPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId/issues/:issueId"
+            element={
+              <RequireAuth>
+                <IssueDetailPage />
+              </RequireAuth>
+            }
+          />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/design-system" element={<DesignSystemPage />} />
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

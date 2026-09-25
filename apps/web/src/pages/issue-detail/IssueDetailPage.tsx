@@ -6,7 +6,34 @@ import { useIssue, useIssueEvents } from "../../entities/issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { CommentForm } from "../../features/post-comment";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, StatusBadge } from "../../shared/ui";
+import { Card, Skeleton, StatusBadge } from "../../shared/ui";
+
+function IssueDetailSkeleton() {
+  return (
+    <main className="p-8">
+      <Skeleton className="h-4 w-32" />
+      <div className="mt-2 mb-4">
+        <Skeleton className="mb-2 h-3 w-16" />
+        <Skeleton className="mb-2 h-7 w-64" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+      <Skeleton className="mt-6 mb-2 h-5 w-20" />
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    </main>
+  );
+}
+
+function TimelineSkeleton() {
+  return (
+    <div className="flex flex-col gap-2">
+      <Skeleton className="h-4 w-56" />
+      <Skeleton className="h-4 w-40" />
+    </div>
+  );
+}
 
 function describeEvent(event: IssueEvent): string {
   switch (event.type) {
@@ -63,7 +90,7 @@ export function IssueDetailPage() {
   const [showConflictNotice, setShowConflictNotice] = useState(false);
 
   if (projectsPending || issuePending) {
-    return <p className="p-8 text-[var(--color-text-muted)]">Loading…</p>;
+    return <IssueDetailSkeleton />;
   }
 
   if (!project || !issue) {
@@ -114,7 +141,7 @@ export function IssueDetailPage() {
 
       <h2 className="mt-6 mb-2 text-lg font-semibold">Activity</h2>
       {eventsPending ? (
-        <p className="text-[var(--color-text-muted)]">Loading…</p>
+        <TimelineSkeleton />
       ) : (
         <ul className="flex flex-col gap-2">
           {events?.map((event) => (

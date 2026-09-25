@@ -16,22 +16,22 @@ win.
 
 ## Current phase
 
-**Phase 4 — React depth.** See `docs/roadmap.md`.
+**Phase 5 — Kanban board.** See `docs/roadmap.md`.
 
-Slice 1 (cursor pagination on the issues list) is done: keyset pagination
-on `GET .../projects/:projectId/issues` (a real composite index + a
-measured `EXPLAIN ANALYZE` proof, not assumed), `useIssues` on
-`useInfiniteQuery`, a "Load more" button on `ProjectDetailPage`, and a new
-dedicated `GET .../issues/:issueId` endpoint + `useIssue` hook (fixes a
-regression the pagination change would otherwise have caused in
-`IssueDetailPage`).
-
-Slice 2 (status filter + sort, URL-driven) is done: `?status=`/`?order=`
-on the same endpoint, `ProjectDetailPage` reading/writing both via
-`useSearchParams` (landing directly on a filtered URL renders already
-filtered — verified, not just wired), and a distinct filtered-empty-state
-message. Slice 3 (reusable table/list, empty states, skeletons, error
-boundaries, generalized beyond this one case) is next.
+Phase 4 (React depth) is **fully done** across three slices — every
+bullet in its original checklist is covered: cursor pagination (slice 1,
+a real composite index + measured `EXPLAIN ANALYZE` proof, `useIssues` on
+`useInfiniteQuery`, a new dedicated `GET .../issues/:issueId` endpoint +
+`useIssue` hook fixing a regression pagination would've caused in
+`IssueDetailPage`), status filter + sort with the URL as the source of
+truth (slice 2, `?status=`/`?order=` on the same endpoint,
+`ProjectDetailPage` reading/writing both via `useSearchParams`), and
+reusable list states + a real error boundary (slice 3, new `Skeleton`/
+`EmptyState` primitives in `shared/ui`, reused the already-existing
+`ErrorText` for query errors, and a class-component `ErrorBoundary`
+wrapped once in `App.tsx` — this app had zero error boundaries before,
+confirmed by actually throwing and watching it recover, not just reading
+the code). Full detail in `docs/roadmap.md`'s Phase 4 checklist.
 
 Phase 3.5 (Design system extraction) is fully done across four slices —
 the semantic token tier + dark mode infrastructure, migrating every

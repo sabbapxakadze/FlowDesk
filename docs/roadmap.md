@@ -336,7 +336,7 @@ be asked.
 **Done when** (deferred) every existing screen reflects a deliberate visual
 direction, not just the ones touched directly in this minimal slice 1.
 
-## Phase 4 — React depth
+## Phase 4 — React depth ✅ complete
 
 Slice 1 (cursor pagination on the issues list) shipped:
 
@@ -419,9 +419,54 @@ Slice 2 (status filter + sort, URL-driven) shipped:
       distinct from the unconditional "No issues yet." — verified live
       against a project with issues in other statuses but none matching
       the active filter.
-- [ ] Slice 3 — reusable table/list, empty states, skeletons, error
-      boundaries, generalized beyond this one filtered-empty-state case.
-      Not started.
+Slice 3 (reusable list states + error boundary) shipped:
+
+- [x] `Skeleton` and `EmptyState`, new `shared/ui` primitives — `Skeleton`
+      a plain pulsing block sized via `className`, same shape as
+      shadcn's own; `EmptyState` a consistent wrapper for the
+      muted-text "nothing here" message. Deliberately not one generic
+      `<List>` component: `ProjectsPage`, `ProjectDetailPage`, and the
+      issue-detail timeline differ enough in surrounding chrome (create
+      form, filter controls, nested-timeline shape) that one component
+      covering all three would need enough props to become the
+      premature abstraction CLAUDE.md warns against. Also deliberately
+      no `<table>` primitive — nothing in the app renders tabular data
+      today, the roadmap's "table/list" wording predates knowing that.
+- [x] Reused the *already-existing* `ErrorText` (built for form errors,
+      Phase 3.5) for list-level query errors on `ProjectsPage` and
+      `ProjectDetailPage` — no new component needed, just applying one
+      that was already there.
+- [x] Skeletons replace "Loading…" text on `ProjectsPage`,
+      `ProjectDetailPage`'s issue list, `IssueDetailPage`'s project/issue
+      load, and its activity timeline. Verified live (not just read from
+      the diff): an artificial `fetch` delay confirmed the skeleton
+      actually renders — surrounding page chrome (header, create form,
+      filter controls) stays mounted and stable while only the list
+      region shows placeholders, then swaps cleanly to real content with
+      zero leftover skeleton nodes.
+- [x] **A real `ErrorBoundary`** (`shared/error-boundary/ErrorBoundary.tsx`)
+      — a class component (the one place in React's API a function
+      component can't do the job; no hook equivalent for
+      `componentDidCatch`/`getDerivedStateFromError`), wrapped once
+      around the routed content in `App.tsx`. Before this slice the app
+      had zero error boundaries anywhere — an unexpected render
+      exception white-screened the whole app. Verified live by actually
+      throwing (temporarily, in `EmptyState`, reverted immediately after
+      confirming): the boundary caught it and rendered the fallback
+      ("Something went wrong." + a reload button) instead of a blank
+      page — this is the one part of this slice that isn't provable by
+      reading the code.
+- [x] Filtered empty state (from slice 2) verified live to still render
+      correctly through the new `EmptyState` component.
+- [~] The `isError`→`ErrorText` query-error path itself (list-level fetch
+      failures) was **not independently re-verified live** — attempts to
+      simulate a failed fetch in this browser session hit TanStack
+      Query's `networkMode` treating the query as "paused" rather than
+      erroring, an environment-specific quirk unrelated to this slice's
+      code (the `isError`/`error` values themselves are unchanged from
+      the already-working logic this slice only swapped the rendered
+      element for). Flagged honestly rather than claimed as checked —
+      revisit if this ever needs a real confirmation.
 
 ## Phase 5 — Kanban board
 
