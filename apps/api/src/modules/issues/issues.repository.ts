@@ -1,19 +1,92 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { comments, issueEvents, issueLabels, issues, labels, projects, users } from "../../db/schema/index.js";
 import type { IssueStatus } from "@flowdesk/contracts";
+
+type IssueRow = typeof issues.$inferSelect;
+
+/** { createdAt, id } is the keyset — id breaks ties when two issues share
+ * a createdAt millisecond (rare but real, e.g. a seed script). Opaque to
+ * the client: base64 JSON, generated only from a row this server just
+ * returned, never accepted as hand-built input beyond round-tripping it. */
+function encodeCursor(row: Pick<IssueRow, "createdAt" | "id">): string {
+  return Buffer.from(JSON.stringify({ createdAt: row.createdAt.toISOString(), id: row.id })).toString(
+    "base64url",
+  );
+}
+
+function decodeCursor(cursor: string): { createdAt: Date; id: string } | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    typeof (parsed as { createdAt?: unknown }).createdAt !== "string" ||
+    typeof (parsed as { id?: unknown }).id !== "string"
+  ) {
+    return null;
+  }
+  const createdAt = new Date((parsed as { createdAt: string }).createdAt);
+  if (Number.isNaN(createdAt.getTime())) return null;
+  return { createdAt, id: (parsed as { id: string }).id };
+}
 
 /**
  * Scoped by both organizationId and projectId even though projectId alone
  * would already narrow correctly — the organizationId filter is what
  * makes this safe even if a caller ever got here without requireProject
  * having verified the project belongs to that org first (ADR 0004).
+ *
+ * Keyset pagination, not OFFSET: ordered by (created_at DESC, id DESC),
+ * matching issues_project_id_created_at_id_idx exactly. The cursor
+ * condition uses Postgres's row-constructor comparison
+ * `(created_at, id) < (cursorCreatedAt, cursorId)` rather than the
+ * equivalent `OR`-expanded form (`created_at < x OR (created_at = x AND
+ * id < y)`) — verified with EXPLAIN ANALYZE (see docs/roadmap.md's Phase
+ * 4 slice 1 entry) that only the row-constructor form compiles to a real
+ * composite Index Cond on this index; the OR form still used the index for
+ * project_id but fell back to filtering every row after the cursor by
+ * hand, scanning work proportional to page depth instead of `limit`, the
+ * exact cost keyset pagination exists to avoid. Fetches one row past the
+ * requested limit to know whether a next page exists without a second
+ * COUNT-style query.
+ *
+ * "invalid_cursor" is a return value, not a thrown error — same modeling
+ * as update()'s conflict/not_found below: an expected, client-triggerable
+ * outcome the controller turns into a 400, not a bug.
  */
-export async function listByProject(organizationId: string, projectId: string) {
-  return db
+export async function listByProject(
+  organizationId: string,
+  projectId: string,
+  options: { limit: number; cursor?: string },
+): Promise<{ status: "ok"; items: IssueRow[]; nextCursor: string | null } | { status: "invalid_cursor" }> {
+  const conditions = [eq(issues.organizationId, organizationId), eq(issues.projectId, projectId)];
+
+  if (options.cursor) {
+    const decoded = decodeCursor(options.cursor);
+    if (!decoded) return { status: "invalid_cursor" };
+    conditions.push(
+      sql`(${issues.createdAt}, ${issues.id}) < (${decoded.createdAt.toISOString()}, ${decoded.id})`,
+    );
+  }
+
+  const rows = await db
     .select()
     .from(issues)
-    .where(and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId)));
+    .where(and(...conditions))
+    .orderBy(desc(issues.createdAt), desc(issues.id))
+    .limit(options.limit + 1);
+
+  const hasMore = rows.length > options.limit;
+  const items = hasMore ? rows.slice(0, options.limit) : rows;
+  const lastItem = items[items.length - 1];
+  const nextCursor = hasMore && lastItem ? encodeCursor(lastItem) : null;
+
+  return { status: "ok", items, nextCursor };
 }
 
 /**

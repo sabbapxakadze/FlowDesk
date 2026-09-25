@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router";
 import type { IssueEvent } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
-import { useIssues, useIssueEvents } from "../../entities/issue";
+import { useIssue, useIssueEvents } from "../../entities/issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { CommentForm } from "../../features/post-comment";
 import { useAuth } from "../../shared/auth/useAuth";
@@ -45,19 +45,13 @@ function TimelineEntry({ event }: { event: IssueEvent }) {
   );
 }
 
-/**
- * No dedicated "get one issue" endpoint — reuses the already-fetched
- * useIssues(projectId) list, same reasoning ProjectDetailPage uses for
- * finding its project from the cached org-wide project list.
- */
 export function IssueDetailPage() {
   const { organization } = useAuth();
   const { projectId, issueId } = useParams<{ projectId: string; issueId: string }>();
   const { data: projects, isPending: projectsPending } = useProjects(organization!.id);
   const project = projects?.find((p) => p.id === projectId);
 
-  const { data: issues, isPending: issuesPending } = useIssues(organization!.id, projectId!);
-  const issue = issues?.find((i) => i.id === issueId);
+  const { data: issue, isPending: issuePending } = useIssue(organization!.id, projectId!, issueId!);
 
   const { data: events, isPending: eventsPending } = useIssueEvents(
     organization!.id,
@@ -68,7 +62,7 @@ export function IssueDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showConflictNotice, setShowConflictNotice] = useState(false);
 
-  if (projectsPending || issuesPending) {
+  if (projectsPending || issuePending) {
     return <p className="p-8 text-[var(--color-text-muted)]">Loading…</p>;
   }
 

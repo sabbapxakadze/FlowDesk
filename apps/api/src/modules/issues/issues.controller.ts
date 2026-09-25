@@ -6,7 +6,9 @@ import {
   createCommentResponseSchema,
   createIssueRequestSchema,
   createIssueResponseSchema,
+  getIssueResponseSchema,
   listIssueEventsResponseSchema,
+  listIssuesQuerySchema,
   listIssuesResponseSchema,
   listLabelsResponseSchema,
   updateIssueRequestSchema,
@@ -33,8 +35,40 @@ export async function listIssues(req: Request, res: Response) {
     throw new Error("listIssues requires requireProject to have run first");
   }
 
-  const rows = await issuesService.listIssues(req.ctx.organizationId, req.ctx.projectId);
-  const body = listIssuesResponseSchema.parse({ data: rows.map(toWireFormat) });
+  const parsedQuery = listIssuesQuerySchema.safeParse(req.query);
+  if (!parsedQuery.success) {
+    throw new AppError(
+      "validation_error",
+      400,
+      "Invalid pagination parameters",
+      parsedQuery.error.flatten().fieldErrors,
+    );
+  }
+
+  const result = await issuesService.listIssues(req.ctx.organizationId, req.ctx.projectId, parsedQuery.data);
+
+  if (result.status === "invalid_cursor") {
+    throw new AppError("invalid_cursor", 400, "Invalid pagination cursor.");
+  }
+
+  const body = listIssuesResponseSchema.parse({
+    data: result.items.map(toWireFormat),
+    nextCursor: result.nextCursor,
+  });
+  res.json(body);
+}
+
+export async function getIssue(req: Request, res: Response) {
+  if (!req.ctx?.projectId || !req.ctx.issueId) {
+    throw new Error("getIssue requires requireIssue to have run first");
+  }
+
+  const issue = await issuesService.getIssue(req.ctx.organizationId, req.ctx.projectId, req.ctx.issueId);
+  if (!issue) {
+    throw new AppError("issue_not_found", 404, "Issue not found.");
+  }
+
+  const body = getIssueResponseSchema.parse({ data: toWireFormat(issue) });
   res.json(body);
 }
 

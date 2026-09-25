@@ -53,6 +53,10 @@ export function EditIssueForm({
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: issueKeys.list(projectId) });
+      // The dedicated single-issue query (IssueDetailPage) needs its own
+      // invalidation — it's no longer served from the list cache, so
+      // invalidating the list alone would leave a stale detail view.
+      void queryClient.invalidateQueries({ queryKey: issueKeys.detail(issue.id) });
       // A successful update just wrote an issue.updated event — the
       // timeline (if anything is showing it) needs to pick that up too.
       void queryClient.invalidateQueries({ queryKey: issueKeys.events(issue.id) });
@@ -61,6 +65,7 @@ export function EditIssueForm({
     onError: (error) => {
       if (error instanceof ApiError && error.code === "version_conflict") {
         void queryClient.invalidateQueries({ queryKey: issueKeys.list(projectId) });
+        void queryClient.invalidateQueries({ queryKey: issueKeys.detail(issue.id) });
         onConflict();
         onDone();
       }

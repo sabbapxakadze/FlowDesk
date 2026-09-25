@@ -50,6 +50,13 @@
       "when": 1790178013928,
       "tag": "0006_noisy_tempest",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790340403950,
+      "tag": "0007_typical_jetstream",
+      "breakpoints": true
     }
   ]
 }

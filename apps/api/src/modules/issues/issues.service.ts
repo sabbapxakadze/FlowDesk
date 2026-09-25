@@ -8,8 +8,16 @@ import * as issuesRepository from "./issues.repository.js";
  * start so that doesn't mean threading logic into the controller or
  * repository later.
  */
-export async function listIssues(organizationId: string, projectId: string) {
-  return issuesRepository.listByProject(organizationId, projectId);
+export async function listIssues(
+  organizationId: string,
+  projectId: string,
+  options: { limit: number; cursor?: string },
+) {
+  return issuesRepository.listByProject(organizationId, projectId, options);
+}
+
+export async function getIssue(organizationId: string, projectId: string, issueId: string) {
+  return issuesRepository.findById(organizationId, projectId, issueId);
 }
 
 export async function createIssue(input: {

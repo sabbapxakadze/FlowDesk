@@ -5,6 +5,7 @@ import { IssueCard, useIssues } from "../../entities/issue";
 import { CreateIssueForm } from "../../features/create-issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { useAuth } from "../../shared/auth/useAuth";
+import { Button } from "../../shared/ui";
 
 /**
  * No dedicated "get one project" fetch — this reuses the same
@@ -20,11 +21,20 @@ export function ProjectDetailPage() {
   const project = projects?.find((p) => p.id === projectId);
 
   const {
-    data: issues,
+    data,
     isPending: issuesPending,
     isError,
     error,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
   } = useIssues(organization!.id, projectId!);
+  // useInfiniteQuery's data is { pages: Page[], pageParams }, not a flat
+  // list — flatten once here so the rest of this page (and IssueCard)
+  // doesn't need to know pagination happened at all. The ?? [] is only
+  // reached before the first page loads, already gated below by
+  // issuesPending — never a real empty-vs-loading ambiguity.
+  const issues = data?.pages.flatMap((page) => page.data) ?? [];
 
   // Which issue (if any) is currently showing its edit form instead of its
   // card — page-level state because IssueCard (entities layer) can't
@@ -88,6 +98,18 @@ export function ProjectDetailPage() {
             ),
           )}
         </ul>
+      )}
+
+      {hasNextPage && (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="mt-3"
+          disabled={isFetchingNextPage}
+          onClick={() => void fetchNextPage()}
+        >
+          {isFetchingNextPage ? "Loading…" : "Load more"}
+        </Button>
       )}
     </main>
   );

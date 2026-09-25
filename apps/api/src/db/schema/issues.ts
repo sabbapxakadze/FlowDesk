@@ -52,7 +52,16 @@ export const issues = pgTable(
   },
   (table) => [
     index("issues_organization_id_idx").on(table.organizationId),
-    index("issues_project_id_idx").on(table.projectId),
+    // Composite, not a bare project_id index: serves both the plain
+    // project-scoped lookup and the keyset-paginated list query's
+    // WHERE (created_at, id) < (cursor) ... ORDER BY created_at DESC, id
+    // DESC — verified with EXPLAIN ANALYZE, see docs/roadmap.md's Phase 4
+    // slice 1 entry. A separate single-column index would be redundant.
+    index("issues_project_id_created_at_id_idx").on(
+      table.projectId,
+      table.createdAt,
+      table.id,
+    ),
     uniqueIndex("issues_project_id_number_unique").on(table.projectId, table.number),
   ],
 );

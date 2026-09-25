@@ -22,6 +22,16 @@ issuesRouter.get(
   issuesController.listIssues,
 );
 
+issuesRouter.get(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("view_issue"),
+  issuesController.getIssue,
+);
+
 issuesRouter.post(
   "/organizations/:organizationId/projects/:projectId/issues",
   requireAuth,

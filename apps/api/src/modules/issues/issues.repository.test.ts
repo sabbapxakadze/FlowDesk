@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { resetDatabase } from "../../db/test-utils.js";
-import { comments, issueEvents, labels, organizations, projects, users } from "../../db/schema/index.js";
+import { comments, issueEvents, issues, labels, organizations, projects, users } from "../../db/schema/index.js";
 import * as issuesRepository from "./issues.repository.js";
 import * as issuesService from "./issues.service.js";
 
@@ -57,10 +57,11 @@ describe("issues repository", () => {
       reporterId: b.user.id,
     });
 
-    const result = await issuesRepository.listByProject(a.org.id, a.project.id);
+    const result = await issuesRepository.listByProject(a.org.id, a.project.id, { limit: 25 });
 
-    expect(result).toHaveLength(1);
-    expect(result[0]?.title).toBe("A issue");
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.title).toBe("A issue");
   });
 
   it("assigns sequential numbers starting at 1", async () => {
@@ -120,6 +121,116 @@ describe("issues repository", () => {
     expect(events).toHaveLength(1);
     expect(events[0]?.type).toBe("issue.created");
     expect(events[0]?.actorId).toBe(user.id);
+  });
+});
+
+/**
+ * Keyset pagination's ordering/cursor behavior, same reasoning as every
+ * other "prove it, don't assume" test in this file: the WHERE (created_at,
+ * id) < (cursor) clause is only actually correct if paging through real
+ * seeded rows returns them in the right order with no gaps or repeats,
+ * not provable by reading the query. Issues are inserted directly (not
+ * via issuesRepository.create()) so createdAt can be set explicitly —
+ * real concurrent creates could otherwise land in the same millisecond
+ * and make the ordering assertions flaky.
+ */
+describe("issues repository — pagination", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  async function seedIssues(
+    org: { id: string },
+    project: { id: string },
+    user: { id: string },
+    count: number,
+  ) {
+    const base = new Date("2026-01-01T00:00:00.000Z").getTime();
+    return db
+      .insert(issues)
+      .values(
+        Array.from({ length: count }, (_, i) => ({
+          organizationId: org.id,
+          projectId: project.id,
+          number: i + 1,
+          title: `Issue ${i + 1}`,
+          reporterId: user.id,
+          createdAt: new Date(base + i * 1000),
+          updatedAt: new Date(base + i * 1000),
+        })),
+      )
+      .returning();
+  }
+
+  it("returns at most `limit` items and a non-null cursor when more remain", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    await seedIssues(org, project, user, 5);
+
+    const result = await issuesRepository.listByProject(org.id, project.id, { limit: 2 });
+
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect(result.items).toHaveLength(2);
+    expect(result.nextCursor).not.toBeNull();
+  });
+
+  it("orders newest first and returns a null cursor on the last page", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    await seedIssues(org, project, user, 3);
+
+    const result = await issuesRepository.listByProject(org.id, project.id, { limit: 10 });
+
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect(result.items.map((i) => i.title)).toEqual(["Issue 3", "Issue 2", "Issue 1"]);
+    expect(result.nextCursor).toBeNull();
+  });
+
+  it("advances correctly across pages with no gaps or repeats", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    await seedIssues(org, project, user, 5);
+
+    const page1 = await issuesRepository.listByProject(org.id, project.id, { limit: 2 });
+    if (page1.status !== "ok" || !page1.nextCursor) throw new Error("expected a next page");
+    expect(page1.items.map((i) => i.title)).toEqual(["Issue 5", "Issue 4"]);
+
+    const page2 = await issuesRepository.listByProject(org.id, project.id, {
+      limit: 2,
+      cursor: page1.nextCursor,
+    });
+    if (page2.status !== "ok" || !page2.nextCursor) throw new Error("expected a next page");
+    expect(page2.items.map((i) => i.title)).toEqual(["Issue 3", "Issue 2"]);
+
+    const page3 = await issuesRepository.listByProject(org.id, project.id, {
+      limit: 2,
+      cursor: page2.nextCursor,
+    });
+    if (page3.status !== "ok") throw new Error("expected ok");
+    expect(page3.items.map((i) => i.title)).toEqual(["Issue 1"]);
+    expect(page3.nextCursor).toBeNull();
+  });
+
+  it("rejects a malformed cursor instead of silently falling back to page one", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    await seedIssues(org, project, user, 2);
+
+    const result = await issuesRepository.listByProject(org.id, project.id, {
+      limit: 10,
+      cursor: "not-a-real-cursor",
+    });
+
+    expect(result.status).toBe("invalid_cursor");
+  });
+
+  it("never mixes in another project's issues across pages", async () => {
+    const a = await seedOrgProjectUser("Org A", "org-a", "AAA");
+    const b = await seedOrgProjectUser("Org B", "org-b", "BBB");
+    await seedIssues(a.org, a.project, a.user, 3);
+    await seedIssues(b.org, b.project, b.user, 3);
+
+    const result = await issuesRepository.listByProject(a.org.id, a.project.id, { limit: 10 });
+
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect(result.items).toHaveLength(3);
+    expect(result.items.every((i) => i.projectId === a.project.id)).toBe(true);
   });
 });
 

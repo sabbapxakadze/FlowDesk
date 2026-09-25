@@ -20,12 +20,31 @@ export const issueSchema = z.object({
 export type Issue = z.infer<typeof issueSchema>;
 
 // Same envelope convention as project.ts's list response — { data: [...] }
-// leaves room for pagination metadata later without changing the shape.
+// left room for pagination metadata without changing the shape; nextCursor
+// is that metadata, added in Phase 4 slice 1. null means no further pages.
 export const listIssuesResponseSchema = z.object({
   data: z.array(issueSchema),
+  nextCursor: z.string().nullable(),
 });
 
 export type ListIssuesResponse = z.infer<typeof listIssuesResponseSchema>;
+
+// Keyset pagination query params. cursor is opaque (server-generated, see
+// issues.repository.ts) — the client never constructs one, only passes
+// back what a previous response gave it. limit is capped, not just
+// defaulted, so a client can't request an unbounded page.
+export const listIssuesQuerySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export type ListIssuesQuery = z.infer<typeof listIssuesQuerySchema>;
+
+export const getIssueResponseSchema = z.object({
+  data: issueSchema,
+});
+
+export type GetIssueResponse = z.infer<typeof getIssueResponseSchema>;
 
 export const createIssueRequestSchema = z.object({
   title: z.string().min(1, "Title is required").max(500, "Title is too long"),

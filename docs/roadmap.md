@@ -338,11 +338,53 @@ direction, not just the ones touched directly in this minimal slice 1.
 
 ## Phase 4 — React depth
 
-- [ ] TanStack Query conventions: keys, invalidation, staleness
-- [ ] Server-side filter + sort + cursor/offset pagination
-- [ ] URL as the source of truth for filter state
-- [ ] Reusable table/list, empty states, skeletons, error boundaries
-- [ ] Documented index + `EXPLAIN ANALYZE` before/after on the list query
+Slice 1 (cursor pagination on the issues list) shipped:
+
+- [x] Server-side cursor pagination on `GET .../projects/:projectId/issues`
+      — keyset (`WHERE (created_at, id) < (cursor)`, not `OFFSET`), ordered
+      `created_at DESC, id DESC` with `id` as the tie-breaker. `limit`
+      defaults to 25, capped at 100 (`listIssuesQuerySchema`). Response
+      gained `nextCursor: string | null`; `null` means no further pages —
+      no separate `hasMore` field.
+- [x] TanStack Query conventions: `useIssues` rewritten on
+      `useInfiniteQuery` (`getNextPageParam` reading `nextCursor`), same
+      `issueKeys` factory the old `useQuery` version used — no key-shape
+      change needed. `ProjectDetailPage` flattens `data.pages` and renders
+      a plain "Load more" button (`hasNextPage`/`fetchNextPage`); no
+      skeletons/infinite-scroll treatment yet — that's slice 2's "reusable
+      list, empty states, skeletons" item, not this slice's.
+- [x] **Documented index + `EXPLAIN ANALYZE` before/after**, proven against
+      5,000 seeded rows in a throwaway project (not assumed): before
+      (single-column `issues_project_id_idx`, a keyset query 2,500 rows
+      deep) — `Seq Scan` + top-N sort, "Rows Removed by Filter: 2505",
+      1.111ms. After swapping to the composite
+      `issues_project_id_created_at_id_idx` on
+      `(project_id, created_at, id)` — first attempt (the `OR`-expanded
+      cursor condition, `created_at < x OR (created_at = x AND id < y)`)
+      still fell back to filtering every row past the cursor by hand
+      instead of a real index condition, only ~2x faster (0.490ms).
+      Switching the query to Postgres's row-constructor comparison
+      (`(created_at, id) < (cursor_created_at, cursor_id)`) produced a
+      genuine composite `Index Cond` with zero cursor-related row
+      filtering, 0.077ms — ~14x faster than the pre-index baseline, and
+      critically, cost now scales with `limit`, not with page depth. The
+      repository's cursor condition uses this row-constructor form, not
+      the `OR` form, specifically because of this measurement — see the
+      comment on `listByProject` in `issues.repository.ts`.
+- [x] **Found and fixed a real regression this slice's own change would
+      have caused**: `IssueDetailPage` had no dedicated "get one issue"
+      endpoint — it found the issue by scanning the (previously complete)
+      issues list. Once that list only returns its first page, an issue
+      past page 1 would silently fail to load on direct navigation. Fixed
+      with a new `GET .../issues/:issueId` endpoint (reusing `requireIssue`,
+      which already fetches and 404s the row) and a new `useIssue` hook;
+      `EditIssueForm` now also invalidates `issueKeys.detail(issue.id)`
+      alongside the list, since the detail view no longer shares the
+      list's cache entry. Verified live: navigated directly to an issue
+      created well past page 1 (27 seeded issues, 25-item pages) and
+      confirmed it now loads correctly.
+- [ ] Slice 2 — filter + sort + URL-driven list state, reusable
+      table/list, empty states, skeletons, error boundaries. Not started.
 
 ## Phase 5 — Kanban board
 
