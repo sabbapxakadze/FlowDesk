@@ -26,13 +26,17 @@ and the public `/design-system` route documenting all of it live. Full
 detail lives in `docs/roadmap.md`'s Phase 3.5 checklist; don't duplicate
 it here.
 
-What Phase 4 inherits from it: every screen already uses semantic tokens
-and the shared component set exclusively — a new list/table/filter UI
-should be built on `shared/ui`'s primitives from the start, not hand-rolled
-and migrated later. `entities/project`'s `useProjects` hook (plain
-`useQuery`, no key factory conventions beyond the ad hoc ones already in
-place) is the concrete thing Phase 4's "TanStack Query conventions" bullet
-means to formalize.
+Phase 3.6 (Visual identity) is **paused after a deliberately minimal
+slice 1**: real structural improvements (hover/focus states, shadow-based
+card elevation, softer radii, a `StatusBadge` status-color system) are in,
+proven on `ProjectsPage` and `IssueDetailPage`, but the color story is
+intentionally plain — a hand-crafted deep-blue accent on the stock `gray`
+neutral scale, not a fully considered palette. Slice 2 (rolling polish out
+everywhere) and any further aesthetic work are explicitly deferred by the
+owner's own call, in favor of building out the full feature set first.
+**Flagged for later**: once Phases 4-8 have shipped real screens to design
+for, raise a real design pass proactively — don't wait to be asked; see
+`docs/roadmap.md`'s Phase 3.6 "Revisit point" note for the detail.
 Update this line when a phase completes.
 
 ---

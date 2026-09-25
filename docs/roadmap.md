@@ -269,6 +269,73 @@ Slice 4 (`/design-system` route) shipped:
 uses only semantic tokens. *(True as of slice 2 — confirmed by the grep in
 slice 2's verification, not just assumed from the diff.)*
 
+## Phase 3.6 — Visual identity (paused after slice 1, minimal)
+
+Goal: Phase 3.5 built the *infrastructure* for consistent design (tokens,
+dark mode, a shared component library) — it deliberately didn't touch the
+actual aesthetic. This phase started spending that infrastructure on a
+real visual identity, but slice 1 went through two direction changes
+(Linear-style → Notion-inspired warm coral/stone → simplified) before the
+owner made an explicit call: finish the product's functionality first
+(Phases 4-8) and do one real, considered design pass later, once there's
+more surface to design for, rather than iterating on color in the abstract
+now. Slice 1 landed in a **deliberately minimal** form as a result — real
+structural improvements (hover/focus states, shadow-based card elevation,
+softer radii, a status-color system) kept, but the color story simplified
+to a plain deep-blue accent on the stock cool `gray` neutral scale instead
+of a hand-tuned warm palette. Slice 2 (rolling polish out to every
+remaining screen) and any further aesthetic work are **explicitly
+deferred** — see the flagged revisit point below.
+
+Slice 1 (visual foundations, kept minimal) shipped:
+
+- [x] A real accent color — FlowDesk's own deep blue (`--color-accent-*`,
+      an 11-shade hand-crafted primitive scale, hue ~250 in OKLCH,
+      replacing the placeholder `--color-brand-500`), used for links,
+      focus rings, and the in-progress status. Originally warm coral on
+      warm `stone` neutrals (a fuller Notion-inspired take); simplified to
+      deep-blue-on-`gray` per the owner's explicit call to keep this slice
+      minimal rather than keep tuning color — the `stone` experiment is
+      gone, semantic tokens reference the stock `gray` scale again.
+- [x] A fixed 3-color status system (`--color-status-todo/in-progress/done`)
+      as new semantic tokens, applied via a new `StatusBadge` (a colored
+      dot + label) — replacing plain status text on issue cards and the
+      issue detail page.
+- [x] Cards drop the hard border for a soft shadow + background contrast
+      (`bg-page` = `gray-100`, `bg-surface` = white) — reads as elevated
+      without an outline. Softer, larger corners (`radius-card` → 12px,
+      `radius-control` → 6px).
+- [x] Every `shared/ui` component gets real hover/focus states — there
+      were none anywhere before this (confirmed via the Phase 3.5 audit).
+      `Button` hover (opacity shift) and `Card` hover (shadow increase)
+      verified via `getComputedStyle` during a real simulated hover, not
+      just eyeballed. A real accent-colored focus-visible ring on every
+      form control — a genuine accessibility gap closed, not just a style
+      change.
+      Found and fixed a real layout bug while verifying live:
+      `StatusBadge` (an inline element) replacing a block-level status
+      `<p>` on the issue detail page let the adjacent "Edit" button flow
+      onto the same line with no gap — caught by screenshot, not by
+      reading the diff, fixed with an explicit flex row.
+      Proven on `ProjectsPage` and `IssueDetailPage` (its richest screen)
+      in both light and dark mode.
+- [ ] Slice 2 — **Deferred.** Roll out the refreshed foundations and
+      component visuals across every remaining screen. Not started; not
+      planned until the flagged revisit point below.
+
+**Revisit point (flagged, not scheduled)**: once Phases 4-8 have built out
+the full feature surface — real screens for filtering/pagination, the
+Kanban board, real-time presence, search/notifications, and analytics —
+there's enough actual product to design for instead of guessing ahead of
+it. That's the natural point for one real, considered design pass (finish
+slice 2, revisit the warm-vs-cool neutral and accent-color decision with
+real screens in hand, add a persistent nav shell). Raise this explicitly
+with the owner when the roadmap reaches that point, rather than waiting to
+be asked.
+
+**Done when** (deferred) every existing screen reflects a deliberate visual
+direction, not just the ones touched directly in this minimal slice 1.
+
 ## Phase 4 — React depth
 
 - [ ] TanStack Query conventions: keys, invalidation, staleness

@@ -12,7 +12,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
       <input
         ref={ref}
         className={cn(
-          "rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1",
+          "rounded-[var(--radius-control)] border border-[var(--color-border-input)] px-2 py-1 transition-colors focus:border-[var(--color-border-focus)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-border-focus)]",
           className,
         )}
         {...props}

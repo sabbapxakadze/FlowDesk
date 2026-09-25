@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Card } from "../../../shared/ui";
+import { Card, StatusBadge } from "../../../shared/ui";
 import type { Issue } from "../model";
 
 /**
@@ -23,13 +23,13 @@ export function IssueCard({
   onEdit?: () => void;
 }) {
   return (
-    <Card as="li" className="flex items-start justify-between gap-2">
+    <Card as="li" hoverable className="flex items-start justify-between gap-2">
       <Link to={`/projects/${issue.projectId}/issues/${issue.id}`}>
         <p className="text-sm text-[var(--color-text-muted)]">
           {projectKey}-{issue.number}
         </p>
         <p className="font-medium">{issue.title}</p>
-        <p className="text-xs text-[var(--color-text-muted)]">{issue.status}</p>
+        <StatusBadge status={issue.status} />
       </Link>
       {onEdit && (
         <button onClick={onEdit} className="text-sm text-[var(--color-text-link)] underline">

@@ -1,20 +1,41 @@
 /**
- * Primitive tokens only — Phase 0 scope. See docs/adr/0006 (sequencing
- * note): the semantic tier (--color-bg-surface, --color-text-muted, etc.)
- * is deliberately not defined yet. It gets extracted in Phase 3.5 from real
- * screens, instead of being guessed now before any exist.
+ * Primitive tokens only. Tailwind v4 already ships an extensive primitive
+ * scale out of the box (colors, spacing, type, radius). This file only
+ * adds what that default scale doesn't have: our font stack and
+ * FlowDesk's own accent color. Nothing here should be imported by a
+ * component directly — components consume the semantic tier
+ * (shared/tokens/semantic.css), which references these.
  *
- * Tailwind v4 already ships an extensive primitive scale out of the box
- * (colors, spacing, type, radius — all as CSS variables under the hood).
- * This file only adds what that default scale doesn't have: our font stack
- * and a brand accent color. Nothing here should be imported by a component
- * directly — components will consume the semantic tier once it exists.
+ * `@theme static`, not plain `@theme`: verified in Phase 3.5 that
+ * Tailwind v4 tree-shakes a declared theme variable it can't detect a
+ * *direct utility-class* consumer for. The accent scale is consumed
+ * indirectly — through semantic.css's `var(--color-accent-500)` style
+ * references, never as a literal `bg-accent-500` class anywhere — so
+ * without `static` most of these shades would silently vanish from the
+ * compiled CSS the same way slice 1 of 3.5's tokens did.
  */
-@theme {
+@theme static {
   --font-sans:
     "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-  /* Placeholder brand accent — expect this to change once there's an
-     actual visual direction. Not load-bearing anywhere yet. */
-  --color-brand-500: oklch(0.58 0.18 260);
+  /**
+   * FlowDesk's own accent — deep blue (hue ~250 in OKLCH). Originally
+   * warm coral, paired with a warm-neutral (stone) base; both were
+   * deliberately simplified to this deep-blue-on-cool-gray combination
+   * (see semantic.css) — a real, later design pass revisits the full
+   * palette once more of the product exists to design for (see
+   * docs/roadmap.md's Phase 3.6 note on where that pass belongs). Same
+   * 11-shade ramp shape as Tailwind's own built-in scales, hue changed.
+   */
+  --color-accent-50: oklch(0.97 0.02 250);
+  --color-accent-100: oklch(0.93 0.045 250);
+  --color-accent-200: oklch(0.87 0.08 250);
+  --color-accent-300: oklch(0.79 0.12 250);
+  --color-accent-400: oklch(0.71 0.16 250);
+  --color-accent-500: oklch(0.65 0.19 250);
+  --color-accent-600: oklch(0.58 0.2 250);
+  --color-accent-700: oklch(0.5 0.19 250);
+  --color-accent-800: oklch(0.42 0.16 250);
+  --color-accent-900: oklch(0.35 0.13 250);
+  --color-accent-950: oklch(0.25 0.09 250);
 }

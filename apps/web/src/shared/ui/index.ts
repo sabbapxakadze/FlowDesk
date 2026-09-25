@@ -5,4 +5,5 @@ export { Select } from "./Select";
 export { Field } from "./Field";
 export { Card } from "./Card";
 export { ErrorText } from "./ErrorText";
+export { StatusBadge } from "./StatusBadge";
 export { cn } from "./lib/cn";

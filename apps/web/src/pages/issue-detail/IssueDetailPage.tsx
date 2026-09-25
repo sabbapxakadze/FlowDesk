@@ -6,7 +6,7 @@ import { useIssues, useIssueEvents } from "../../entities/issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { CommentForm } from "../../features/post-comment";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card } from "../../shared/ui";
+import { Card, StatusBadge } from "../../shared/ui";
 
 function describeEvent(event: IssueEvent): string {
   switch (event.type) {
@@ -102,17 +102,19 @@ export function IssueDetailPage() {
             {project.key}-{issue.number}
           </p>
           <h1 className="text-2xl font-semibold">{issue.title}</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">{issue.status}</p>
+          <div className="mt-1 flex items-center gap-3">
+            <StatusBadge status={issue.status} />
+            <button
+              onClick={() => {
+                setShowConflictNotice(false);
+                setIsEditing(true);
+              }}
+              className="text-sm text-[var(--color-text-link)] underline"
+            >
+              Edit
+            </button>
+          </div>
           {issue.description && <p className="mt-2">{issue.description}</p>}
-          <button
-            onClick={() => {
-              setShowConflictNotice(false);
-              setIsEditing(true);
-            }}
-            className="mt-2 text-sm text-[var(--color-text-link)] underline"
-          >
-            Edit
-          </button>
         </div>
       )}
 

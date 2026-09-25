@@ -1,64 +1,55 @@
 /**
- * The semantic tier — see docs/adr/0006. Derived from an audit of every
- * component built so far (Phase 0-3's real screens), not guessed upfront.
- * Values reference the primitive palette Tailwind v4 already generates
- * (--color-gray-500 etc.) — the primitive tier stays the one source of
- * raw color values, this file is the one place intent is named.
+ * The semantic tier — see docs/adr/0006. A deliberately simple palette
+ * for now: the cool default `gray` scale as the neutral base, plus
+ * FlowDesk's own accent (`--color-accent-*`, primitives.css — deep blue)
+ * for links/focus/in-progress status, and a fixed 3-color status system.
+ * A fuller visual identity pass (warmer neutrals, more considered type
+ * scale, etc.) is deliberately deferred to later in the roadmap, once
+ * more of the product exists to design for — see docs/roadmap.md's
+ * Phase 3.6 note. This is "good enough, not fancy," on purpose.
  *
- * Components will consume these via arbitrary-value utilities, e.g.
- * `text-[var(--color-text-muted)]`, once slice 2 migrates them. Nothing
- * in this file changes what any screen looks like by itself — only
- * `body`'s two properties (wired in app/index.css) have a consumer yet.
- *
- * `@theme static`, not plain `@theme`: verified empirically that Tailwind
- * v4 tree-shakes theme variables it can't detect a utility-class consumer
- * for yet — most of this block was silently missing from the compiled
- * output until this was added (caught by reading the actual generated CSS,
- * not by trusting the source). `static` is Tailwind's documented escape
- * hatch for tokens meant for dynamic/future consumption instead of a
- * class name a naive source scan can find right now.
+ * `@theme static`, not plain `@theme` — see primitives.css's comment on
+ * why (verified in Phase 3.5, still true here).
  */
 @theme static {
-  --color-bg-page: var(--color-white);
+  --color-bg-page: var(--color-gray-100);
   --color-bg-surface: var(--color-white);
 
   --color-text-default: var(--color-gray-900);
   --color-text-muted: var(--color-gray-500);
   --color-text-danger: var(--color-red-600);
   --color-text-warning: var(--color-amber-600);
-  --color-text-link: var(--color-blue-600);
+  --color-text-link: var(--color-accent-600);
 
   --color-bg-action-primary: var(--color-gray-900);
   --color-text-on-action: var(--color-white);
 
   --color-border-default: var(--color-gray-200);
   --color-border-input: var(--color-gray-300);
+  /* Focus rings, not a border — nothing had any focus-visible treatment
+     before Phase 3.6. A real accessibility gap, not just a style one. */
+  --color-border-focus: var(--color-accent-500);
+
+  /* Status is a fixed enum (todo/in_progress/done), not user data — it
+     belongs in the token layer so it can be considered per theme, unlike
+     LabelBadge's arbitrary user-chosen colors which correctly stay raw. */
+  --color-status-todo: var(--color-gray-400);
+  --color-status-in-progress: var(--color-accent-500);
+  --color-status-done: var(--color-emerald-600);
 }
 
 /**
- * Not inside @theme: verified empirically that Tailwind v4 silently drops
- * a --radius-* custom property from its output when the name isn't one of
- * its recognized scale keywords (xs/sm/md/lg/xl/...) — unlike --color-*,
- * which is an open namespace and passes any name through. These two don't
- * need Tailwind's utility-generation machinery anyway (no `rounded-card`
- * class is needed — components reference the variable directly via
- * `rounded-[var(--radius-card)]`), so a plain :root rule sidesteps the
- * whole issue instead of fighting it.
+ * Not inside @theme — see primitives.css / this file's earlier version
+ * for why (Tailwind drops unrecognized --radius-* keys from @theme's
+ * output regardless of `static`; a plain :root rule sidesteps it).
+ * --radius-xl/--radius-md are real Tailwind v4 primitives, same as
+ * --radius-lg/--radius-sm were.
  */
 :root {
-  --radius-card: var(--radius-lg);
-  --radius-control: var(--radius-sm);
+  --radius-card: var(--radius-xl);
+  --radius-control: var(--radius-md);
 }
 
-/**
- * Dark mode redefines this tier and nothing else (CLAUDE.md's Concurrency
- * convention... see the Conventions section's Design tokens rule). Two
- * paths to the same redefinition: the media query (automatic, respects
- * the OS/browser preference) and a [data-theme="dark"] override (inert
- * today — no toggle UI exists yet — but costs nothing to have ready for
- * one, and :not([data-theme="light"]) stops the media query from
- * fighting a future manual "light" choice on a dark-preferring system).
- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-bg-page: var(--color-gray-950);
@@ -68,16 +59,18 @@
     --color-text-muted: var(--color-gray-400);
     --color-text-danger: var(--color-red-400);
     --color-text-warning: var(--color-amber-400);
-    --color-text-link: var(--color-blue-400);
+    --color-text-link: var(--color-accent-400);
 
-    /* The near-black-on-white button only reads as "primary action"
-       because it inverts the page — on a near-black page that means
-       inverting the other way, not keeping the same gray-900. */
     --color-bg-action-primary: var(--color-gray-100);
     --color-text-on-action: var(--color-gray-900);
 
     --color-border-default: var(--color-gray-800);
     --color-border-input: var(--color-gray-700);
+    --color-border-focus: var(--color-accent-400);
+
+    --color-status-todo: var(--color-gray-400);
+    --color-status-in-progress: var(--color-accent-400);
+    --color-status-done: var(--color-emerald-400);
   }
 }
 
@@ -89,11 +82,16 @@
   --color-text-muted: var(--color-gray-400);
   --color-text-danger: var(--color-red-400);
   --color-text-warning: var(--color-amber-400);
-  --color-text-link: var(--color-blue-400);
+  --color-text-link: var(--color-accent-400);
 
   --color-bg-action-primary: var(--color-gray-100);
   --color-text-on-action: var(--color-gray-900);
 
   --color-border-default: var(--color-gray-800);
   --color-border-input: var(--color-gray-700);
+  --color-border-focus: var(--color-accent-400);
+
+  --color-status-todo: var(--color-gray-400);
+  --color-status-in-progress: var(--color-accent-400);
+  --color-status-done: var(--color-emerald-400);
 }

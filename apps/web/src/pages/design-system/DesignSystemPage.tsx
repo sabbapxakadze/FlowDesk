@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { Button, Card, ErrorText, Field, Input, Select, Textarea } from "../../shared/ui";
+import type { IssueStatus } from "@flowdesk/contracts";
+import { Button, Card, ErrorText, Field, Input, Select, StatusBadge, Textarea } from "../../shared/ui";
 
 type ColorToken = {
   name: string;
@@ -26,7 +27,28 @@ const colorTokens: ColorToken[] = [
   { name: "text-on-action", cssVar: "--color-text-on-action", category: "Text" },
   { name: "border-default", cssVar: "--color-border-default", category: "Border" },
   { name: "border-input", cssVar: "--color-border-input", category: "Border" },
+  { name: "border-focus", cssVar: "--color-border-focus", category: "Border" },
 ];
+
+const ACCENT_SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
+
+/** Same reasoning as the class lookup tables below — a literal, complete
+ * string per shade, not a template literal Tailwind's scanner can't see. */
+const accentBgClassByShade: Record<(typeof ACCENT_SHADES)[number], string> = {
+  50: "bg-accent-50",
+  100: "bg-accent-100",
+  200: "bg-accent-200",
+  300: "bg-accent-300",
+  400: "bg-accent-400",
+  500: "bg-accent-500",
+  600: "bg-accent-600",
+  700: "bg-accent-700",
+  800: "bg-accent-800",
+  900: "bg-accent-900",
+  950: "bg-accent-950",
+};
+
+const ALL_STATUSES: IssueStatus[] = ["todo", "in_progress", "done"];
 
 /**
  * Tailwind's JIT scanner reads literal source text, not runtime-evaluated
@@ -134,6 +156,27 @@ export function DesignSystemPage() {
         <div className="flex flex-col gap-3">
           {byCategory("Border").map((t) => (
             <TokenSwatch key={t.cssVar} token={t} />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Accent primitive (FlowDesk's own)">
+        <div className="flex flex-wrap gap-2">
+          {ACCENT_SHADES.map((shade) => (
+            <div key={shade} className="text-center text-xs">
+              <div
+                className={`mb-1 h-10 w-10 rounded-[var(--radius-control)] ${accentBgClassByShade[shade]}`}
+              />
+              {shade}
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Status">
+        <div className="flex gap-4">
+          {ALL_STATUSES.map((status) => (
+            <StatusBadge key={status} status={status} />
           ))}
         </div>
       </Section>
