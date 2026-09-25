@@ -29,13 +29,17 @@ export const listIssuesResponseSchema = z.object({
 
 export type ListIssuesResponse = z.infer<typeof listIssuesResponseSchema>;
 
-// Keyset pagination query params. cursor is opaque (server-generated, see
-// issues.repository.ts) — the client never constructs one, only passes
-// back what a previous response gave it. limit is capped, not just
-// defaulted, so a client can't request an unbounded page.
+// Keyset pagination + filter/sort query params. cursor is opaque
+// (server-generated, see issues.repository.ts) — the client never
+// constructs one, only passes back what a previous response gave it.
+// limit is capped, not just defaulted, so a client can't request an
+// unbounded page. order is direction-only (created_at is the only
+// sortable column today, see the Phase 4 slice 2 plan's "Decisions").
 export const listIssuesQuerySchema = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),
+  status: issueStatusSchema.optional(),
+  order: z.enum(["asc", "desc"]).default("desc"),
 });
 
 export type ListIssuesQuery = z.infer<typeof listIssuesQuerySchema>;

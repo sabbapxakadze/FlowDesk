@@ -1,20 +1,24 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetchIssues } from "./fetchIssues";
-import { issueKeys } from "./queryKeys";
+import { issueKeys, type IssueListFilters } from "./queryKeys";
 
 /**
  * Cursor pagination via TanStack Query's built-in useInfiniteQuery, not a
  * hand-rolled "page" state: getNextPageParam reads the server's opaque
  * nextCursor directly, and a null nextCursor is what tells TanStack there's
  * no further page — no separate hasMore bookkeeping needed on this side.
- * Same queryKey factory (issueKeys.list) useQuery used; useInfiniteQuery
- * namespaces its cache under it automatically.
+ *
+ * filters (status/order) are part of the query key — changing either is a
+ * different cache entry, so useInfiniteQuery naturally starts back at a
+ * fresh first page with no manual cursor-reset code needed. See
+ * queryKeys.ts for why that doesn't break CreateIssueForm/EditIssueForm's
+ * existing unfiltered invalidation calls.
  */
-export function useIssues(organizationId: string, projectId: string) {
+export function useIssues(organizationId: string, projectId: string, filters: IssueListFilters = {}) {
   return useInfiniteQuery({
-    queryKey: issueKeys.list(projectId),
+    queryKey: issueKeys.list(projectId, filters),
     queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
-      fetchIssues(organizationId, projectId, { cursor: pageParam }),
+      fetchIssues(organizationId, projectId, { ...filters, cursor: pageParam }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });

@@ -41,19 +41,26 @@ function decodeCursor(cursor: string): { createdAt: Date; id: string } | null {
  * makes this safe even if a caller ever got here without requireProject
  * having verified the project belongs to that org first (ADR 0004).
  *
- * Keyset pagination, not OFFSET: ordered by (created_at DESC, id DESC),
- * matching issues_project_id_created_at_id_idx exactly. The cursor
- * condition uses Postgres's row-constructor comparison
- * `(created_at, id) < (cursorCreatedAt, cursorId)` rather than the
- * equivalent `OR`-expanded form (`created_at < x OR (created_at = x AND
- * id < y)`) — verified with EXPLAIN ANALYZE (see docs/roadmap.md's Phase
- * 4 slice 1 entry) that only the row-constructor form compiles to a real
- * composite Index Cond on this index; the OR form still used the index for
- * project_id but fell back to filtering every row after the cursor by
- * hand, scanning work proportional to page depth instead of `limit`, the
- * exact cost keyset pagination exists to avoid. Fetches one row past the
- * requested limit to know whether a next page exists without a second
- * COUNT-style query.
+ * Keyset pagination, not OFFSET: ordered by (created_at, id), matching
+ * issues_project_id_created_at_id_idx exactly. The cursor condition uses
+ * Postgres's row-constructor comparison `(created_at, id) < (cursor)`
+ * rather than the equivalent `OR`-expanded form — verified with EXPLAIN
+ * ANALYZE (see docs/roadmap.md's Phase 4 slice 1 entry) that only the
+ * row-constructor form compiles to a real composite Index Cond; the OR
+ * form still used the index for project_id but fell back to filtering
+ * every row after the cursor by hand, scanning work proportional to page
+ * depth instead of `limit`. Fetches one row past the requested limit to
+ * know whether a next page exists without a second COUNT-style query.
+ *
+ * order flips both the ORDER BY direction and the cursor's comparison
+ * operator together (desc: `<`/DESC, asc: `>`/ASC) — encapsulated here so
+ * the two can't drift apart into an inconsistent combination. Postgres
+ * btree indexes scan equally well in either direction, so `asc` reuses
+ * the same composite index with no second index needed (verified with
+ * EXPLAIN ANALYZE, see docs/roadmap.md's Phase 4 slice 2 entry). status,
+ * when present, is a plain eq() — no separate index for it: it's a
+ * 3-value filter applied on top of an already-selective project_id
+ * equality, not worth a dedicated (or wider) index at this scale.
  *
  * "invalid_cursor" is a return value, not a thrown error — same modeling
  * as update()'s conflict/not_found below: an expected, client-triggerable
@@ -62,23 +69,29 @@ function decodeCursor(cursor: string): { createdAt: Date; id: string } | null {
 export async function listByProject(
   organizationId: string,
   projectId: string,
-  options: { limit: number; cursor?: string },
+  options: { limit: number; cursor?: string; status?: IssueStatus; order: "asc" | "desc" },
 ): Promise<{ status: "ok"; items: IssueRow[]; nextCursor: string | null } | { status: "invalid_cursor" }> {
   const conditions = [eq(issues.organizationId, organizationId), eq(issues.projectId, projectId)];
+
+  if (options.status) {
+    conditions.push(eq(issues.status, options.status));
+  }
 
   if (options.cursor) {
     const decoded = decodeCursor(options.cursor);
     if (!decoded) return { status: "invalid_cursor" };
+    const comparator = options.order === "asc" ? sql.raw(">") : sql.raw("<");
     conditions.push(
-      sql`(${issues.createdAt}, ${issues.id}) < (${decoded.createdAt.toISOString()}, ${decoded.id})`,
+      sql`(${issues.createdAt}, ${issues.id}) ${comparator} (${decoded.createdAt.toISOString()}, ${decoded.id})`,
     );
   }
 
+  const orderFn = options.order === "asc" ? asc : desc;
   const rows = await db
     .select()
     .from(issues)
     .where(and(...conditions))
-    .orderBy(desc(issues.createdAt), desc(issues.id))
+    .orderBy(orderFn(issues.createdAt), orderFn(issues.id))
     .limit(options.limit + 1);
 
   const hasMore = rows.length > options.limit;

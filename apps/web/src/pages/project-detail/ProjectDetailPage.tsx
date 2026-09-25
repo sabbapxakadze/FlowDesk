@@ -1,11 +1,18 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
+import type { IssueStatus } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
 import { IssueCard, useIssues } from "../../entities/issue";
 import { CreateIssueForm } from "../../features/create-issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Button } from "../../shared/ui";
+import { Button, Select, STATUS_LABELS } from "../../shared/ui";
+
+const STATUS_FILTER_VALUES: IssueStatus[] = ["todo", "in_progress", "done"];
+
+function isIssueStatus(value: string | null): value is IssueStatus {
+  return value !== null && (STATUS_FILTER_VALUES as string[]).includes(value);
+}
 
 /**
  * No dedicated "get one project" fetch — this reuses the same
@@ -20,6 +27,15 @@ export function ProjectDetailPage() {
   const { data: projects, isPending: projectsPending } = useProjects(organization!.id);
   const project = projects?.find((p) => p.id === projectId);
 
+  // The URL is the source of truth for filter/sort state, not component
+  // state — a bookmarked or reloaded ?status=...&order=... URL reproduces
+  // the same view. Omitted params mean "all statuses" / newest-first,
+  // matching the API's own defaults (see listIssuesQuerySchema).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusParam = searchParams.get("status");
+  const status = isIssueStatus(statusParam) ? statusParam : undefined;
+  const order = searchParams.get("order") === "asc" ? "asc" : undefined;
+
   const {
     data,
     isPending: issuesPending,
@@ -28,7 +44,7 @@ export function ProjectDetailPage() {
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useIssues(organization!.id, projectId!);
+  } = useIssues(organization!.id, projectId!, { status, order });
   // useInfiniteQuery's data is { pages: Page[], pageParams }, not a flat
   // list — flatten once here so the rest of this page (and IssueCard)
   // doesn't need to know pagination happened at all. The ?? [] is only
@@ -41,6 +57,30 @@ export function ProjectDetailPage() {
   // import EditIssueForm (features layer); this is where the two compose.
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
   const [showConflictNotice, setShowConflictNotice] = useState(false);
+
+  function setStatusFilter(value: string) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value === "") {
+        next.delete("status");
+      } else {
+        next.set("status", value);
+      }
+      return next;
+    });
+  }
+
+  function toggleOrder() {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (next.get("order") === "asc") {
+        next.delete("order");
+      } else {
+        next.set("order", "asc");
+      }
+      return next;
+    });
+  }
 
   if (projectsPending || issuesPending) {
     return <p className="p-8 text-[var(--color-text-muted)]">Loading…</p>;
@@ -65,6 +105,25 @@ export function ProjectDetailPage() {
 
       <CreateIssueForm organizationId={organization!.id} projectId={project.id} />
 
+      <div className="mt-4 mb-3 flex items-center gap-2">
+        <Select
+          value={status ?? ""}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="w-auto"
+          aria-label="Filter by status"
+        >
+          <option value="">All statuses</option>
+          {STATUS_FILTER_VALUES.map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABELS[s]}
+            </option>
+          ))}
+        </Select>
+        <Button variant="secondary" size="sm" onClick={toggleOrder}>
+          {order === "asc" ? "Oldest first" : "Newest first"}
+        </Button>
+      </div>
+
       {showConflictNotice && (
         <p className="mb-2 text-sm text-[var(--color-text-warning)]">
           That issue was updated by someone else — showing the latest version.
@@ -72,7 +131,9 @@ export function ProjectDetailPage() {
       )}
 
       {issues.length === 0 ? (
-        <p className="text-[var(--color-text-muted)]">No issues yet.</p>
+        <p className="text-[var(--color-text-muted)]">
+          {status ? `No ${STATUS_LABELS[status].toLowerCase()} issues.` : "No issues yet."}
+        </p>
       ) : (
         <ul className="flex flex-col gap-2">
           {issues.map((issue) =>

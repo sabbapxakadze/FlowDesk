@@ -24,8 +24,14 @@ measured `EXPLAIN ANALYZE` proof, not assumed), `useIssues` on
 `useInfiniteQuery`, a "Load more" button on `ProjectDetailPage`, and a new
 dedicated `GET .../issues/:issueId` endpoint + `useIssue` hook (fixes a
 regression the pagination change would otherwise have caused in
-`IssueDetailPage`). Slice 2 (filter + sort + URL-driven list state,
-reusable list/empty/skeleton states) is next.
+`IssueDetailPage`).
+
+Slice 2 (status filter + sort, URL-driven) is done: `?status=`/`?order=`
+on the same endpoint, `ProjectDetailPage` reading/writing both via
+`useSearchParams` (landing directly on a filtered URL renders already
+filtered — verified, not just wired), and a distinct filtered-empty-state
+message. Slice 3 (reusable table/list, empty states, skeletons, error
+boundaries, generalized beyond this one case) is next.
 
 Phase 3.5 (Design system extraction) is fully done across four slices —
 the semantic token tier + dark mode infrastructure, migrating every

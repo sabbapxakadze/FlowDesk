@@ -1,10 +1,5 @@
 import type { IssueStatus } from "@flowdesk/contracts";
-
-const STATUS_LABELS: Record<IssueStatus, string> = {
-  todo: "Todo",
-  in_progress: "In progress",
-  done: "Done",
-};
+import { STATUS_LABELS } from "./statusLabels";
 
 /**
  * Complete literal class strings in a lookup table, not a template

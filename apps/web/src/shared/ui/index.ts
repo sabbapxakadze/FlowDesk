@@ -6,4 +6,5 @@ export { Field } from "./Field";
 export { Card } from "./Card";
 export { ErrorText } from "./ErrorText";
 export { StatusBadge } from "./StatusBadge";
+export { STATUS_LABELS } from "./statusLabels";
 export { cn } from "./lib/cn";

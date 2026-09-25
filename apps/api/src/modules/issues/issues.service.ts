@@ -11,7 +11,7 @@ import * as issuesRepository from "./issues.repository.js";
 export async function listIssues(
   organizationId: string,
   projectId: string,
-  options: { limit: number; cursor?: string },
+  options: { limit: number; cursor?: string; status?: IssueStatus; order: "asc" | "desc" },
 ) {
   return issuesRepository.listByProject(organizationId, projectId, options);
 }

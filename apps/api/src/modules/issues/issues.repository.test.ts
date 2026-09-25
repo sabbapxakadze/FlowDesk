@@ -57,7 +57,10 @@ describe("issues repository", () => {
       reporterId: b.user.id,
     });
 
-    const result = await issuesRepository.listByProject(a.org.id, a.project.id, { limit: 25 });
+    const result = await issuesRepository.listByProject(a.org.id, a.project.id, {
+      limit: 25,
+      order: "desc",
+    });
 
     if (result.status !== "ok") throw new Error("expected ok");
     expect(result.items).toHaveLength(1);
@@ -166,7 +169,10 @@ describe("issues repository — pagination", () => {
     const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
     await seedIssues(org, project, user, 5);
 
-    const result = await issuesRepository.listByProject(org.id, project.id, { limit: 2 });
+    const result = await issuesRepository.listByProject(org.id, project.id, {
+      limit: 2,
+      order: "desc",
+    });
 
     if (result.status !== "ok") throw new Error("expected ok");
     expect(result.items).toHaveLength(2);
@@ -177,7 +183,10 @@ describe("issues repository — pagination", () => {
     const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
     await seedIssues(org, project, user, 3);
 
-    const result = await issuesRepository.listByProject(org.id, project.id, { limit: 10 });
+    const result = await issuesRepository.listByProject(org.id, project.id, {
+      limit: 10,
+      order: "desc",
+    });
 
     if (result.status !== "ok") throw new Error("expected ok");
     expect(result.items.map((i) => i.title)).toEqual(["Issue 3", "Issue 2", "Issue 1"]);
@@ -188,12 +197,13 @@ describe("issues repository — pagination", () => {
     const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
     await seedIssues(org, project, user, 5);
 
-    const page1 = await issuesRepository.listByProject(org.id, project.id, { limit: 2 });
+    const page1 = await issuesRepository.listByProject(org.id, project.id, { limit: 2, order: "desc" });
     if (page1.status !== "ok" || !page1.nextCursor) throw new Error("expected a next page");
     expect(page1.items.map((i) => i.title)).toEqual(["Issue 5", "Issue 4"]);
 
     const page2 = await issuesRepository.listByProject(org.id, project.id, {
       limit: 2,
+      order: "desc",
       cursor: page1.nextCursor,
     });
     if (page2.status !== "ok" || !page2.nextCursor) throw new Error("expected a next page");
@@ -201,6 +211,7 @@ describe("issues repository — pagination", () => {
 
     const page3 = await issuesRepository.listByProject(org.id, project.id, {
       limit: 2,
+      order: "desc",
       cursor: page2.nextCursor,
     });
     if (page3.status !== "ok") throw new Error("expected ok");
@@ -214,6 +225,7 @@ describe("issues repository — pagination", () => {
 
     const result = await issuesRepository.listByProject(org.id, project.id, {
       limit: 10,
+      order: "desc",
       cursor: "not-a-real-cursor",
     });
 
@@ -226,11 +238,115 @@ describe("issues repository — pagination", () => {
     await seedIssues(a.org, a.project, a.user, 3);
     await seedIssues(b.org, b.project, b.user, 3);
 
-    const result = await issuesRepository.listByProject(a.org.id, a.project.id, { limit: 10 });
+    const result = await issuesRepository.listByProject(a.org.id, a.project.id, {
+      limit: 10,
+      order: "desc",
+    });
 
     if (result.status !== "ok") throw new Error("expected ok");
     expect(result.items).toHaveLength(3);
     expect(result.items.every((i) => i.projectId === a.project.id)).toBe(true);
+  });
+
+  it("filters by status", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const base = new Date("2026-01-01T00:00:00.000Z").getTime();
+    await db.insert(issues).values([
+      {
+        organizationId: org.id,
+        projectId: project.id,
+        number: 1,
+        title: "Todo issue",
+        reporterId: user.id,
+        status: "todo",
+        createdAt: new Date(base),
+        updatedAt: new Date(base),
+      },
+      {
+        organizationId: org.id,
+        projectId: project.id,
+        number: 2,
+        title: "In progress issue",
+        reporterId: user.id,
+        status: "in_progress",
+        createdAt: new Date(base + 1000),
+        updatedAt: new Date(base + 1000),
+      },
+      {
+        organizationId: org.id,
+        projectId: project.id,
+        number: 3,
+        title: "Done issue",
+        reporterId: user.id,
+        status: "done",
+        createdAt: new Date(base + 2000),
+        updatedAt: new Date(base + 2000),
+      },
+    ]);
+
+    const result = await issuesRepository.listByProject(org.id, project.id, {
+      limit: 10,
+      order: "desc",
+      status: "in_progress",
+    });
+
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect(result.items.map((i) => i.title)).toEqual(["In progress issue"]);
+  });
+
+  it("returns oldest-first with order: asc and advances the cursor forward", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    await seedIssues(org, project, user, 5);
+
+    const page1 = await issuesRepository.listByProject(org.id, project.id, { limit: 2, order: "asc" });
+    if (page1.status !== "ok" || !page1.nextCursor) throw new Error("expected a next page");
+    expect(page1.items.map((i) => i.title)).toEqual(["Issue 1", "Issue 2"]);
+
+    const page2 = await issuesRepository.listByProject(org.id, project.id, {
+      limit: 2,
+      order: "asc",
+      cursor: page1.nextCursor,
+    });
+    if (page2.status !== "ok") throw new Error("expected ok");
+    expect(page2.items.map((i) => i.title)).toEqual(["Issue 3", "Issue 4"]);
+  });
+
+  it("combines a status filter with cursor pagination", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const base = new Date("2026-01-01T00:00:00.000Z").getTime();
+    // Alternating status: Issue 1/3/5 are "todo", Issue 2/4/6 are "done" —
+    // the cursor must skip the interleaved "done" rows, not just the
+    // previous page's worth of raw rows.
+    await db.insert(issues).values(
+      Array.from({ length: 6 }, (_, i) => ({
+        organizationId: org.id,
+        projectId: project.id,
+        number: i + 1,
+        title: `Issue ${i + 1}`,
+        reporterId: user.id,
+        status: i % 2 === 0 ? ("todo" as const) : ("done" as const),
+        createdAt: new Date(base + i * 1000),
+        updatedAt: new Date(base + i * 1000),
+      })),
+    );
+
+    const page1 = await issuesRepository.listByProject(org.id, project.id, {
+      limit: 2,
+      order: "desc",
+      status: "todo",
+    });
+    if (page1.status !== "ok" || !page1.nextCursor) throw new Error("expected a next page");
+    expect(page1.items.map((i) => i.title)).toEqual(["Issue 5", "Issue 3"]);
+
+    const page2 = await issuesRepository.listByProject(org.id, project.id, {
+      limit: 2,
+      order: "desc",
+      status: "todo",
+      cursor: page1.nextCursor,
+    });
+    if (page2.status !== "ok") throw new Error("expected ok");
+    expect(page2.items.map((i) => i.title)).toEqual(["Issue 1"]);
+    expect(page2.nextCursor).toBeNull();
   });
 });
 

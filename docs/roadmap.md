@@ -383,8 +383,45 @@ Slice 1 (cursor pagination on the issues list) shipped:
       list's cache entry. Verified live: navigated directly to an issue
       created well past page 1 (27 seeded issues, 25-item pages) and
       confirmed it now loads correctly.
-- [ ] Slice 2 — filter + sort + URL-driven list state, reusable
-      table/list, empty states, skeletons, error boundaries. Not started.
+Slice 2 (status filter + sort, URL-driven) shipped:
+
+- [x] Server-side status filter (`?status=todo|in_progress|done`, plain
+      `eq()` — no new index; status is a 3-value filter applied on top of
+      an already-selective `project_id` equality, not worth a dedicated
+      or wider index at this scale) and sort direction (`?order=asc|desc`
+      on `created_at`, the only sortable column today — not a general
+      multi-column sort system). Both added to `listIssuesQuerySchema`;
+      `listByProject`'s `order` flips the `ORDER BY` direction and the
+      cursor's comparison operator (`<`/DESC vs `>`/ASC) together, in one
+      place, so they can't drift apart into an inconsistent combination.
+- [x] **EXPLAIN ANALYZE sanity check** (5,000 seeded rows, reusing slice
+      1's approach): both `status` filtering and `order: asc` confirmed
+      to still hit `issues_project_id_created_at_id_idx` as an `Index
+      Scan`/`Index Scan Backward` — status as a post-index `Filter`
+      (expected, not a regression), `asc` as a genuine forward scan on
+      the same composite index (Postgres btrees are bidirectionally
+      scannable — no second index needed). Re-verified with a cursor
+      present too (the actual paginated-request shape), confirming the
+      row-constructor `Index Cond` from slice 1 still applies with both
+      `<` and `>` comparators.
+- [x] URL as the source of truth: `status`/`order` live in
+      `ProjectDetailPage`'s `useSearchParams()`, not component state —
+      landing directly on a `?status=...&order=...` URL renders already
+      filtered/sorted, verified live (not just wired). Filter/order
+      changes are a different `issueKeys.list(projectId, filters)` cache
+      key entirely, so `useInfiniteQuery` resets to a fresh first page
+      automatically — no manual pagination-reset code needed.
+      `CreateIssueForm`/`EditIssueForm`'s existing unfiltered
+      `invalidateQueries({ queryKey: issueKeys.list(projectId) })` calls
+      needed no changes: TanStack's partial key matching means that
+      shorter, filter-less key still invalidates every filtered variant.
+- [x] Filtered empty state gets its own message ("No done issues.") 
+      distinct from the unconditional "No issues yet." — verified live
+      against a project with issues in other statuses but none matching
+      the active filter.
+- [ ] Slice 3 — reusable table/list, empty states, skeletons, error
+      boundaries, generalized beyond this one filtered-empty-state case.
+      Not started.
 
 ## Phase 5 — Kanban board
 
