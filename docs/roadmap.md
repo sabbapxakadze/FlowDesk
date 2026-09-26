@@ -558,8 +558,49 @@ Slice 2 (move endpoint — bisection + rebalancing) shipped:
       a column and moving across columns both persist and both endpoints'
       cache invalidation (list, board, detail, events) keeps every view
       in sync.
-- [ ] Slice 3 — real dnd-kit drag & drop with optimistic updates,
-      replacing slice 2's buttons. Not started.
+Slice 3 (real drag & drop with optimistic updates) shipped:
+
+- [x] `@dnd-kit/core` + `@dnd-kit/sortable` (+ `@dnd-kit/utilities`) —
+      not core alone: sortable's keyboard coordinate getter is what
+      makes drag genuinely keyboard-operable (Tab to the handle, Space
+      to pick up, arrow keys to move — including across columns, Space
+      to drop), not just pointer-draggable. Each column is droppable
+      (append) and a `SortableContext`; each card is a sortable drop
+      target (insert-before). Replaces slice 2's up/down/move-to-column
+      buttons entirely — `BoardCard` calls the same `useMoveIssue`
+      mutation slice 2 already built, just triggered by `onDragEnd`
+      instead of a click handler.
+- [x] **A real bug found via live testing, not assumed away**: the
+      first version put the drag `listeners`/`attributes` on the whole
+      card, including its title `<Link>`, on the theory that
+      `PointerSensor`'s activation distance would disambiguate a click
+      from a drag. It didn't — verified live: completing a drag
+      actually navigated to the issue detail page mid-drop (dnd-kit's
+      synthetic click after a finished drag still fires on the
+      original pointerdown target; checking `isDragging` in the Link's
+      own `onClick` doesn't help, since that flag has already reset to
+      `false` by the time the click event fires). Fixed with a
+      dedicated drag-handle button, separate from the `Link` — the
+      standard fix, not a click/drag disambiguation hack. `Card`
+      (`shared/ui`) needed converting to `forwardRef` for `useSortable`'s
+      `setNodeRef` to attach to, same reason `Input`/`Textarea`/`Select`
+      already are, for React Hook Form.
+- [x] Optimistic update lives in `useMoveIssue`'s `onMutate`/`onError`
+      (TanStack Query's own mechanism — snapshot the board cache, splice
+      the moved issue into its new position immediately, restore the
+      snapshot on failure), not a separate local-state layer — reuses
+      the data layer the project already has instead of adding a second
+      one. Scoped to the board query only; the list view still just
+      refetches on settle.
+- [x] Verified live, end to end, including the two things easiest to
+      silently ship broken: a real HTTP 409 injected via a mocked route
+      confirmed the optimistic move rolls back to the exact pre-drag
+      state (a real request fired and was rejected, not just "nothing
+      happened"); and an actual keyboard-only pass (focus the handle,
+      Space, arrow key, Space) produced a real successful move request,
+      not just a visual-only interaction. Both cross-column and
+      within-column pointer drags confirmed via the board's real API
+      response after the drop, not just the DOM.
 - [ ] Slice 4 — sprints: create, assign issues, backlog vs active. Not
       started.
 

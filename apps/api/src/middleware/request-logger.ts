@@ -17,4 +17,13 @@ export const requestLogger = pinoHttp({
     res.setHeader("X-Request-Id", id);
     return id;
   },
+  // The full req/res objects (headers included) still get logged as
+  // structured fields — this only replaces the human-facing `msg`, so a
+  // request reads as one short line ("POST /api/v1/auth/login 201
+  // (93ms)") instead of leaning on pino-pretty to reformat the whole
+  // record. customSuccessMessage/customErrorMessage only affect
+  // pino-http's own per-request logs, not any other logger.info/error
+  // call elsewhere in the app.
+  customSuccessMessage: (req, res, responseTime) => `${req.method} ${req.url} ${res.statusCode} (${responseTime}ms)`,
+  customErrorMessage: (req, res, error) => `${req.method} ${req.url} ${res.statusCode} (${error.message})`,
 });

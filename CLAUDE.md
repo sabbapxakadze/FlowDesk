@@ -36,8 +36,24 @@ original `MAX_RANK_SCALE = 20` was unreachable and would have let `/`
 silently round two distinct ranks together before the rebalance safety
 net ever fired. Fixed (now 10, with real margin) and verified live
 against real seeded data via `psql`, not just the automated test — see
-ADR 0007's updated Decision section for the full finding. Slice 3 (real
-dnd-kit drag & drop) is next, then slice 4 (sprints).
+ADR 0007's updated Decision section for the full finding.
+
+Slice 3 (real drag & drop with optimistic updates) is done: `@dnd-kit/
+core` + `@dnd-kit/sortable` replace slice 2's buttons entirely, calling
+the same `useMoveIssue` mutation from `onDragEnd`. **Another real bug
+caught live**: an early version made the whole card (including its
+title link) the drag handle, on the theory that `PointerSensor`'s
+activation distance alone would disambiguate a click from a drag — it
+didn't, completing a drag actually navigated to the issue detail page.
+Fixed with a dedicated drag-handle button (the standard fix), which
+needed `Card` converted to `forwardRef` for `useSortable`'s
+`setNodeRef`. Optimistic update lives in `useMoveIssue`'s `onMutate`/
+`onError` (TanStack Query's own mechanism, not a parallel local-state
+layer). Verified live end to end: cross-column and within-column
+pointer drags via the real API response, a mocked 409 confirming
+rollback to the exact pre-drag state, and an actual keyboard-only pass
+(focus, Space, arrow key, Space) producing a real successful move
+request. Slice 4 (sprints) is the last slice in this phase.
 
 Phase 4 (React depth) is **fully done** across three slices — every
 bullet in its original checklist is covered: cursor pagination (slice 1,
