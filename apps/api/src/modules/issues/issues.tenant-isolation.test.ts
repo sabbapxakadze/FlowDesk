@@ -154,6 +154,27 @@ describe("issues tenant isolation (HTTP level)", () => {
 
     expect(res.body.error.code).toBe("not_a_member");
   });
+
+  it("lets a member move their own issue and blocks an outsider from moving it", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const userB = await registerAndLogIn("b@example.com", "Org B");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Movable issue");
+
+    await request(app)
+      .patch(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/move`)
+      .set("Authorization", `Bearer ${userB.accessToken}`)
+      .send({ version: issue.version, status: "in_progress" })
+      .expect(403);
+
+    const res = await request(app)
+      .patch(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/move`)
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ version: issue.version, status: "in_progress" })
+      .expect(200);
+
+    expect(res.body.data.status).toBe("in_progress");
+  });
 });
 
 describe("issue update (HTTP level)", () => {

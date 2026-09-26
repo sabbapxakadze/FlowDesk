@@ -138,6 +138,153 @@ function nextRankSql(organizationId: string, projectId: string, status: string) 
   return sql`COALESCE((SELECT MAX(${issues.boardRank}) FROM ${issues} WHERE ${issues.organizationId} = ${organizationId} AND ${issues.projectId} = ${projectId} AND ${issues.status} = ${status}), 0) + 1000`;
 }
 
+/** The exact type db.transaction()'s callback receives — extracted
+ * rather than hand-typed, so it can never silently drift from what
+ * Drizzle actually infers. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * How many decimal places a bisected rank may need before the gap is
+ * considered exhausted and the column gets rebalanced instead — see ADR
+ * 0007. Checked via Postgres's own scale() function, never a JS-side
+ * distance/epsilon comparison (that would reintroduce the float-
+ * precision trap numeric exists to avoid).
+ *
+ * Deliberately well below what it might look like it could safely be:
+ * unlike +, -, and *, numeric's / operator is NOT unlimited-precision in
+ * Postgres — it computes a heuristic result scale targeting roughly
+ * 16 significant digits total (integer part + decimal part combined),
+ * shrinking as the integer part grows (empirically as low as 12 for a
+ * 7-8 digit rank, confirmed directly against this project's own
+ * Postgres 16 instance while building this). A threshold anywhere near
+ * that ceiling would let two deep-enough bisections silently round to
+ * the same stored value before this check ever caught it — exactly the
+ * collision fractional ranking exists to prevent. 10 leaves real margin
+ * below the observed worst case.
+ */
+const MAX_RANK_SCALE = 10;
+
+/**
+ * Renumbers every issue in a (project, status) column to fresh integer
+ * multiples of 1000, oldest-first among ties — same shape as the slice 1
+ * backfill migration, just scoped to one column and run inline instead
+ * of as a migration. Small column sizes are assumed (this project's
+ * real scale); a bulk single-statement renumber would be worth it at a
+ * size where N sequential UPDATEs actually matters.
+ */
+async function rebalanceColumn(tx: Tx, organizationId: string, projectId: string, status: IssueStatus) {
+  const rows = await tx
+    .select({ id: issues.id })
+    .from(issues)
+    .where(
+      and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId), eq(issues.status, status)),
+    )
+    .orderBy(asc(issues.boardRank), asc(issues.id));
+
+  for (const [index, row] of rows.entries()) {
+    await tx
+      .update(issues)
+      .set({ boardRank: String((index + 1) * 1000) })
+      .where(eq(issues.id, row.id));
+  }
+}
+
+/**
+ * Fetches a single issue's board_rank, scoped to organizationId +
+ * projectId + status — the same query doubles as the "does this
+ * neighbor actually belong to the target column" validation move()
+ * needs (defense in depth, same reasoning as every other tenant-scoped
+ * read here).
+ */
+async function fetchRankInColumn(
+  tx: Tx,
+  organizationId: string,
+  projectId: string,
+  status: IssueStatus,
+  issueId: string,
+): Promise<string | null> {
+  const [row] = await tx
+    .select({ boardRank: issues.boardRank })
+    .from(issues)
+    .where(
+      and(
+        eq(issues.id, issueId),
+        eq(issues.organizationId, organizationId),
+        eq(issues.projectId, projectId),
+        eq(issues.status, status),
+      ),
+    );
+  return row?.boardRank ?? null;
+}
+
+/**
+ * The exact midpoint between prevIssueId's and nextIssueId's ranks (or
+ * half of nextIssueId's, if prevIssueId is null — the target is the
+ * first card in the column), computed by Postgres's exact decimal
+ * arithmetic in one round trip alongside scale(), never parsed into a
+ * JS number. Wrapped in trim_scale() (Postgres 13+): plain numeric
+ * division pads its result to a generous fixed display scale (e.g.
+ * `1500.0000000000000000` for an exact 3000/2) even when the value is
+ * whole — checking scale() on that raw result would measure division's
+ * padding, not the rank's actual precision, and trigger a rebalance far
+ * too early. trim_scale() reduces to the minimal scale the value
+ * actually needs, so both the stored rank and the exhaustion check
+ * reflect real precision. If the trimmed candidate still needs more
+ * decimal places than MAX_RANK_SCALE, the column is rebalanced and the
+ * candidate recomputed against the now-current neighbor ranks —
+ * re-fetched by id, since a rebalance changes every rank in the column
+ * and the values read before it would be stale. Returns null if either
+ * neighbor isn't actually in this (project, status) column (see
+ * fetchRankInColumn).
+ */
+async function computeBisectedRank(
+  tx: Tx,
+  organizationId: string,
+  projectId: string,
+  status: IssueStatus,
+  prevIssueId: string | null,
+  nextIssueId: string,
+): Promise<string | null> {
+  const fetchBoth = async () => {
+    const nextRank = await fetchRankInColumn(tx, organizationId, projectId, status, nextIssueId);
+    if (nextRank === null) return null;
+    if (prevIssueId === null) return { prevRank: null, nextRank };
+    const prevRank = await fetchRankInColumn(tx, organizationId, projectId, status, prevIssueId);
+    if (prevRank === null) return null;
+    return { prevRank, nextRank };
+  };
+
+  const midpointOf = (prevRank: string | null, nextRank: string) =>
+    sql`trim_scale(${prevRank ? sql`(${prevRank}::numeric + ${nextRank}::numeric) / 2` : sql`${nextRank}::numeric / 2`})`;
+
+  const ranks = await fetchBoth();
+  if (!ranks) return null;
+
+  const midpoint = midpointOf(ranks.prevRank, ranks.nextRank);
+  const result = await tx.execute<{ candidate: string; candidate_scale: number }>(
+    sql`SELECT (${midpoint}) AS candidate, scale(${midpoint}) AS candidate_scale`,
+  );
+  const row = result.rows[0];
+  if (!row) throw new Error("Failed to compute a bisected board_rank");
+
+  if (row.candidate_scale <= MAX_RANK_SCALE) {
+    return row.candidate;
+  }
+
+  // Gap exhausted — rebalance the column, then recompute against the
+  // now-current (freshly evenly-spaced) neighbor ranks. Both neighbors
+  // are guaranteed to still be in this column post-rebalance (it only
+  // renumbers, never reorders or removes rows) — safe to re-fetch by id.
+  await rebalanceColumn(tx, organizationId, projectId, status);
+  const freshRanks = await fetchBoth();
+  if (!freshRanks) return null;
+  const freshMidpoint = midpointOf(freshRanks.prevRank, freshRanks.nextRank);
+  const freshResult = await tx.execute<{ candidate: string }>(sql`SELECT (${freshMidpoint}) AS candidate`);
+  const freshRow = freshResult.rows[0];
+  if (!freshRow) throw new Error("Failed to compute a bisected board_rank after rebalancing");
+  return freshRow.candidate;
+}
+
 /**
  * One transaction: increment the project's counter, insert the issue with
  * the pre-increment value as its number, insert the issue_events row.
@@ -275,6 +422,117 @@ export async function update(input: {
       );
 
     return current ? { status: "conflict", current } : { status: "not_found" };
+  });
+}
+
+/**
+ * Moves an issue to a position within `status` — reordering within its
+ * current column, or into a different one, are the same operation here.
+ * See ADR 0007 / the Phase 5 slice 2 plan's "Decisions" for the request
+ * shape: neither neighbor means "append to the end"; nextIssueId present
+ * means "insert before that card" (prevIssueId, if given alongside it,
+ * is the lower bound — omitted means the target is the column's first
+ * card). prevIssueId alone is treated as "append" — it's only ever
+ * meaningful paired with nextIssueId, and always recomputing MAX+gap for
+ * a bare append is robust against a stale/wrong prevIssueId rather than
+ * trusting it.
+ *
+ * Always writes an issue.moved event, even for a same-column reorder —
+ * CLAUDE.md's audit convention has no stated exception for a "boring"
+ * state change, and carving one out here would be an uncalled-for one.
+ *
+ * The rebalance inside computeBisectedRank (if triggered) commits even
+ * if this move's own version check later fails: it happens before the
+ * conditional UPDATE, in the same transaction, and a version conflict
+ * is a returned value here, not a thrown error, so the transaction still
+ * commits normally. A rebalance that accompanies a rejected move is
+ * still a legitimate, harmless tidy-up of that column's ranks.
+ */
+export async function move(input: {
+  organizationId: string;
+  projectId: string;
+  issueId: string;
+  expectedVersion: number;
+  status: IssueStatus;
+  prevIssueId?: string;
+  nextIssueId?: string;
+  actorId: string;
+}): Promise<
+  | { status: "moved"; issue: IssueRow }
+  | { status: "conflict"; current: IssueRow }
+  | { status: "not_found" }
+  | { status: "invalid_neighbor" }
+> {
+  return db.transaction(async (tx) => {
+    const [currentRow] = await tx
+      .select()
+      .from(issues)
+      .where(
+        and(
+          eq(issues.id, input.issueId),
+          eq(issues.organizationId, input.organizationId),
+          eq(issues.projectId, input.projectId),
+        ),
+      );
+    if (!currentRow) return { status: "not_found" };
+    const fromStatus = currentRow.status;
+
+    let newRank: string | ReturnType<typeof nextRankSql>;
+    if (input.nextIssueId) {
+      const bisected = await computeBisectedRank(
+        tx,
+        input.organizationId,
+        input.projectId,
+        input.status,
+        input.prevIssueId ?? null,
+        input.nextIssueId,
+      );
+      if (bisected === null) return { status: "invalid_neighbor" };
+      newRank = bisected;
+    } else {
+      newRank = nextRankSql(input.organizationId, input.projectId, input.status);
+    }
+
+    const [updated] = await tx
+      .update(issues)
+      .set({
+        status: input.status,
+        boardRank: newRank,
+        version: sql`${issues.version} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(issues.id, input.issueId),
+          eq(issues.organizationId, input.organizationId),
+          eq(issues.projectId, input.projectId),
+          eq(issues.version, input.expectedVersion),
+        ),
+      )
+      .returning();
+
+    if (!updated) {
+      const [current] = await tx
+        .select()
+        .from(issues)
+        .where(
+          and(
+            eq(issues.id, input.issueId),
+            eq(issues.organizationId, input.organizationId),
+            eq(issues.projectId, input.projectId),
+          ),
+        );
+      return current ? { status: "conflict", current } : { status: "not_found" };
+    }
+
+    await tx.insert(issueEvents).values({
+      issueId: updated.id,
+      actorId: input.actorId,
+      type: "issue.moved",
+      payload: { fromStatus, toStatus: input.status },
+    });
+
+    return { status: "moved", issue: updated };
   });
 }
 

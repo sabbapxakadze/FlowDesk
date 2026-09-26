@@ -510,10 +510,54 @@ Slice 1 (board data model + read-only board view) shipped:
     of its new column on the board — this slice's own regression fix,
     confirmed by actually editing an issue's status in the browser and
     watching it move columns on the board, not just by reading the code.
-- [ ] Slice 2 — the move endpoint: bisecting a rank between two
-      neighbors, with `scale()`-triggered rebalancing once a column's
-      gaps run out (the mechanism ADR 0007 already specifies). Plain
-      up/down/move-to-column buttons to exercise it. Not started.
+Slice 2 (move endpoint — bisection + rebalancing) shipped:
+
+- [x] New `PATCH .../issues/:issueId/move` — `{ version, status,
+      prevIssueId?, nextIssueId? }`. Neither neighbor appends to the end
+      (reuses slice 1's `nextRankSql`); `nextIssueId` present inserts
+      before that card, bisecting against `prevIssueId` if given or
+      halving `nextIssueId`'s rank if it's the column's first card.
+      `prevIssueId` alone is treated as append — always recomputing
+      `MAX + gap` fresh is robust against a stale "last card" claim
+      rather than trusting it. Neighbors are re-fetched inside the
+      transaction, scoped to the *target* column (tenant + column
+      validation in one query); a foreign/missing neighbor is a new
+      `invalid_neighbor` → `400`.
+- [x] **A real bug found via testing, not assumed away**: the first
+      implementation checked `scale()` against a threshold of 20,
+      matching what ADR 0007 originally specified. Live verification
+      against this project's actual Postgres 16 instance showed
+      `numeric`'s `/` operator — unlike `+`/`-`/`*` — is *not*
+      unlimited-precision: it computes a heuristic result scale around
+      16 significant digits total, shrinking further (down to ~12) as
+      the integer part grows. A threshold of 20 was unreachable —
+      `/` would have silently rounded two distinct deep bisections into
+      the *same* stored value long before the "safety net" ever fired.
+      Fixed by lowering `MAX_RANK_SCALE` to 10 (real margin below the
+      observed ~12-digit floor) and `trim_scale()`-wrapping every
+      midpoint (plain division pads its result — `3000::numeric/2` is
+      `1500.0000000000000000`, not `1500` — which would otherwise measure
+      division's own padding instead of the rank's real precision). ADR
+      0007 updated with the full finding. Verified two ways: an automated
+      test forcing ~18 iterations of genuinely deepening bisection between
+      the same two neighbors and asserting the observed scale never
+      exceeds 10; and the same sequence run live against real seeded data
+      via the actual HTTP API, watching `psql` directly — scale climbing
+      3→10 across 8 real requests, then visibly resetting to a clean
+      integer (a real rebalance) before climbing again.
+- [x] Always writes an `issue.moved` event (`{ fromStatus, toStatus }`),
+      even for a same-column reorder — no carve-out from CLAUDE.md's
+      audit convention for a "boring" state change. `IssueDetailPage`'s
+      timeline phrases the two cases differently ("reordered this issue"
+      vs. "moved this issue to In progress") — verified live for both.
+- [x] `BoardCard` gains up/down arrows (disabled at column boundaries)
+      and a "Move to…" select, wired through a new `useMoveIssue` hook
+      (`features/move-issue` — a real hook rather than a form-inlined
+      mutation like `edit-issue`/`create-issue`, since multiple buttons
+      across the whole board share it). Verified live: reordering within
+      a column and moving across columns both persist and both endpoints'
+      cache invalidation (list, board, detail, events) keeps every view
+      in sync.
 - [ ] Slice 3 — real dnd-kit drag & drop with optimistic updates,
       replacing slice 2's buttons. Not started.
 - [ ] Slice 4 — sprints: create, assign issues, backlog vs active. Not

@@ -6,7 +6,7 @@ import { useIssue, useIssueEvents } from "../../entities/issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { CommentForm } from "../../features/post-comment";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, Skeleton, StatusBadge } from "../../shared/ui";
+import { Card, Skeleton, STATUS_LABELS, StatusBadge } from "../../shared/ui";
 
 function IssueDetailSkeleton() {
   return (
@@ -49,6 +49,13 @@ function describeEvent(event: IssueEvent): string {
       if ("status" in event.payload) parts.push(`changed status to ${String(event.payload.status)}`);
       if ("description" in event.payload) parts.push("updated the description");
       return parts.length > 0 ? parts.join(", ") : "updated this issue";
+    }
+    case "issue.moved": {
+      const fromStatus = String(event.payload.fromStatus);
+      const toStatus = String(event.payload.toStatus);
+      return fromStatus === toStatus
+        ? "reordered this issue"
+        : `moved this issue to ${STATUS_LABELS[toStatus as keyof typeof STATUS_LABELS] ?? toStatus}`;
     }
     default:
       return event.type;

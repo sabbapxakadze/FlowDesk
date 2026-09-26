@@ -95,4 +95,21 @@ export const updateIssueResponseSchema = z.object({
   data: issueSchema,
 });
 
+// Only two real shapes matter (see ADR 0007 / the Phase 5 slice 2 plan's
+// "Decisions"): neither neighbor means "append to the end of `status`";
+// nextIssueId present means "insert before that card" (with prevIssueId
+// as the lower bound, if the target isn't the very first card).
+// prevIssueId alone (no nextIssueId) is treated as "append" server-side.
+export const moveIssueRequestSchema = z.object({
+  version: z.number().int(),
+  status: issueStatusSchema,
+  prevIssueId: z.uuid().optional(),
+  nextIssueId: z.uuid().optional(),
+});
+
+export type MoveIssueRequest = z.infer<typeof moveIssueRequestSchema>;
+
+// Response reuses updateIssueResponseSchema's shape exactly — no new
+// schema needed, moveIssueResponseSchema would just be an alias.
+
 export type UpdateIssueResponse = z.infer<typeof updateIssueResponseSchema>;

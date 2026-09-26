@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router";
 import type { IssueStatus } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
 import { BoardCard, useBoard } from "../../entities/issue";
+import { useMoveIssue } from "../../features/move-issue";
 import { useAuth } from "../../shared/auth/useAuth";
 import { Card, EmptyState, ErrorText, Skeleton, STATUS_LABELS } from "../../shared/ui";
 
@@ -32,6 +33,7 @@ export function ProjectBoardPage() {
   const project = projects?.find((p) => p.id === projectId);
 
   const { data: issues, isPending: issuesPending, isError, error } = useBoard(organization!.id, projectId!);
+  const moveMutation = useMoveIssue(organization!.id, projectId!);
 
   if (projectsPending) {
     return <p className="p-8 text-[var(--color-text-muted)]">Loading…</p>;
@@ -63,8 +65,39 @@ export function ProjectBoardPage() {
                   <ColumnSkeleton />
                 ) : columnIssues && columnIssues.length > 0 ? (
                   <ul className="flex flex-col gap-2">
-                    {columnIssues.map((issue) => (
-                      <BoardCard key={issue.id} issue={issue} projectKey={project.key} />
+                    {columnIssues.map((issue, i) => (
+                      <BoardCard
+                        key={issue.id}
+                        issue={issue}
+                        projectKey={project.key}
+                        canMoveUp={i > 0}
+                        canMoveDown={i < columnIssues.length - 1}
+                        onMoveUp={() =>
+                          moveMutation.mutate({
+                            issueId: issue.id,
+                            version: issue.version,
+                            status: issue.status,
+                            prevIssueId: columnIssues[i - 2]?.id,
+                            nextIssueId: columnIssues[i - 1]?.id,
+                          })
+                        }
+                        onMoveDown={() =>
+                          moveMutation.mutate({
+                            issueId: issue.id,
+                            version: issue.version,
+                            status: issue.status,
+                            prevIssueId: columnIssues[i + 1]?.id,
+                            nextIssueId: columnIssues[i + 2]?.id,
+                          })
+                        }
+                        onMoveToStatus={(targetStatus: IssueStatus) =>
+                          moveMutation.mutate({
+                            issueId: issue.id,
+                            version: issue.version,
+                            status: targetStatus,
+                          })
+                        }
+                      />
                     ))}
                   </ul>
                 ) : (

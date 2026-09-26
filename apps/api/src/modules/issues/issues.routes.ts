@@ -64,6 +64,16 @@ issuesRouter.patch(
   issuesController.updateIssue,
 );
 
+issuesRouter.patch(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId/move",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("manage_issue"),
+  issuesController.moveIssue,
+);
+
 issuesRouter.get(
   "/organizations/:organizationId/projects/:projectId/issues/:issueId/labels",
   requireAuth,

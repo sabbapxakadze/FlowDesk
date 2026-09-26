@@ -12,6 +12,7 @@ import {
   listIssuesQuerySchema,
   listIssuesResponseSchema,
   listLabelsResponseSchema,
+  moveIssueRequestSchema,
   updateIssueRequestSchema,
   updateIssueResponseSchema,
 } from "@flowdesk/contracts";
@@ -124,6 +125,49 @@ export async function updateIssue(req: Request, res: Response) {
     changes,
     actorId: req.ctx.userId,
   });
+
+  if (result.status === "conflict") {
+    throw new AppError(
+      "version_conflict",
+      409,
+      "This issue was changed by someone else since you loaded it.",
+      undefined,
+      { current: toWireFormat(result.current) },
+    );
+  }
+
+  if (result.status === "not_found") {
+    throw new AppError("issue_not_found", 404, "Issue not found.");
+  }
+
+  const body = updateIssueResponseSchema.parse({ data: toWireFormat(result.issue) });
+  res.json(body);
+}
+
+export async function moveIssue(req: Request, res: Response) {
+  if (!req.ctx?.projectId || !req.ctx.issueId) {
+    throw new Error("moveIssue requires requireIssue to have run first");
+  }
+
+  const parsed = moveIssueRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError("validation_error", 400, "Invalid move request", parsed.error.flatten().fieldErrors);
+  }
+
+  const result = await issuesService.moveIssue({
+    organizationId: req.ctx.organizationId,
+    projectId: req.ctx.projectId,
+    issueId: req.ctx.issueId,
+    expectedVersion: parsed.data.version,
+    status: parsed.data.status,
+    prevIssueId: parsed.data.prevIssueId,
+    nextIssueId: parsed.data.nextIssueId,
+    actorId: req.ctx.userId,
+  });
+
+  if (result.status === "invalid_neighbor") {
+    throw new AppError("invalid_neighbor", 400, "One of the given neighbor issues isn't in that column.");
+  }
 
   if (result.status === "conflict") {
     throw new AppError(

@@ -645,6 +645,305 @@ describe("issues repository — update", () => {
   });
 });
 
+/**
+ * move() — see ADR 0007 / the Phase 5 slice 2 plan. The rebalance test is
+ * the important one: everything else here is provable by reading the
+ * query, but "does the scheme actually stay bounded under repeated
+ * bisection, or does it silently grow forever" is only provable by
+ * actually forcing it deep and watching what happens.
+ */
+describe("issues repository — move", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("appends to the end of the target column when no neighbors are given", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const first = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "First",
+      description: null,
+      reporterId: user.id,
+    });
+    const mover = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Mover",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const result = await issuesRepository.move({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: mover.id,
+      expectedVersion: mover.version,
+      status: "in_progress",
+      actorId: user.id,
+    });
+
+    if (result.status !== "moved") throw new Error("expected moved");
+    expect(result.issue.status).toBe("in_progress");
+    expect(result.issue.boardRank).toBe("1000"); // first in an empty column
+    expect(first.boardRank).toBe("1000"); // untouched, different column
+  });
+
+  it("inserts between two neighbors at the exact midpoint", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const a = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "A",
+      description: null,
+      reporterId: user.id,
+    });
+    const b = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "B",
+      description: null,
+      reporterId: user.id,
+    });
+    const mover = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Mover",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const result = await issuesRepository.move({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: mover.id,
+      expectedVersion: mover.version,
+      status: "todo",
+      prevIssueId: a.id,
+      nextIssueId: b.id,
+      actorId: user.id,
+    });
+
+    if (result.status !== "moved") throw new Error("expected moved");
+    expect(a.boardRank).toBe("1000");
+    expect(b.boardRank).toBe("2000");
+    expect(result.issue.boardRank).toBe("1500");
+  });
+
+  it("inserts at the start of a column when only nextIssueId is given", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const a = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "A",
+      description: null,
+      reporterId: user.id,
+    });
+    const mover = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Mover",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const result = await issuesRepository.move({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: mover.id,
+      expectedVersion: mover.version,
+      status: "todo",
+      nextIssueId: a.id,
+      actorId: user.id,
+    });
+
+    if (result.status !== "moved") throw new Error("expected moved");
+    expect(a.boardRank).toBe("1000");
+    expect(result.issue.boardRank).toBe("500");
+  });
+
+  it("writes an issue.moved event with fromStatus/toStatus on a cross-column move", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+
+    await issuesRepository.move({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: issue.id,
+      expectedVersion: issue.version,
+      status: "in_progress",
+      actorId: user.id,
+    });
+
+    const events = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.moved")));
+    expect(events).toHaveLength(1);
+    expect(events[0]?.payload).toEqual({ fromStatus: "todo", toStatus: "in_progress" });
+  });
+
+  it("writes an issue.moved event even for a same-column reorder", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const a = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "A",
+      description: null,
+      reporterId: user.id,
+    });
+    const b = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "B",
+      description: null,
+      reporterId: user.id,
+    });
+
+    // Move B to the very start (before A) — same column throughout.
+    await issuesRepository.move({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: b.id,
+      expectedVersion: b.version,
+      status: "todo",
+      nextIssueId: a.id,
+      actorId: user.id,
+    });
+
+    const events = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, b.id), eq(issueEvents.type, "issue.moved")));
+    expect(events).toHaveLength(1);
+    expect(events[0]?.payload).toEqual({ fromStatus: "todo", toStatus: "todo" });
+  });
+
+  it("returns a conflict without moving the row when the version is stale", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const result = await issuesRepository.move({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: issue.id,
+      expectedVersion: issue.version + 5,
+      status: "done",
+      actorId: user.id,
+    });
+
+    expect(result.status).toBe("conflict");
+    if (result.status !== "conflict") throw new Error("expected conflict");
+    expect(result.current.status).toBe("todo");
+    expect(result.current.boardRank).toBe(issue.boardRank);
+  });
+
+  it("rejects a neighbor that doesn't exist or isn't in the target column", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const other = await seedOrgProjectUser("Other Org", "other-org", "OTH");
+    const mover = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Mover",
+      description: null,
+      reporterId: user.id,
+    });
+    const foreignIssue = await issuesRepository.create({
+      organizationId: other.org.id,
+      projectId: other.project.id,
+      title: "Foreign",
+      description: null,
+      reporterId: other.user.id,
+    });
+
+    const missingResult = await issuesRepository.move({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: mover.id,
+      expectedVersion: mover.version,
+      status: "todo",
+      nextIssueId: "00000000-0000-0000-0000-000000000000",
+      actorId: user.id,
+    });
+    expect(missingResult.status).toBe("invalid_neighbor");
+
+    const foreignResult = await issuesRepository.move({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: mover.id,
+      expectedVersion: mover.version,
+      status: "todo",
+      nextIssueId: foreignIssue.id,
+      actorId: user.id,
+    });
+    expect(foreignResult.status).toBe("invalid_neighbor");
+  });
+
+  it("keeps board_rank's decimal precision bounded across deep repeated bisection", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const lower = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Lower bound",
+      description: null,
+      reporterId: user.id,
+    });
+    let mover = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Mover",
+      description: null,
+      reporterId: user.id,
+    });
+    // Every round bisects the gap between `lower` (fixed at 1000) and
+    // the *previous* round's result — a genuinely deepening sequence,
+    // not the same insert repeated (which would just tie every time).
+    let upperNeighbor = mover;
+
+    const scalesSeen: number[] = [];
+    for (let i = 0; i < 30; i++) {
+      const result = await issuesRepository.move({
+        organizationId: org.id,
+        projectId: project.id,
+        issueId: mover.id,
+        expectedVersion: mover.version,
+        status: "todo",
+        prevIssueId: lower.id,
+        nextIssueId: upperNeighbor.id,
+        actorId: user.id,
+      });
+      if (result.status !== "moved") throw new Error(`expected moved, got ${result.status}`);
+      mover = result.issue;
+      upperNeighbor = mover;
+      const decimalPart = mover.boardRank.split(".")[1];
+      scalesSeen.push(decimalPart?.length ?? 0);
+    }
+
+    // 10 matches MAX_RANK_SCALE — see its comment in issues.repository.ts
+    // for why it's *not* 20: Postgres's numeric `/` isn't actually
+    // unlimited-precision the way +/-/* are (confirmed directly against
+    // this project's own Postgres instance while building this — a
+    // fixed-gap-1000 bisection sequence like this one empirically caps
+    // around scale 16 no matter how many more times it's halved, since
+    // `/` silently rounds rather than growing precision further). A
+    // threshold near that ceiling would never fire — this asserts it
+    // fires well before, with real margin, not just "eventually".
+    expect(Math.max(...scalesSeen)).toBeLessThanOrEqual(10);
+  });
+});
+
 describe("issues repository — labels", () => {
   beforeEach(async () => {
     await resetDatabase();

@@ -19,16 +19,25 @@ win.
 **Phase 5 — Kanban board.** See `docs/roadmap.md`.
 
 Slice 1 (board data model + read-only board view) is done: `board_rank`
-column (a Postgres `numeric`, never a float — see the new ADR 0007 for
-the whole ranking scheme, including the bisection/rebalance mechanism
-slice 2 implements), a two-step nullable-add-then-backfill migration, a
-new unpaginated `GET .../projects/:projectId/board` endpoint, and a new
+column (a Postgres `numeric`, never a float — see ADR 0007 for the whole
+ranking scheme), a two-step nullable-add-then-backfill migration, a new
+unpaginated `GET .../projects/:projectId/board` endpoint, and a new
 read-only `ProjectBoardPage`. Also fixed a regression this slice's own
 board view would otherwise have exposed: `update()`'s existing
 status-change path now re-ranks an issue to the end of its new column.
-Slice 2 (the move endpoint — bisection + rebalancing, plain move
-buttons) is next, then slice 3 (real dnd-kit drag & drop) and slice 4
-(sprints).
+
+Slice 2 (move endpoint — bisection + rebalancing) is done: `PATCH
+.../issues/:issueId/move`, plain up/down/move-to-column buttons on
+`BoardCard`. **Caught and fixed a real bug via live testing, not
+assumption**: `numeric`'s `/` operator turned out not to be
+unlimited-precision the way `+`/`-`/`*` are (Postgres computes a
+heuristic ~16-significant-digit result scale for division) — the
+original `MAX_RANK_SCALE = 20` was unreachable and would have let `/`
+silently round two distinct ranks together before the rebalance safety
+net ever fired. Fixed (now 10, with real margin) and verified live
+against real seeded data via `psql`, not just the automated test — see
+ADR 0007's updated Decision section for the full finding. Slice 3 (real
+dnd-kit drag & drop) is next, then slice 4 (sprints).
 
 Phase 4 (React depth) is **fully done** across three slices — every
 bullet in its original checklist is covered: cursor pagination (slice 1,

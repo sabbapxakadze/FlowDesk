@@ -95,3 +95,16 @@ export async function listIssueEvents(organizationId: string, issueId: string) {
 export async function getBoard(organizationId: string, projectId: string) {
   return issuesRepository.listForBoard(organizationId, projectId);
 }
+
+export async function moveIssue(input: {
+  organizationId: string;
+  projectId: string;
+  issueId: string;
+  expectedVersion: number;
+  status: IssueStatus;
+  prevIssueId?: string;
+  nextIssueId?: string;
+  actorId: string;
+}) {
+  return issuesRepository.move(input);
+}
