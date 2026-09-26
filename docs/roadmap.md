@@ -470,10 +470,54 @@ Slice 3 (reusable list states + error boundary) shipped:
 
 ## Phase 5 — Kanban board
 
-- [ ] Fractional `board_rank` ordering
-- [ ] Drag & drop (dnd-kit)
-- [ ] Optimistic update with rollback on failure
-- [ ] Sprints: create, assign issues, backlog vs active
+Slice 1 (board data model + read-only board view) shipped:
+
+- [x] **`board_rank` ordering scheme designed and documented** — new
+      ADR 0007: a Postgres `numeric` column (exact arbitrary-precision
+      decimal, never `double precision` — no float rounding after
+      repeated bisection), all rank arithmetic done in SQL and never
+      parsed into a JS number, gap-of-1000 initial spacing, and a
+      `scale()`-based rebalance trigger designed now for slice 2 to
+      implement. Rank is never sent to the client — not part of the
+      public `Issue` contract type — the client only ever expresses
+      "put this issue relative to that one."
+  - This slice only needed the simple append case (`COALESCE(MAX(board_rank),
+    0) + 1000`, in `nextRankSql`) — `create()` assigns it on insert,
+    and `update()` now also recomputes it whenever `changes.status`
+    genuinely differs from the row's current status (not just present in
+    the payload — `EditIssueForm` always resends the current status
+    alongside any edit; confirmed the fix doesn't fire on a same-status
+    resend). Slice 2 adds the harder bisection-between-neighbors case.
+  - Two-step migration (`0008`: nullable column + composite index;
+    `0009`, hand-written via `drizzle-kit generate --custom`: a
+    `ROW_NUMBER()`-based backfill spacing existing issues by 1000 within
+    each `(project, status)` group, oldest-first, then `SET NOT NULL`)
+    — confirmed directly in `psql` against real pre-existing dev-DB data,
+    not just fresh test rows.
+- [x] New `GET .../projects/:projectId/board` endpoint — unpaginated
+      (a board's whole point is seeing everything at a glance), ordered
+      by `(status, board_rank, id)` matching the new composite index
+      exactly. Verified over real HTTP that `board_rank` never appears
+      in the response (Zod's default key-stripping on `.parse()` against
+      a schema that doesn't declare the field).
+- [x] New read-only `ProjectBoardPage` (`/projects/:projectId/board`) —
+      three columns, a new `BoardCard` (deliberately not reusing
+      `IssueCard`: the action sets are going to diverge once slice 2
+      adds move controls). Linked from/to the existing list page. No
+      move affordances yet.
+  - Verified live: the manual edit form's status change (pre-existing,
+    Phase 3 functionality) now correctly repositions an issue to the end
+    of its new column on the board — this slice's own regression fix,
+    confirmed by actually editing an issue's status in the browser and
+    watching it move columns on the board, not just by reading the code.
+- [ ] Slice 2 — the move endpoint: bisecting a rank between two
+      neighbors, with `scale()`-triggered rebalancing once a column's
+      gaps run out (the mechanism ADR 0007 already specifies). Plain
+      up/down/move-to-column buttons to exercise it. Not started.
+- [ ] Slice 3 — real dnd-kit drag & drop with optimistic updates,
+      replacing slice 2's buttons. Not started.
+- [ ] Slice 4 — sprints: create, assign issues, backlog vs active. Not
+      started.
 
 ## Phase 6 — Real-time
 

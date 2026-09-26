@@ -123,6 +123,37 @@ describe("issues tenant isolation (HTTP level)", () => {
 
     expect(res.body.error.code).toBe("project_not_found");
   });
+
+  it("lets a member fetch their own project's board, with board_rank never on the wire", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    await createIssue(userA.accessToken, userA.organizationId, projectId, "Board issue");
+
+    const res = await request(app)
+      .get(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/board`)
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .expect(200);
+
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].title).toBe("Board issue");
+    // See ADR 0007: rank is an internal implementation detail, stripped
+    // by getBoardResponseSchema.parse() — proven here over real HTTP,
+    // not just by reading the schema.
+    expect(res.body.data[0]).not.toHaveProperty("boardRank");
+  });
+
+  it("blocks a valid user from another organization from reading a project's board", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const userB = await registerAndLogIn("b@example.com", "Org B");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+
+    const res = await request(app)
+      .get(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/board`)
+      .set("Authorization", `Bearer ${userB.accessToken}`)
+      .expect(403);
+
+    expect(res.body.error.code).toBe("not_a_member");
+  });
 });
 
 describe("issue update (HTTP level)", () => {

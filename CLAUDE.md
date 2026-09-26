@@ -18,6 +18,18 @@ win.
 
 **Phase 5 — Kanban board.** See `docs/roadmap.md`.
 
+Slice 1 (board data model + read-only board view) is done: `board_rank`
+column (a Postgres `numeric`, never a float — see the new ADR 0007 for
+the whole ranking scheme, including the bisection/rebalance mechanism
+slice 2 implements), a two-step nullable-add-then-backfill migration, a
+new unpaginated `GET .../projects/:projectId/board` endpoint, and a new
+read-only `ProjectBoardPage`. Also fixed a regression this slice's own
+board view would otherwise have exposed: `update()`'s existing
+status-change path now re-ranks an issue to the end of its new column.
+Slice 2 (the move endpoint — bisection + rebalancing, plain move
+buttons) is next, then slice 3 (real dnd-kit drag & drop) and slice 4
+(sprints).
+
 Phase 4 (React depth) is **fully done** across three slices — every
 bullet in its original checklist is covered: cursor pagination (slice 1,
 a real composite index + measured `EXPLAIN ANALYZE` proof, `useIssues` on

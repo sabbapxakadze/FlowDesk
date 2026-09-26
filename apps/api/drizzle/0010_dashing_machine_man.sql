@@ -1,0 +1,1 @@
+ALTER TABLE "issues" ALTER COLUMN "board_rank" SET NOT NULL;

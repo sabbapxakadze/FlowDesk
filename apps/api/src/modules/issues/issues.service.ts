@@ -91,3 +91,7 @@ export async function addComment(input: { issueId: string; authorId: string; bod
 export async function listIssueEvents(organizationId: string, issueId: string) {
   return issuesRepository.listEvents(organizationId, issueId);
 }
+
+export async function getBoard(organizationId: string, projectId: string) {
+  return issuesRepository.listForBoard(organizationId, projectId);
+}

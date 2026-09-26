@@ -123,6 +123,22 @@ export async function findById(organizationId: string, projectId: string, issueI
 }
 
 /**
+ * COALESCE(MAX(board_rank), 0) + 1000, scoped like every other tenant
+ * read here — a plain SQL expression, not a separate awaited query, so
+ * it's computed atomically as part of whatever INSERT/UPDATE embeds it,
+ * within the same transaction. No row-lock the way create()'s issue-
+ * number counter needs one: two concurrent appends into the same column
+ * landing on the same rank is a harmless cosmetic tie (listForBoard's
+ * `id` tie-breaker still orders them deterministically), not a
+ * correctness bug the way a duplicate issue number would be. See ADR
+ * 0007 — this and every other rank value is a plain SQL expression,
+ * never a JS number, to keep numeric's exact-decimal precision intact.
+ */
+function nextRankSql(organizationId: string, projectId: string, status: string) {
+  return sql`COALESCE((SELECT MAX(${issues.boardRank}) FROM ${issues} WHERE ${issues.organizationId} = ${organizationId} AND ${issues.projectId} = ${projectId} AND ${issues.status} = ${status}), 0) + 1000`;
+}
+
+/**
  * One transaction: increment the project's counter, insert the issue with
  * the pre-increment value as its number, insert the issue_events row.
  * All three commit together or none do — see the Phase 3 slice 1 plan's
@@ -154,6 +170,10 @@ export async function create(input: {
         title: input.title,
         description: input.description,
         reporterId: input.reporterId,
+        // New issues always start in "todo" (the column default) —
+        // append to the end of that column, same helper update() uses
+        // when a status edit moves an issue into a different column.
+        boardRank: nextRankSql(input.organizationId, input.projectId, "todo"),
       })
       .returning();
     if (!issue) throw new Error("Failed to create issue");
@@ -177,6 +197,16 @@ export async function create(input: {
  * succeed. Zero rows affected means either the version moved (conflict)
  * or the row is gone (not_found, effectively unreachable today — no
  * delete exists yet — but cheap to handle correctly).
+ *
+ * When changes.status actually differs from the row's current status
+ * (not just present in the payload — EditIssueForm always resends the
+ * unchanged status alongside a title/description-only edit), board_rank
+ * is also appended to the end of the new column. Otherwise a status
+ * edit would leave the issue's rank meaningful only in its old column,
+ * confusing on the board — see ADR 0007 / the Phase 5 slice 1 plan's
+ * "Decisions" section. Needs one extra read (the current status) first,
+ * since the usual single-statement conditional UPDATE has no other way
+ * to know whether status is actually changing.
  */
 export async function update(input: {
   organizationId: string;
@@ -191,9 +221,28 @@ export async function update(input: {
   | { status: "not_found" }
 > {
   return db.transaction(async (tx) => {
+    let boardRankChange: { boardRank: ReturnType<typeof nextRankSql> } | Record<string, never> = {};
+    if (input.changes.status) {
+      const [current] = await tx
+        .select({ status: issues.status })
+        .from(issues)
+        .where(
+          and(
+            eq(issues.id, input.issueId),
+            eq(issues.organizationId, input.organizationId),
+            eq(issues.projectId, input.projectId),
+          ),
+        );
+      if (current && current.status !== input.changes.status) {
+        boardRankChange = {
+          boardRank: nextRankSql(input.organizationId, input.projectId, input.changes.status),
+        };
+      }
+    }
+
     const [updated] = await tx
       .update(issues)
-      .set({ ...input.changes, version: sql`${issues.version} + 1`, updatedAt: new Date() })
+      .set({ ...input.changes, ...boardRankChange, version: sql`${issues.version} + 1`, updatedAt: new Date() })
       .where(
         and(
           eq(issues.id, input.issueId),
@@ -365,4 +414,21 @@ export async function listEvents(organizationId: string, issueId: string) {
     .innerJoin(issues, eq(issueEvents.issueId, issues.id))
     .where(and(eq(issueEvents.issueId, issueId), eq(issues.organizationId, organizationId)))
     .orderBy(asc(issueEvents.createdAt));
+}
+
+/**
+ * Every issue in the project, ordered by (status, board_rank, id) —
+ * matching issues_project_id_status_board_rank_id_idx exactly, so the
+ * board never needs to sort client-side or server-side beyond what the
+ * index already provides. Unpaginated, deliberately: a board's whole
+ * point is seeing everything at a glance, unlike the list view's
+ * keyset-paginated listByProject. See the Phase 5 slice 1 plan's
+ * "Decisions" section.
+ */
+export async function listForBoard(organizationId: string, projectId: string) {
+  return db
+    .select()
+    .from(issues)
+    .where(and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId)))
+    .orderBy(asc(issues.status), asc(issues.boardRank), asc(issues.id));
 }

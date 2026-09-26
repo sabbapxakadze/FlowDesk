@@ -128,6 +128,161 @@ describe("issues repository", () => {
 });
 
 /**
+ * board_rank behavior — see ADR 0007 and the Phase 5 slice 1 plan.
+ * "Prove it, don't assume" applies here too: nextRankSql is a plain SQL
+ * expression, easy to get subtly wrong (e.g. forgetting to scope by
+ * status, or by org/project), so these run it against a real Postgres
+ * database rather than trusting the query reads correctly.
+ */
+describe("issues repository — board ranking", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("assigns sequential ranks, spaced by 1000, within a column", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+
+    const first = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "First",
+      description: null,
+      reporterId: user.id,
+    });
+    const second = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Second",
+      description: null,
+      reporterId: user.id,
+    });
+    const third = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Third",
+      description: null,
+      reporterId: user.id,
+    });
+
+    expect(first.boardRank).toBe("1000");
+    expect(second.boardRank).toBe("2000");
+    expect(third.boardRank).toBe("3000");
+  });
+
+  it("keeps separate ranks per column, not one shared sequence per project", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+
+    const todoIssue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Stays in todo",
+      description: null,
+      reporterId: user.id,
+    });
+    const movedIssue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Moves to in_progress",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const result = await issuesRepository.update({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: movedIssue.id,
+      expectedVersion: movedIssue.version,
+      changes: { status: "in_progress" },
+      actorId: user.id,
+    });
+
+    if (result.status !== "updated") throw new Error("expected updated");
+    // in_progress was empty, so the moved issue is first in *that*
+    // column (rank 1000) even though it's the second issue overall —
+    // proves the rank sequence is per (project, status), not per project.
+    expect(result.issue.boardRank).toBe("1000");
+    expect(todoIssue.boardRank).toBe("1000");
+  });
+
+  it("does not touch board_rank when status is resent unchanged alongside another field", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Original title",
+      description: null,
+      reporterId: user.id,
+    });
+
+    // EditIssueForm always resends the current status alongside any
+    // edit, even a title-only change — this must not re-rank the issue
+    // to the end of its own column every time someone edits a title.
+    const result = await issuesRepository.update({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: issue.id,
+      expectedVersion: issue.version,
+      changes: { title: "Updated title", status: "todo" },
+      actorId: user.id,
+    });
+
+    if (result.status !== "updated") throw new Error("expected updated");
+    expect(result.issue.boardRank).toBe(issue.boardRank);
+  });
+
+  it("listForBoard orders by status then rank and stays tenant-scoped", async () => {
+    const a = await seedOrgProjectUser("Org A", "org-a", "AAA");
+    const b = await seedOrgProjectUser("Org B", "org-b", "BBB");
+
+    const done = await issuesRepository.create({
+      organizationId: a.org.id,
+      projectId: a.project.id,
+      title: "Will be done",
+      description: null,
+      reporterId: a.user.id,
+    });
+    await issuesRepository.update({
+      organizationId: a.org.id,
+      projectId: a.project.id,
+      issueId: done.id,
+      expectedVersion: done.version,
+      changes: { status: "done" },
+      actorId: a.user.id,
+    });
+    const todoFirst = await issuesRepository.create({
+      organizationId: a.org.id,
+      projectId: a.project.id,
+      title: "Todo, created first",
+      description: null,
+      reporterId: a.user.id,
+    });
+    const todoSecond = await issuesRepository.create({
+      organizationId: a.org.id,
+      projectId: a.project.id,
+      title: "Todo, created second",
+      description: null,
+      reporterId: a.user.id,
+    });
+    await issuesRepository.create({
+      organizationId: b.org.id,
+      projectId: b.project.id,
+      title: "Org B issue",
+      description: null,
+      reporterId: b.user.id,
+    });
+
+    const board = await issuesRepository.listForBoard(a.org.id, a.project.id);
+
+    expect(board.map((i) => i.title)).toEqual([
+      todoFirst.title,
+      todoSecond.title,
+      done.title,
+    ]);
+    expect(board.every((i) => i.projectId === a.project.id)).toBe(true);
+  });
+});
+
+/**
  * Keyset pagination's ordering/cursor behavior, same reasoning as every
  * other "prove it, don't assume" test in this file: the WHERE (created_at,
  * id) < (cursor) clause is only actually correct if paging through real
@@ -158,6 +313,7 @@ describe("issues repository — pagination", () => {
           number: i + 1,
           title: `Issue ${i + 1}`,
           reporterId: user.id,
+          boardRank: String((i + 1) * 1000),
           createdAt: new Date(base + i * 1000),
           updatedAt: new Date(base + i * 1000),
         })),
@@ -259,6 +415,7 @@ describe("issues repository — pagination", () => {
         title: "Todo issue",
         reporterId: user.id,
         status: "todo",
+        boardRank: "1000",
         createdAt: new Date(base),
         updatedAt: new Date(base),
       },
@@ -269,6 +426,7 @@ describe("issues repository — pagination", () => {
         title: "In progress issue",
         reporterId: user.id,
         status: "in_progress",
+        boardRank: "1000",
         createdAt: new Date(base + 1000),
         updatedAt: new Date(base + 1000),
       },
@@ -279,6 +437,7 @@ describe("issues repository — pagination", () => {
         title: "Done issue",
         reporterId: user.id,
         status: "done",
+        boardRank: "1000",
         createdAt: new Date(base + 2000),
         updatedAt: new Date(base + 2000),
       },
@@ -325,6 +484,7 @@ describe("issues repository — pagination", () => {
         title: `Issue ${i + 1}`,
         reporterId: user.id,
         status: i % 2 === 0 ? ("todo" as const) : ("done" as const),
+        boardRank: String((i + 1) * 1000),
         createdAt: new Date(base + i * 1000),
         updatedAt: new Date(base + i * 1000),
       })),

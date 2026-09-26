@@ -106,9 +106,14 @@ export function ProjectDetailPage() {
 
   return (
     <main className="p-8">
-      <Link to="/projects" className="text-sm text-[var(--color-text-link)] underline">
-        ← All projects
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link to="/projects" className="text-sm text-[var(--color-text-link)] underline">
+          ← All projects
+        </Link>
+        <Link to={`/projects/${project.id}/board`} className="text-sm text-[var(--color-text-link)] underline">
+          Board →
+        </Link>
+      </div>
       <h1 className="mt-2 mb-4 text-2xl font-semibold">{project.name}</h1>
 
       <CreateIssueForm organizationId={organization!.id} projectId={project.id} />

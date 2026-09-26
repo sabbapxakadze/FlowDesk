@@ -22,6 +22,19 @@ issuesRouter.get(
   issuesController.listIssues,
 );
 
+// Not nested under /issues — the resource is "the board," not an issue.
+// Still lives in this module: same table, same scoping as every other
+// issues query here (this module already owns labels/comments/events
+// alongside issues themselves).
+issuesRouter.get(
+  "/organizations/:organizationId/projects/:projectId/board",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requirePermission("view_issue"),
+  issuesController.getBoard,
+);
+
 issuesRouter.get(
   "/organizations/:organizationId/projects/:projectId/issues/:issueId",
   requireAuth,

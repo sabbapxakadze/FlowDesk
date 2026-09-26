@@ -5,6 +5,7 @@ import {
   varchar,
   text,
   integer,
+  numeric,
   timestamp,
   index,
   uniqueIndex,
@@ -47,6 +48,13 @@ export const issues = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     version: integer("version").notNull().default(1),
+    // Added nullable (migration 0008), backfilled, then set NOT NULL
+    // (migration 0009's hand-written SQL — no scalar DEFAULT can express
+    // "append per (project, status) group"). See ADR 0007 for the whole
+    // ranking scheme: numeric (exact decimal, never a float) so repeated
+    // bisection between the same two neighbors never loses precision;
+    // never parsed into a JS number, only ever round-tripped as a string.
+    boardRank: numeric("board_rank").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -60,6 +68,16 @@ export const issues = pgTable(
     index("issues_project_id_created_at_id_idx").on(
       table.projectId,
       table.createdAt,
+      table.id,
+    ),
+    // Matches the board query's WHERE project_id = ? ORDER BY status,
+    // board_rank, id exactly — index-only ordering, no sort step. As a
+    // prefix, also serves a future per-column neighbor lookup (WHERE
+    // project_id = ? AND status = ? ORDER BY board_rank). See ADR 0007.
+    index("issues_project_id_status_board_rank_id_idx").on(
+      table.projectId,
+      table.status,
+      table.boardRank,
       table.id,
     ),
     uniqueIndex("issues_project_id_number_unique").on(table.projectId, table.number),

@@ -6,6 +6,7 @@ import {
   createCommentResponseSchema,
   createIssueRequestSchema,
   createIssueResponseSchema,
+  getBoardResponseSchema,
   getIssueResponseSchema,
   listIssueEventsResponseSchema,
   listIssuesQuerySchema,
@@ -184,6 +185,20 @@ export async function listIssueEvents(req: Request, res: Response) {
 
   const rows = await issuesService.listIssueEvents(req.ctx.organizationId, req.ctx.issueId);
   const body = listIssueEventsResponseSchema.parse({ data: rows.map(eventToWireFormat) });
+  res.json(body);
+}
+
+export async function getBoard(req: Request, res: Response) {
+  if (!req.ctx?.projectId) {
+    throw new Error("getBoard requires requireProject to have run first");
+  }
+
+  const rows = await issuesService.getBoard(req.ctx.organizationId, req.ctx.projectId);
+  // getBoardResponseSchema reuses issueSchema, which has no boardRank
+  // field — .parse() strips it (Zod's default for unrecognized keys),
+  // which is exactly the point: rank never leaves the server. See ADR
+  // 0007 / the Phase 5 slice 1 plan's "Decisions" section.
+  const body = getBoardResponseSchema.parse({ data: rows.map(toWireFormat) });
   res.json(body);
 }
 

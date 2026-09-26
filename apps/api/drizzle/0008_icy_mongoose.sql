@@ -1,0 +1,2 @@
+ALTER TABLE "issues" ADD COLUMN "board_rank" numeric;--> statement-breakpoint
+CREATE INDEX "issues_project_id_status_board_rank_id_idx" ON "issues" USING btree ("project_id","status","board_rank","id");

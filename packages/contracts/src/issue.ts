@@ -50,6 +50,17 @@ export const getIssueResponseSchema = z.object({
 
 export type GetIssueResponse = z.infer<typeof getIssueResponseSchema>;
 
+// Every issue in the project, pre-sorted by (status, board_rank) for the
+// Kanban board — unpaginated, deliberately (see the Phase 5 slice 1
+// plan's "Decisions" section). board_rank itself is never part of
+// issueSchema — see ADR 0007: the client only ever expresses "put this
+// issue relative to that one," never touches a rank value directly.
+export const getBoardResponseSchema = z.object({
+  data: z.array(issueSchema),
+});
+
+export type GetBoardResponse = z.infer<typeof getBoardResponseSchema>;
+
 export const createIssueRequestSchema = z.object({
   title: z.string().min(1, "Title is required").max(500, "Title is too long"),
   description: z.string().max(10000, "Description is too long").optional(),
