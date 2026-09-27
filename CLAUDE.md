@@ -60,6 +60,30 @@ the dev API server with a tab left open confirmed it reconnected and
 rejoined *both* rooms automatically, with a real subsequent drag still
 broadcasting correctly afterward.
 
+Slice 3 (live comments — `issue:{id}` room) is done: `broadcastIssueChanged`
+now targets both `project:{id}` and `issue:{id}` in one emit (chained
+`.to()` unions the rooms), and a new `broadcastIssueCommented` targets
+only `issue:{id}` — comments never render on the board, so project-room
+viewers don't need to hear about them. New `join:issue`/`leave:issue`
+mirror `join:project`'s verification shape, and a new
+`useLiveIssueDetailUpdates` hook wires `IssueDetailPage` to both events.
+**A deeper version of slice 2's exact race condition, found live
+again**: slice 2's fix (swap a single Promise on `connect`/`disconnect`)
+still silently orphaned any `.then()` already attached to the *old*
+promise instance the moment it got swapped — React StrictMode's
+dev-only connect/disconnect churn made this the common case for
+`join:issue`, not rare, proven by counting `"joined issue room"` log
+lines across a full run (zero from the app's own hook, one from a
+direct hook-free manual test). Real fix: `whenOrgRoomReady()` is now a
+resolver *queue* against a plain boolean, not a single swapped Promise
+— correct regardless of how many connect/disconnect cycles happen
+in between. Verified live: a comment on one tab appeared live on
+another; dragging the same issue's card on the board live-updated a
+separate detail-page tab's status badge *and* timeline; and a full
+API kill/restart with a detail page open confirmed it reconnected and
+rejoined both `org:{id}` and `issue:{id}`, with a subsequent comment
+still broadcasting correctly afterward.
+
 Slice 1 (board data model + read-only board view) is done: `board_rank`
 column (a Postgres `numeric`, never a float — see ADR 0007 for the whole
 ranking scheme), a two-step nullable-add-then-backfill migration, a new

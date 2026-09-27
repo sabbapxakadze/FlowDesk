@@ -1,6 +1,6 @@
 import type { IssueStatus } from "@flowdesk/contracts";
 import { AppError } from "../../shared/errors.js";
-import { broadcastIssueChanged } from "../../realtime/socket-server.js";
+import { broadcastIssueChanged, broadcastIssueCommented } from "../../realtime/socket-server.js";
 import * as issuesRepository from "./issues.repository.js";
 
 /**
@@ -96,7 +96,9 @@ export async function detachLabel(input: {
 }
 
 export async function addComment(input: { issueId: string; authorId: string; body: string }) {
-  return issuesRepository.addComment(input);
+  const comment = await issuesRepository.addComment(input);
+  broadcastIssueCommented(input.issueId);
+  return comment;
 }
 
 export async function listIssueEvents(organizationId: string, issueId: string) {

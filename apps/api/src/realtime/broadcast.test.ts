@@ -76,6 +76,27 @@ async function connectAndJoinProject(
   return socket;
 }
 
+/**
+ * join:issue relies on socket.data.organizationId the same way
+ * join:project does — connects, joins org, then joins the given issue,
+ * and returns the connected socket.
+ */
+async function connectAndJoinIssue(
+  accessToken: string,
+  organizationId: string,
+  projectId: string,
+  issueId: string,
+): Promise<ClientSocket> {
+  const socket = ioClient(url, { auth: { token: accessToken } });
+  await new Promise<void>((resolve, reject) => {
+    socket.on("connect", () => resolve());
+    socket.on("connect_error", reject);
+  });
+  await new Promise<{ ok: boolean }>((resolve) => socket.emit("join:org", { organizationId }, resolve));
+  await new Promise<{ ok: boolean }>((resolve) => socket.emit("join:issue", { projectId, issueId }, resolve));
+  return socket;
+}
+
 describe("broadcast on issue mutations", () => {
   beforeEach(async () => {
     await resetDatabase();
@@ -180,6 +201,139 @@ describe("broadcast on issue mutations", () => {
 
     const ack = await new Promise<{ ok: boolean; error?: string }>((resolve) => {
       socketA.emit("join:project", { projectId: projectB }, resolve);
+    });
+
+    expect(ack.ok).toBe(false);
+  });
+});
+
+describe("broadcast into the issue room", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+    httpServer = createServer(app);
+    attachSocketServer(httpServer);
+    await new Promise<void>((resolve) => httpServer.listen(0, resolve));
+    const { port } = httpServer.address() as AddressInfo;
+    url = `http://127.0.0.1:${port}`;
+    clients = [];
+  });
+
+  afterEach(async () => {
+    for (const client of clients) client.disconnect();
+    await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+  });
+
+  it("broadcasts issue:commented into the issue room when a comment is posted", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Commentable");
+
+    const socket = await connectAndJoinIssue(userA.accessToken, userA.organizationId, projectId, issue.id);
+    clients.push(socket);
+
+    const received = new Promise<{ issueId: string }>((resolve) => {
+      socket.on("issue:commented", resolve);
+    });
+
+    await request(httpServer)
+      .post(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/comments`)
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ body: "Looking into this" })
+      .expect(201);
+
+    const event = await received;
+    expect(event).toEqual({ issueId: issue.id });
+  });
+
+  it("also broadcasts issue:changed into the issue room (not just the project room) on a move", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Movable");
+
+    // This socket only ever joins the issue room, never the project room.
+    const socket = await connectAndJoinIssue(userA.accessToken, userA.organizationId, projectId, issue.id);
+    clients.push(socket);
+
+    const received = new Promise<{ issueId: string }>((resolve) => {
+      socket.on("issue:changed", resolve);
+    });
+
+    await request(httpServer)
+      .patch(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/move`)
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ version: issue.version, status: "done" })
+      .expect(200);
+
+    const event = await received;
+    expect(event).toEqual({ issueId: issue.id });
+  });
+
+  it("never broadcasts a comment into a project room — only the issue room", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Commentable");
+
+    const projectSocket = await connectAndJoinProject(userA.accessToken, userA.organizationId, projectId);
+    clients.push(projectSocket);
+
+    let receivedComment = false;
+    projectSocket.on("issue:commented", () => {
+      receivedComment = true;
+    });
+
+    await request(httpServer)
+      .post(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/comments`)
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ body: "Should not reach the board" })
+      .expect(201);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(receivedComment).toBe(false);
+  });
+
+  it("never broadcasts one issue's events into another issue's room", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issueA = await createIssue(userA.accessToken, userA.organizationId, projectId, "A");
+    const issueB = await createIssue(userA.accessToken, userA.organizationId, projectId, "B");
+
+    const socketB = await connectAndJoinIssue(userA.accessToken, userA.organizationId, projectId, issueB.id);
+    clients.push(socketB);
+
+    let receivedByB = false;
+    socketB.on("issue:commented", () => {
+      receivedByB = true;
+    });
+
+    await request(httpServer)
+      .post(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issueA.id}/comments`)
+      .set("Authorization", `Bearer ${userA.accessToken}`)
+      .send({ body: "On issue A, not B" })
+      .expect(201);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(receivedByB).toBe(false);
+  });
+
+  it("rejects join:issue for an issue outside the caller's own org/project", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const userB = await registerAndLogIn("b@example.com", "Org B");
+    const projectA = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const projectB = await createProject(userB.accessToken, userB.organizationId, "BBB");
+    const issueB = await createIssue(userB.accessToken, userB.organizationId, projectB, "In B");
+
+    const socketA = ioClient(url, { auth: { token: userA.accessToken } });
+    clients.push(socketA);
+    await new Promise<void>((resolve, reject) => {
+      socketA.on("connect", () => resolve());
+      socketA.on("connect_error", reject);
+    });
+    await new Promise<{ ok: boolean }>((resolve) =>
+      socketA.emit("join:org", { organizationId: userA.organizationId }, resolve),
+    );
+
+    const ack = await new Promise<{ ok: boolean; error?: string }>((resolve) => {
+      socketA.emit("join:issue", { projectId: projectA, issueId: issueB.id }, resolve);
     });
 
     expect(ack.ok).toBe(false);

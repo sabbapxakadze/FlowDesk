@@ -789,7 +789,58 @@ Slice 2 (broadcast after commit + live board updates) shipped:
       showing `join:org` then `join:project` in the correct order), with
       a real subsequent drag still broadcasting correctly afterward, not
       just the underlying connection coming back.
-- [ ] Slice 3 — live comments (`issue:{id}` room). Not started.
+Slice 3 (live comments — `issue:{id}` room) shipped:
+
+- [x] `broadcastIssueChanged(projectId, issueId)` now targets both
+      `project:{id}` and `issue:{id}` in one emit (Socket.IO's chained
+      `.to()` unions the rooms — a socket in both gets one copy, not
+      two) — a field change from anywhere (the board, an edit) now also
+      reaches anyone reading that exact issue's detail page, not just
+      the board/list. No call site changed; `createIssue`/`updateIssue`/
+      `moveIssue` already called it with both ids.
+- [x] New `broadcastIssueCommented(issueId)` — a distinct event
+      (`issue:commented`), only into `issue:{id}`: comments never render
+      on the board/list, so project-room viewers have no reason to hear
+      about them. `issues.service.ts`'s `addComment` calls it after the
+      repository call resolves, same "after commit, only on real
+      success" shape as the other three call sites.
+- [x] New `join:issue`/`leave:issue` socket events, same verification
+      shape as `join:project`: the client sends `{ projectId, issueId }`
+      (both already in the URL), the server checks
+      `socket.data.organizationId` then reuses the exact
+      `issuesRepository.findById` check `requireIssue` runs over HTTP —
+      never trusting the client-claimed ids alone.
+- [x] New `entities/issue/api/useLiveIssueDetailUpdates.ts`, called from
+      `IssueDetailPage`: joins `issue:{id}` on mount, leaves on unmount,
+      invalidates `issueKeys.detail`/`events` on either `issue:changed`
+      or `issue:commented`.
+- [x] **A deeper version of slice 2's race condition, found live again**:
+      slice 2's fix (a single Promise instance, reset on `connect`/
+      `disconnect`) still had the same underlying flaw one level down —
+      a caller that already attached `.then()` to the *old* pending
+      promise is never woken once that promise is silently swapped for
+      a new one, since reassigning the module variable doesn't reach an
+      already-issued reference. React StrictMode's dev-only rapid
+      connect/disconnect churn on a fresh page load made this the
+      *common* case for `join:issue`, not a rare edge case — proven by
+      a direct, hook-free manual `join:issue` call (no intervening
+      disconnect) succeeding every time while the app's own hook
+      silently never joined. Root-caused by counting `"joined issue
+      room"` log lines across a full run (zero from the app, one from
+      the manual test), not guessed at. Real fix: `whenOrgRoomReady()`
+      in `shared/socket/socket-client.ts` is now a resolver *queue*
+      against a plain boolean flag, not a single swapped `Promise` —
+      correct no matter how many connect/disconnect cycles happen
+      between a caller asking and readiness actually being achieved.
+- [x] Verified live end to end with two real browser sessions on the
+      same issue's detail page: a comment posted on one appeared live
+      on the other with no reload; separately, dragging that issue's
+      card on the board (a different tab) live-updated the detail
+      page's status badge *and* timeline, proving the dual-room
+      broadcast; and killing/restarting the dev API server with a
+      detail page open confirmed it reconnected and rejoined **both**
+      `org:{id}` and `issue:{id}` automatically, with a subsequent
+      comment still broadcasting correctly afterward.
 - [ ] Slice 4 — presence on an issue (ephemeral, not persisted). Not
       started.
 

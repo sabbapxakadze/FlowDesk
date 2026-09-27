@@ -10,35 +10,48 @@ import { getStoredAccessToken } from "../auth/token-store";
 let socket: Socket | null = null;
 
 /**
- * Resolves once the *current* connection's join:org round-trip finishes
- * (successfully or not) — pending again from the instant the connection
- * drops until the next reconnect's join:org completes. This exists
- * because of a real bug caught live while building Phase 6 slice 2: a
- * page-scoped join:project (see
+ * Whether the *current* connection's join:org round-trip has finished.
+ * This exists because of a real bug caught live while building Phase 6
+ * slice 2: a page-scoped join:project (see
  * entities/issue/api/useLiveIssueUpdates.ts) fired on mount, and on a
  * fresh page load it could reach the server before join:org's own ack
  * had actually set socket.data.organizationId — rejected with
  * not_in_org even though the client "did everything right."
  *
- * The first version of this fix only reset the promise *inside* the
- * "connect" handler, which left the exact same gap open between calling
- * connectSocket() and the socket actually connecting: a caller in that
- * window read the stale already-resolved default and raced ahead again.
- * resetOrgReady() is called synchronously in connectSocket() itself (no
- * gap before the first connect) and again on every "disconnect" (room
- * membership is gone the instant a connection drops, so readiness has
- * to become pending again at that exact moment, not just on the next
- * "connect"). Anything that depends on the org room already being
- * joined must await whenOrgRoomReady(), not just check
- * `socket?.connected`.
+ * Two earlier versions of this fix both used a single swapped-out
+ * Promise instance (reset inside the "connect" handler, then reset
+ * again on every "connect"/"disconnect" to cover the gap before the
+ * first connect) — both still had the same underlying flaw: a caller
+ * that already grabbed a reference to the *old* pending promise via
+ * .then() never gets woken up once that promise is silently replaced
+ * by a new one, because reassigning the module variable doesn't affect
+ * a .then() chain already attached to the old instance. Caught live
+ * (again) building slice 3: React StrictMode's dev-only rapid
+ * connect/disconnect churn on a fresh page load made this the common
+ * case, not an edge case — a direct, hook-free manual join:issue call
+ * (no intervening disconnect) worked every time; the app's own hook
+ * did not.
+ *
+ * The fix is a resolver *queue*, not a single swapped Promise: readiness
+ * is a plain boolean, and whenOrgRoomReady() either resolves immediately
+ * (already ready) or queues a resolver to be drained the next time
+ * markOrgRoomReady() runs — correct no matter how many connect/
+ * disconnect cycles happen between a caller asking and readiness
+ * actually being achieved, since no single promise identity is ever
+ * silently orphaned.
  */
-let orgReady: Promise<void> = Promise.resolve();
-let resolveOrgReady: (() => void) | null = null;
+let orgRoomReady = false;
+let pendingOrgRoomResolvers: Array<() => void> = [];
 
-function resetOrgReady() {
-  orgReady = new Promise((resolve) => {
-    resolveOrgReady = resolve;
-  });
+function markOrgRoomReady() {
+  orgRoomReady = true;
+  const resolvers = pendingOrgRoomResolvers;
+  pendingOrgRoomResolvers = [];
+  for (const resolve of resolvers) resolve();
+}
+
+function markOrgRoomNotReady() {
+  orgRoomReady = false;
 }
 
 /**
@@ -61,20 +74,20 @@ export function connectSocket(organizationId: string): void {
     auth: (cb) => cb({ token: getStoredAccessToken() }),
   });
   socket = s;
-  resetOrgReady();
+  markOrgRoomNotReady();
 
   s.on("connect", () => {
     s.emit("join:org", { organizationId }, (ack: { ok: boolean; error?: string }) => {
       if (!ack.ok) {
         console.error("Failed to join org room", ack.error);
       }
-      // Resolves either way: a failed join is a real, ack'd outcome
+      // Marked ready either way: a failed join is a real, ack'd outcome
       // callers should still proceed past, not hang on forever.
-      resolveOrgReady?.();
+      markOrgRoomReady();
     });
   });
 
-  s.on("disconnect", resetOrgReady);
+  s.on("disconnect", markOrgRoomNotReady);
 
   s.on("connect_error", (error) => {
     console.error("Socket connection failed", error.message);
@@ -82,7 +95,10 @@ export function connectSocket(organizationId: string): void {
 }
 
 export function whenOrgRoomReady(): Promise<void> {
-  return orgReady;
+  if (orgRoomReady) return Promise.resolve();
+  return new Promise((resolve) => {
+    pendingOrgRoomResolvers.push(resolve);
+  });
 }
 
 export function disconnectSocket(): void {

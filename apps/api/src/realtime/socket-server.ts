@@ -3,6 +3,7 @@ import { Server, type DefaultEventsMap } from "socket.io";
 import { verifyAccessToken } from "../modules/auth/tokens.js";
 import * as organizationsRepository from "../modules/organizations/organizations.repository.js";
 import * as projectsRepository from "../modules/projects/projects.repository.js";
+import * as issuesRepository from "../modules/issues/issues.repository.js";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 
@@ -25,6 +26,9 @@ type JoinOrgAck = { ok: true } | { ok: false; error: "invalid_organization_id" |
 type JoinProjectAck =
   | { ok: true }
   | { ok: false; error: "invalid_project_id" | "not_in_org" | "project_not_found" };
+type JoinIssueAck =
+  | { ok: true }
+  | { ok: false; error: "invalid_project_id" | "invalid_issue_id" | "not_in_org" | "issue_not_found" };
 
 // Module-level singleton, set once attachSocketServer() runs — same
 // pattern db/client.ts already uses for its own singleton. null in any
@@ -158,6 +162,54 @@ export function attachSocketServer(httpServer: HttpServer): IOServer {
       }
     });
 
+    socket.on(
+      "join:issue",
+      async (payload: unknown, ack: (response: JoinIssueAck) => void) => {
+        const body = typeof payload === "object" && payload !== null ? payload : {};
+        const projectId = (body as { projectId?: unknown }).projectId;
+        const issueId = (body as { issueId?: unknown }).issueId;
+
+        if (typeof projectId !== "string") {
+          ack({ ok: false, error: "invalid_project_id" });
+          return;
+        }
+        if (typeof issueId !== "string") {
+          ack({ ok: false, error: "invalid_issue_id" });
+          return;
+        }
+        if (!socket.data.organizationId) {
+          ack({ ok: false, error: "not_in_org" });
+          return;
+        }
+
+        // Same check requireIssue runs over HTTP — never trust the
+        // client-claimed project/issue ids alone.
+        const issue = await issuesRepository.findById(socket.data.organizationId, projectId, issueId);
+        if (!issue) {
+          logger.warn(
+            { userId: socket.data.userId, projectId, issueId },
+            "socket join:issue rejected — issue not found in caller's org/project",
+          );
+          ack({ ok: false, error: "issue_not_found" });
+          return;
+        }
+
+        await socket.join(`issue:${issueId}`);
+        logger.info({ userId: socket.data.userId, issueId }, "socket joined issue room");
+        ack({ ok: true });
+      },
+    );
+
+    socket.on("leave:issue", (payload: unknown) => {
+      const issueId =
+        typeof payload === "object" && payload !== null
+          ? (payload as { issueId?: unknown }).issueId
+          : undefined;
+      if (typeof issueId === "string") {
+        void socket.leave(`issue:${issueId}`);
+      }
+    });
+
     socket.on("disconnect", (reason) => {
       logger.info({ userId: socket.data.userId, socketId: socket.id, reason }, "socket disconnected");
     });
@@ -168,11 +220,30 @@ export function attachSocketServer(httpServer: HttpServer): IOServer {
 
 /**
  * Broadcasts "this issue changed, go refetch" to everyone currently
- * viewing this project's board or list — called from issues.service.ts
- * after a create/update/move commits. Silently no-ops when no socket
- * server is attached (every HTTP-level test): there is genuinely
- * nothing to broadcast to in that case, not a failure to report.
+ * viewing this project's board/list *or* this exact issue's detail page
+ * — called from issues.service.ts after a create/update/move commits.
+ * Chaining .to() unions the target rooms (a socket in both gets one
+ * copy, not two), so this is one broadcast reaching two audiences, not
+ * two broadcasts to keep in sync. Silently no-ops when no socket server
+ * is attached (every HTTP-level test): there is genuinely nothing to
+ * broadcast to in that case, not a failure to report.
  */
 export function broadcastIssueChanged(projectId: string, issueId: string): void {
-  ioInstance?.to(`project:${projectId}`).emit("issue:changed", { issueId });
+  ioInstance
+    ?.to(`project:${projectId}`)
+    .to(`issue:${issueId}`)
+    .emit("issue:changed", { issueId });
+}
+
+/**
+ * Comments never render on the board/list, so this only reaches
+ * issue:{id} — a project-room viewer has no reason to hear about a
+ * comment on an issue they aren't looking at. A distinct event from
+ * issue:changed (not reused) mirrors the domain event system already
+ * distinguishing issue.commented from issue.updated/issue.moved, even
+ * though the client's reaction to either on the detail page is the
+ * same invalidation.
+ */
+export function broadcastIssueCommented(issueId: string): void {
+  ioInstance?.to(`issue:${issueId}`).emit("issue:commented", { issueId });
 }

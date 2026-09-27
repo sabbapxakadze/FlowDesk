@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router";
 import type { IssueEvent } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
-import { useIssue, useIssueEvents } from "../../entities/issue";
+import { useIssue, useIssueEvents, useLiveIssueDetailUpdates } from "../../entities/issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { CommentForm } from "../../features/post-comment";
 import { useAuth } from "../../shared/auth/useAuth";
@@ -98,6 +98,7 @@ export function IssueDetailPage() {
     projectId!,
     issueId!,
   );
+  useLiveIssueDetailUpdates(projectId!, issueId!);
 
   const [isEditing, setIsEditing] = useState(false);
   const [showConflictNotice, setShowConflictNotice] = useState(false);

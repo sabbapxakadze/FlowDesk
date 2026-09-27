@@ -6,6 +6,7 @@ export { useIssueEvents } from "./api/useIssueEvents";
 export { useBoard } from "./api/useBoard";
 export { useBacklog } from "./api/useBacklog";
 export { useLiveIssueUpdates } from "./api/useLiveIssueUpdates";
+export { useLiveIssueDetailUpdates } from "./api/useLiveIssueDetailUpdates";
 export { issueKeys } from "./api/queryKeys";
 export { IssueCard } from "./ui/IssueCard";
 export { BoardCard } from "./ui/BoardCard";
