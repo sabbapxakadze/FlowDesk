@@ -10,6 +10,38 @@ import { getStoredAccessToken } from "../auth/token-store";
 let socket: Socket | null = null;
 
 /**
+ * Resolves once the *current* connection's join:org round-trip finishes
+ * (successfully or not) — pending again from the instant the connection
+ * drops until the next reconnect's join:org completes. This exists
+ * because of a real bug caught live while building Phase 6 slice 2: a
+ * page-scoped join:project (see
+ * entities/issue/api/useLiveIssueUpdates.ts) fired on mount, and on a
+ * fresh page load it could reach the server before join:org's own ack
+ * had actually set socket.data.organizationId — rejected with
+ * not_in_org even though the client "did everything right."
+ *
+ * The first version of this fix only reset the promise *inside* the
+ * "connect" handler, which left the exact same gap open between calling
+ * connectSocket() and the socket actually connecting: a caller in that
+ * window read the stale already-resolved default and raced ahead again.
+ * resetOrgReady() is called synchronously in connectSocket() itself (no
+ * gap before the first connect) and again on every "disconnect" (room
+ * membership is gone the instant a connection drops, so readiness has
+ * to become pending again at that exact moment, not just on the next
+ * "connect"). Anything that depends on the org room already being
+ * joined must await whenOrgRoomReady(), not just check
+ * `socket?.connected`.
+ */
+let orgReady: Promise<void> = Promise.resolve();
+let resolveOrgReady: (() => void) | null = null;
+
+function resetOrgReady() {
+  orgReady = new Promise((resolve) => {
+    resolveOrgReady = resolve;
+  });
+}
+
+/**
  * Connects once per login and re-authenticates on every reconnect, not
  * just the first connect: `auth` is a function here, not a static
  * object, so socket.io-client calls it fresh on every (re)connection
@@ -25,21 +57,32 @@ let socket: Socket | null = null;
 export function connectSocket(organizationId: string): void {
   socket?.disconnect();
 
-  socket = io({
+  const s = io({
     auth: (cb) => cb({ token: getStoredAccessToken() }),
   });
+  socket = s;
+  resetOrgReady();
 
-  socket.on("connect", () => {
-    socket?.emit("join:org", { organizationId }, (ack: { ok: boolean; error?: string }) => {
+  s.on("connect", () => {
+    s.emit("join:org", { organizationId }, (ack: { ok: boolean; error?: string }) => {
       if (!ack.ok) {
         console.error("Failed to join org room", ack.error);
       }
+      // Resolves either way: a failed join is a real, ack'd outcome
+      // callers should still proceed past, not hang on forever.
+      resolveOrgReady?.();
     });
   });
 
-  socket.on("connect_error", (error) => {
+  s.on("disconnect", resetOrgReady);
+
+  s.on("connect_error", (error) => {
     console.error("Socket connection failed", error.message);
   });
+}
+
+export function whenOrgRoomReady(): Promise<void> {
+  return orgReady;
 }
 
 export function disconnectSocket(): void {

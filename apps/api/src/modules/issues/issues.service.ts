@@ -1,12 +1,17 @@
 import type { IssueStatus } from "@flowdesk/contracts";
 import { AppError } from "../../shared/errors.js";
+import { broadcastIssueChanged } from "../../realtime/socket-server.js";
 import * as issuesRepository from "./issues.repository.js";
 
 /**
- * Pass-through today — same as projects.service.ts. This is where
- * business rules land once there are any, kept as a real layer from the
- * start so that doesn't mean threading logic into the controller or
- * repository later.
+ * Was a pure pass-through until Phase 6 slice 1 — this is where business
+ * rules land once there are any, kept as a real layer from the start so
+ * that doesn't mean threading logic into the controller or repository
+ * later. create/update/move call broadcastIssueChanged() after the
+ * repository call resolves (genuinely "after commit" — db.transaction()
+ * has already resolved by then), and only on a real success: update/move
+ * check the repository's own discriminated-union status first, since a
+ * conflict/not_found never actually changed anything worth broadcasting.
  */
 export async function listIssues(
   organizationId: string,
@@ -27,7 +32,9 @@ export async function createIssue(input: {
   description: string | null;
   reporterId: string;
 }) {
-  return issuesRepository.create(input);
+  const issue = await issuesRepository.create(input);
+  broadcastIssueChanged(input.projectId, issue.id);
+  return issue;
 }
 
 export async function updateIssue(input: {
@@ -38,7 +45,11 @@ export async function updateIssue(input: {
   changes: Partial<{ title: string; description: string | null; status: IssueStatus }>;
   actorId: string;
 }) {
-  return issuesRepository.update(input);
+  const result = await issuesRepository.update(input);
+  if (result.status === "updated") {
+    broadcastIssueChanged(input.projectId, input.issueId);
+  }
+  return result;
 }
 
 export async function listIssueLabels(organizationId: string, issueId: string) {
@@ -106,7 +117,11 @@ export async function moveIssue(input: {
   nextIssueId?: string;
   actorId: string;
 }) {
-  return issuesRepository.move(input);
+  const result = await issuesRepository.move(input);
+  if (result.status === "moved") {
+    broadcastIssueChanged(input.projectId, input.issueId);
+  }
+  return result;
 }
 
 export async function getBacklog(organizationId: string, projectId: string) {

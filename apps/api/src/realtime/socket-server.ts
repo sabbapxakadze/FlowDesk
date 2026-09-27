@@ -2,34 +2,52 @@ import type { Server as HttpServer } from "node:http";
 import { Server, type DefaultEventsMap } from "socket.io";
 import { verifyAccessToken } from "../modules/auth/tokens.js";
 import * as organizationsRepository from "../modules/organizations/organizations.repository.js";
+import * as projectsRepository from "../modules/projects/projects.repository.js";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 
 // The 4th Server/Socket generic — what socket.data holds. Set once in
-// the auth middleware below, read everywhere after. Typing it this way
-// (not a `declare module` augmentation) is socket.io's own documented
-// mechanism for this, and avoids fighting the library's generics.
+// the auth middleware / join:org handler below, read everywhere after.
+// Typing it this way (not a `declare module` augmentation) is socket.io's
+// own documented mechanism for this, and avoids fighting the library's
+// generics. organizationId is the socket-side equivalent of
+// req.ctx.organizationId — null until a successful join:org sets it,
+// which join:project then relies on the same way requireProject relies
+// on requireOrgMembership having already run.
 interface SocketData {
   userId: string;
+  organizationId: string | null;
 }
 
 type IOServer = Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, SocketData>;
 
 type JoinOrgAck = { ok: true } | { ok: false; error: "invalid_organization_id" | "not_a_member" };
+type JoinProjectAck =
+  | { ok: true }
+  | { ok: false; error: "invalid_project_id" | "not_in_org" | "project_not_found" };
+
+// Module-level singleton, set once attachSocketServer() runs — same
+// pattern db/client.ts already uses for its own singleton. null in any
+// process that never called attachSocketServer() (every HTTP-level
+// test, which drives app.ts directly via supertest with no real
+// http.Server) — broadcastIssueChanged degrades to a safe no-op in that
+// case, which is the correct behavior, not a workaround: there is
+// genuinely nothing to broadcast to.
+let ioInstance: IOServer | null = null;
 
 /**
  * Wires auth + room-joining onto a real http.Server and returns the io
  * instance. A pure function of the server it's given (not a side effect
- * of importing this module) so index.ts and this slice's own test can
- * both call it — production and test auth can never drift apart into two
- * different implementations. No module-level getIO() singleton yet:
- * nothing needs to .emit() from elsewhere until slice 2, and that's slice
- * 2's decision to make with a real caller in hand, not guessed at now.
+ * of importing this module) so index.ts and this slice's own tests can
+ * all call it — production and test auth can never drift apart into two
+ * different implementations. Also stashes the created server as the
+ * module-level singleton broadcastIssueChanged() reads.
  */
 export function attachSocketServer(httpServer: HttpServer): IOServer {
   const io: IOServer = new Server(httpServer, {
     cors: { origin: env.APP_URL },
   });
+  ioInstance = io;
 
   // Same token requireAuth checks (apps/api/src/middleware/require-auth.ts)
   // — verifyAccessToken() is already a plain function, not Express-
@@ -47,7 +65,7 @@ export function attachSocketServer(httpServer: HttpServer): IOServer {
 
     try {
       const { userId } = verifyAccessToken(token);
-      socket.data = { userId };
+      socket.data = { userId, organizationId: null };
       next();
     } catch {
       logger.warn({ socketId: socket.id }, "socket handshake rejected — invalid or expired access token");
@@ -86,10 +104,59 @@ export function attachSocketServer(httpServer: HttpServer): IOServer {
         }
 
         await socket.join(`org:${organizationId}`);
+        // Remembered for join:project below — the socket-side
+        // equivalent of req.ctx.organizationId, set once membership is
+        // actually proven rather than trusted from a later event's
+        // own payload.
+        socket.data.organizationId = organizationId;
         logger.info({ userId: socket.data.userId, organizationId }, "socket joined org room");
         ack({ ok: true });
       },
     );
+
+    socket.on(
+      "join:project",
+      async (payload: unknown, ack: (response: JoinProjectAck) => void) => {
+        const projectId =
+          typeof payload === "object" && payload !== null
+            ? (payload as { projectId?: unknown }).projectId
+            : undefined;
+
+        if (typeof projectId !== "string") {
+          ack({ ok: false, error: "invalid_project_id" });
+          return;
+        }
+
+        if (!socket.data.organizationId) {
+          ack({ ok: false, error: "not_in_org" });
+          return;
+        }
+
+        const project = await projectsRepository.findById(socket.data.organizationId, projectId);
+        if (!project) {
+          logger.warn(
+            { userId: socket.data.userId, projectId },
+            "socket join:project rejected — project not found in caller's org",
+          );
+          ack({ ok: false, error: "project_not_found" });
+          return;
+        }
+
+        await socket.join(`project:${projectId}`);
+        logger.info({ userId: socket.data.userId, projectId }, "socket joined project room");
+        ack({ ok: true });
+      },
+    );
+
+    socket.on("leave:project", (payload: unknown) => {
+      const projectId =
+        typeof payload === "object" && payload !== null
+          ? (payload as { projectId?: unknown }).projectId
+          : undefined;
+      if (typeof projectId === "string") {
+        void socket.leave(`project:${projectId}`);
+      }
+    });
 
     socket.on("disconnect", (reason) => {
       logger.info({ userId: socket.data.userId, socketId: socket.id, reason }, "socket disconnected");
@@ -97,4 +164,15 @@ export function attachSocketServer(httpServer: HttpServer): IOServer {
   });
 
   return io;
+}
+
+/**
+ * Broadcasts "this issue changed, go refetch" to everyone currently
+ * viewing this project's board or list — called from issues.service.ts
+ * after a create/update/move commits. Silently no-ops when no socket
+ * server is attached (every HTTP-level test): there is genuinely
+ * nothing to broadcast to in that case, not a failure to report.
+ */
+export function broadcastIssueChanged(projectId: string, issueId: string): void {
+  ioInstance?.to(`project:${projectId}`).emit("issue:changed", { issueId });
 }

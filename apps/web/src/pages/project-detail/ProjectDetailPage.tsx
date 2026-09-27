@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import type { IssueStatus } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
-import { IssueCard, useIssues } from "../../entities/issue";
+import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
 import { CreateIssueForm } from "../../features/create-issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { useAuth } from "../../shared/auth/useAuth";
@@ -59,6 +59,7 @@ export function ProjectDetailPage() {
     isFetchingNextPage,
     fetchNextPage,
   } = useIssues(organization!.id, projectId!, { status, order });
+  useLiveIssueUpdates(projectId!);
   // useInfiniteQuery's data is { pages: Page[], pageParams }, not a flat
   // list — flatten once here so the rest of this page (and IssueCard)
   // doesn't need to know pagination happened at all. The ?? [] is only

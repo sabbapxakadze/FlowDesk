@@ -729,9 +729,66 @@ No real-time *feature* yet — this slice is the walking skeleton
 (mirrors Phase 1's role for the whole app) proving an authenticated,
 tenant-scoped connection works end to end before slices 2-4 build on it.
 
-- [ ] Slice 2 — broadcast after commit + cache reconciliation (first
-      real feature: live board updates via a new `project:{id}` room).
-      Not started.
+Slice 2 (broadcast after commit + live board updates) shipped:
+
+- [x] `createIssue`/`updateIssue`/`moveIssue` in `issues.service.ts` —
+      until now a pure pass-through to the repository, as anticipated
+      since Phase 3 slice 1 — now call the new `broadcastIssueChanged
+      (projectId, issueId)` after the repository call resolves, and only
+      on a real success (`update`/`move` check the repository's own
+      `status` first; a conflict/not_found never actually changed
+      anything worth broadcasting).
+- [x] `broadcastIssueChanged` lives in `realtime/socket-server.ts`,
+      backed by a module-level `ioInstance` singleton set inside
+      `attachSocketServer()` (same pattern `db/client.ts` already uses)
+      — **silently no-ops if no socket server was ever attached**,
+      which is correct behavior for every HTTP-level test in this
+      codebase (they drive `app` directly via supertest, no real
+      `http.Server`, no sockets), not a workaround. Verified by the full
+      existing test suite staying green untouched.
+- [x] New `join:project`/`leave:project` socket events — same shape as
+      slice 1's `join:org`: re-verifies the project actually belongs to
+      an org the caller is a member of
+      (`projectsRepository.findById`, the same check `requireProject`
+      does over HTTP) before joining the room. Needed `socket.data` to
+      also remember `organizationId` (set once, on a successful
+      `join:org`) — the socket-side equivalent of
+      `req.ctx.organizationId`.
+- [x] New `apps/api/src/realtime/broadcast.test.ts` — a real `http.Server`
+      wrapping the real `app` (not a bare server), driven by both
+      `supertest` for genuine HTTP mutations and a real `socket.io-client`
+      asserting `issue:changed` actually arrives in the right
+      `project:{id}` room (and never in one the socket didn't join).
+- [x] New `entities/issue/api/useLiveIssueUpdates.ts`, called from
+      `ProjectBoardPage` and `ProjectDetailPage`: joins `project:{id}`
+      on mount, leaves on unmount, invalidates `issueKeys.board`/`list`
+      on `issue:changed`.
+- [x] **A real race condition found and fixed via live testing, not
+      assumed away** — twice. A fresh page load calls `connectSocket()`
+      (which joins `org:{id}`) and mounts `useLiveIssueUpdates` (which
+      joins `project:{id}`) almost simultaneously; the project join
+      could reach the server and get rejected (`not_in_org`) before the
+      org join's own ack had actually set `socket.data.organizationId`
+      server-side — caught live with two real browser tabs, not
+      predicted from reading the code. First fix attempt (reset a
+      shared "org ready" promise inside the `connect` handler) still
+      left the exact same gap open *before* the first `connect` event
+      fired. Real fix: `whenOrgRoomReady()` in
+      `shared/socket/socket-client.ts` is a promise reset **synchronously
+      inside `connectSocket()` itself** (no gap before the first
+      connect) and again on every `disconnect` (room membership is gone
+      the instant a connection drops, not just "eventually" on the next
+      reconnect) — anything that depends on the org room must await it,
+      not just check `socket?.connected`.
+- [x] Verified live end to end with two real browser sessions on the
+      same project: a drag on one tab updated the other's board with no
+      reload; creating an issue on one tab's list page appeared live on
+      the other's board; and — the harder case — killing and restarting
+      the dev API server while a tab stayed open confirmed it
+      reconnected and rejoined **both** rooms automatically (server logs
+      showing `join:org` then `join:project` in the correct order), with
+      a real subsequent drag still broadcasting correctly afterward, not
+      just the underlying connection coming back.
 - [ ] Slice 3 — live comments (`issue:{id}` room). Not started.
 - [ ] Slice 4 — presence on an issue (ephemeral, not persisted). Not
       started.

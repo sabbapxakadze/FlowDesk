@@ -15,7 +15,7 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Issue, IssueStatus } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
-import { BoardCard, useBoard } from "../../entities/issue";
+import { BoardCard, useBoard, useLiveIssueUpdates } from "../../entities/issue";
 import { useMoveIssue } from "../../features/move-issue";
 import { useAuth } from "../../shared/auth/useAuth";
 import { Card, EmptyState, ErrorText, Skeleton, STATUS_LABELS } from "../../shared/ui";
@@ -69,6 +69,7 @@ export function ProjectBoardPage() {
 
   const { data: issues, isPending: issuesPending, isError, error } = useBoard(organization!.id, projectId!);
   const moveMutation = useMoveIssue(organization!.id, projectId!);
+  useLiveIssueUpdates(projectId!);
 
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
 

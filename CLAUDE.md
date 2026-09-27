@@ -38,6 +38,28 @@ regenerating `pnpm-lock.yaml` from scratch). No real-time feature yet —
 this slice is the walking skeleton slices 2-4 (live board updates, live
 comments, presence) build on.
 
+Slice 2 (broadcast after commit + live board updates) is done:
+`createIssue`/`updateIssue`/`moveIssue` now call a new
+`broadcastIssueChanged(projectId, issueId)` after the repository call
+resolves and only on real success, emitting into a new `project:{id}`
+room (joined/left per-page via a new `useLiveIssueUpdates` hook, not
+connection-scoped like `org:{id}`). The broadcast helper silently
+no-ops when no socket server is attached — correct for every existing
+HTTP-level test, not a workaround. **A real race condition found and
+fixed live, twice**: a fresh page load's `join:org` and `join:project`
+fire almost simultaneously, and the project join could reach the server
+before the org join's ack had actually set `socket.data.organizationId`
+— caught with two real browser tabs, not predicted from the code. The
+first fix attempt still left a gap open before the very first `connect`
+event; the real fix resets a `whenOrgRoomReady()` promise synchronously
+inside `connectSocket()` itself (`shared/socket/socket-client.ts`), and
+again on every `disconnect`. Verified live end to end with two browser
+sessions: a drag and a create on one tab both appeared live on the
+other with no reload, and — the harder case — killing and restarting
+the dev API server with a tab left open confirmed it reconnected and
+rejoined *both* rooms automatically, with a real subsequent drag still
+broadcasting correctly afterward.
+
 Slice 1 (board data model + read-only board view) is done: `board_rank`
 column (a Postgres `numeric`, never a float — see ADR 0007 for the whole
 ranking scheme), a two-step nullable-add-then-backfill migration, a new
