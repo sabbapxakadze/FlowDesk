@@ -16,8 +16,27 @@ win.
 
 ## Current phase
 
-**Phase 5 — Kanban board — fully complete.** See `docs/roadmap.md`.
-Next up is Phase 6 (Real-time, Socket.IO) — not started.
+**Phase 6 — Real-time.** See `docs/roadmap.md`. Phase 5 (Kanban board)
+is fully complete.
+
+Slice 1 (Socket.IO connection, handshake auth, org room) is done: a
+new `attachSocketServer()` wires an authenticated, tenant-scoped
+connection onto the real `http.Server` (`index.ts` now builds one
+explicitly instead of discarding `app.listen()`'s return value).
+Handshake auth reuses `verifyAccessToken()` (the same function
+`requireAuth` uses); `join:org` re-runs the real membership check
+`requireOrgMembership` does before joining a room, never trusting the
+client-claimed org id. Reconnection re-authenticates with whatever
+token is current via a function-form `auth` option, verified live by
+killing and restarting the dev API server with the browser tab left
+open and watching it reconnect and re-join automatically. Two real bugs
+were found and fixed while building/verifying this slice, not assumed
+away: the handshake-rejection path was originally silent server-side
+(now logged, matching every other rejection path in this codebase), and
+a dangling lockfile entry for `socket.io-client` (only fixed by
+regenerating `pnpm-lock.yaml` from scratch). No real-time feature yet —
+this slice is the walking skeleton slices 2-4 (live board updates, live
+comments, presence) build on.
 
 Slice 1 (board data model + read-only board view) is done: `board_rank`
 column (a Postgres `numeric`, never a float — see ADR 0007 for the whole

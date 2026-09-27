@@ -3,6 +3,7 @@ import { authSessionSchema, type AuthSession } from "@flowdesk/contracts";
 import { apiPost, apiPostVoid } from "../api/client";
 import { setStoredAccessToken } from "./token-store";
 import { AuthContext, type AuthOrganization, type AuthUser } from "./auth-context";
+import { connectSocket, disconnectSocket } from "../socket/socket-client";
 
 /**
  * The access token lives here, in memory, and nowhere else — never
@@ -27,6 +28,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // is what shared/api/client.ts's fetch wrapper actually reads — kept
     // in sync here, on every login, so the next API call carries it.
     setStoredAccessToken(session.accessToken);
+    // Same lifecycle the access token itself already follows — connect
+    // once we have both a token and the org to join.
+    connectSocket(session.organization.id);
   }, []);
 
   const logout = useCallback(() => {
@@ -34,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOrganization(null);
     setAccessToken(null);
     setStoredAccessToken(null);
+    disconnectSocket();
     // Local state clears immediately either way; telling the server to
     // revoke the session is best-effort and shouldn't block the UI on it.
     void apiPostVoid("/v1/auth/logout");

@@ -660,10 +660,81 @@ Slice 4 (sprints) shipped:
 
 ## Phase 6 — Real-time
 
-- [ ] Socket.IO with access-token handshake auth
-- [ ] Rooms: `org:{id}`, `project:{id}`, `issue:{id}`
-- [ ] Broadcast after commit; client reconciles TanStack Query cache
-- [ ] Live comments, live status changes, presence on an issue
+Slice 1 (Socket.IO connection, handshake auth, org room) shipped:
+
+- [x] New `apps/api/src/realtime/socket-server.ts` — `attachSocketServer(httpServer)`,
+      a pure function of the server it's given (not a side effect of
+      importing the module), so `index.ts` and this slice's own test both
+      call it and can never drift into two different auth
+      implementations. `index.ts` now builds a real `http.Server`
+      (`createServer(app)`) instead of discarding `app.listen()`'s return
+      value, since Socket.IO needs to attach to it directly.
+- [x] Handshake auth reuses `verifyAccessToken()` — the same function
+      `requireAuth` already calls, already a plain function with nothing
+      Express-specific about it. Rejection is Socket.IO's own mechanism
+      (`next(new Error(...))`, the client gets `connect_error`), not
+      `AppError` — its HTTP status/code/details shape has nothing to map
+      onto a socket handshake. Every rejection (missing token, invalid
+      token, and `join:org` for a non-member) is logged server-side with
+      structured `logger.warn` — **found live while verifying this
+      slice**: the handshake-rejection path was originally silent
+      server-side (only `join:org`'s rejection logged anything), an
+      observability gap next to every other rejection path in this
+      codebase; fixed before considering the slice done.
+- [x] `join:org` is a client-emitted event with an acknowledgement
+      callback, not automatic on connect. The handler re-runs the exact
+      membership check `requireOrgMembership` does
+      (`organizationsRepository.findMembership`) before calling
+      `socket.join()` — the client-claimed org id is never trusted on
+      its own, same defense-in-depth as every HTTP middleware here.
+- [x] Reconnection re-authenticates with whatever token is current, not
+      one captured at first connect: `socket.io-client`'s `auth` option
+      is a function (`apps/web/src/shared/socket/socket-client.ts`),
+      called fresh on every (re)connection attempt, reading whatever
+      `token-store.ts` currently holds. `join:org` re-fires on every
+      `connect` event too, since Socket.IO room membership doesn't
+      survive a new underlying connection. **Verified live, not just
+      assumed**: logged in, killed the API dev server outright while the
+      browser tab stayed open, confirmed the client's own reconnect
+      attempts (and their failures) logged live, restarted the API, and
+      watched the client reconnect and re-join its org room automatically
+      within seconds — no page reload, no new code beyond the reconnect-
+      safe `auth` function and the existing `connect` handler.
+- [x] `AuthContext.tsx`'s `login()`/`logout()` call `connectSocket()`/
+      `disconnectSocket()` — the same lifecycle the access token itself
+      already follows, not a new one.
+- [x] Vite dev proxy gets a `/socket.io` entry with `ws: true` (off by
+      default for a plain proxy entry) alongside the existing `/api`
+      one, keeping "the browser only ever talks to one origin" true for
+      sockets too.
+- [x] New `socket-server.test.ts` — a real `http.Server` on an ephemeral
+      port, the same `attachSocketServer()` production wiring uses, a
+      real `socket.io-client` connection: valid token + real membership
+      connects and `join:org` acks; missing/invalid token is rejected at
+      handshake; valid token but no membership in the claimed org acks
+      `{ ok: false }`.
+- [x] **A real lockfile bug found and fixed while installing
+      dependencies for this slice**: `pnpm-lock.yaml` had an incomplete,
+      dangling resolution for `socket.io-client@4.8.4` (declared in the
+      packages section with no matching dependency snapshot, left over
+      from adding the package separately in two workspace directories),
+      which left `apps/web/node_modules/socket.io-client` a broken
+      symlink — `pnpm install`, `--force`, and `pnpm dedupe` all left it
+      unfixed; only deleting and regenerating the lockfile from the
+      package.json specs resolved it cleanly. Confirmed via
+      `pnpm typecheck` succeeding afterward, not just the symlink
+      existing.
+
+No real-time *feature* yet — this slice is the walking skeleton
+(mirrors Phase 1's role for the whole app) proving an authenticated,
+tenant-scoped connection works end to end before slices 2-4 build on it.
+
+- [ ] Slice 2 — broadcast after commit + cache reconciliation (first
+      real feature: live board updates via a new `project:{id}` room).
+      Not started.
+- [ ] Slice 3 — live comments (`issue:{id}` room). Not started.
+- [ ] Slice 4 — presence on an issue (ephemeral, not persisted). Not
+      started.
 
 ## Phase 7 — Search, notifications, uploads
 
