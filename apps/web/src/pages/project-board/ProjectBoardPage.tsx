@@ -123,9 +123,14 @@ export function ProjectBoardPage() {
 
   return (
     <main className="p-8">
-      <Link to={`/projects/${project.id}`} className="text-sm text-[var(--color-text-link)] underline">
-        ← {project.name} (list)
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link to={`/projects/${project.id}`} className="text-sm text-[var(--color-text-link)] underline">
+          ← {project.name} (list)
+        </Link>
+        <Link to={`/projects/${project.id}/sprints`} className="text-sm text-[var(--color-text-link)] underline">
+          Sprints →
+        </Link>
+      </div>
       <h1 className="mt-2 mb-4 text-2xl font-semibold">{project.name} — Board</h1>
 
       {isError ? (

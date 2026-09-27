@@ -110,9 +110,14 @@ export function ProjectDetailPage() {
         <Link to="/projects" className="text-sm text-[var(--color-text-link)] underline">
           ← All projects
         </Link>
-        <Link to={`/projects/${project.id}/board`} className="text-sm text-[var(--color-text-link)] underline">
-          Board →
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link to={`/projects/${project.id}/sprints`} className="text-sm text-[var(--color-text-link)] underline">
+            Sprints →
+          </Link>
+          <Link to={`/projects/${project.id}/board`} className="text-sm text-[var(--color-text-link)] underline">
+            Board →
+          </Link>
+        </div>
       </div>
       <h1 className="mt-2 mb-4 text-2xl font-semibold">{project.name}</h1>
 

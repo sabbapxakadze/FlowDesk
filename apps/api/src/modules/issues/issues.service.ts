@@ -108,3 +108,18 @@ export async function moveIssue(input: {
 }) {
   return issuesRepository.move(input);
 }
+
+export async function getBacklog(organizationId: string, projectId: string) {
+  return issuesRepository.getBacklog(organizationId, projectId);
+}
+
+export async function assignSprint(input: {
+  organizationId: string;
+  projectId: string;
+  issueId: string;
+  expectedVersion: number;
+  sprintId: string | null;
+  actorId: string;
+}) {
+  return issuesRepository.assignSprint(input);
+}

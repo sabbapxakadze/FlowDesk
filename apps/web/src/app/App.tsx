@@ -3,6 +3,7 @@ import { HomePage } from "../pages/home/HomePage";
 import { ProjectsPage } from "../pages/projects/ProjectsPage";
 import { ProjectDetailPage } from "../pages/project-detail/ProjectDetailPage";
 import { ProjectBoardPage } from "../pages/project-board/ProjectBoardPage";
+import { ProjectSprintsPage } from "../pages/project-sprints/ProjectSprintsPage";
 import { IssueDetailPage } from "../pages/issue-detail/IssueDetailPage";
 import { RegisterPage } from "../pages/register/RegisterPage";
 import { LoginPage } from "../pages/login/LoginPage";
@@ -40,6 +41,14 @@ export function App() {
             element={
               <RequireAuth>
                 <ProjectBoardPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId/sprints"
+            element={
+              <RequireAuth>
+                <ProjectSprintsPage />
               </RequireAuth>
             }
           />

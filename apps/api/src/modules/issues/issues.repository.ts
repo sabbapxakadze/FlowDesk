@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { comments, issueEvents, issueLabels, issues, labels, projects, users } from "../../db/schema/index.js";
+import { comments, issueEvents, issueLabels, issues, labels, projects, sprints, users } from "../../db/schema/index.js";
 import type { IssueStatus } from "@flowdesk/contracts";
 
 type IssueRow = typeof issues.$inferSelect;
@@ -689,4 +689,127 @@ export async function listForBoard(organizationId: string, projectId: string) {
     .from(issues)
     .where(and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId)))
     .orderBy(asc(issues.status), asc(issues.boardRank), asc(issues.id));
+}
+
+/**
+ * sprintId: null means the backlog (sprint_id IS NULL); a real id means
+ * that sprint's issues. Ordered by createdAt, not a fractional rank —
+ * see the Phase 5 slice 4 plan's "Decisions": this slice deliberately
+ * doesn't reuse ADR 0007's ranking machinery, since backlog/sprint
+ * membership was asked for, not backlog prioritization order.
+ */
+export async function listByProjectAndSprint(organizationId: string, projectId: string, sprintId: string | null) {
+  return db
+    .select()
+    .from(issues)
+    .where(
+      and(
+        eq(issues.organizationId, organizationId),
+        eq(issues.projectId, projectId),
+        sprintId === null ? isNull(issues.sprintId) : eq(issues.sprintId, sprintId),
+      ),
+    )
+    .orderBy(asc(issues.createdAt), asc(issues.id));
+}
+
+/**
+ * Powers the whole backlog/active-sprint page in one query pass — same
+ * "compose everything for one page in one call" precedent as
+ * listForBoard. Reads the sprints table directly rather than calling
+ * into sprints.repository.ts — this module already reaches into other
+ * tables directly for its own composed reads (e.g. attachLabel's direct
+ * `labels` select), so this follows the same convention rather than a
+ * cross-module repository call.
+ */
+export async function getBacklog(organizationId: string, projectId: string) {
+  const [activeSprint] = await db
+    .select()
+    .from(sprints)
+    .where(
+      and(eq(sprints.organizationId, organizationId), eq(sprints.projectId, projectId), eq(sprints.status, "active")),
+    );
+
+  const backlog = await listByProjectAndSprint(organizationId, projectId, null);
+  const activeSprintIssues = activeSprint
+    ? await listByProjectAndSprint(organizationId, projectId, activeSprint.id)
+    : [];
+
+  return { activeSprint: activeSprint ?? null, backlog, activeSprintIssues };
+}
+
+/**
+ * Assigning an issue to a sprint (or back to the backlog, sprintId
+ * null) is an issue mutation, not a sprint one — same shape as move():
+ * conditional UPDATE on the issue's own version. sprintId is validated
+ * against this project/org before the update (defense in depth against
+ * a foreign/cross-tenant sprint id, same reasoning as move()'s neighbor
+ * validation) rather than trusting the foreign key alone to reject it
+ * with a less useful error.
+ */
+export async function assignSprint(input: {
+  organizationId: string;
+  projectId: string;
+  issueId: string;
+  expectedVersion: number;
+  sprintId: string | null;
+  actorId: string;
+}): Promise<
+  | { status: "assigned"; issue: IssueRow }
+  | { status: "conflict"; current: IssueRow }
+  | { status: "not_found" }
+  | { status: "invalid_sprint" }
+> {
+  return db.transaction(async (tx) => {
+    let sprintName: string | null = null;
+    if (input.sprintId) {
+      const [sprint] = await tx
+        .select({ name: sprints.name })
+        .from(sprints)
+        .where(
+          and(
+            eq(sprints.id, input.sprintId),
+            eq(sprints.organizationId, input.organizationId),
+            eq(sprints.projectId, input.projectId),
+          ),
+        );
+      if (!sprint) return { status: "invalid_sprint" };
+      sprintName = sprint.name;
+    }
+
+    const [updated] = await tx
+      .update(issues)
+      .set({ sprintId: input.sprintId, version: sql`${issues.version} + 1`, updatedAt: new Date() })
+      .where(
+        and(
+          eq(issues.id, input.issueId),
+          eq(issues.organizationId, input.organizationId),
+          eq(issues.projectId, input.projectId),
+          eq(issues.version, input.expectedVersion),
+        ),
+      )
+      .returning();
+
+    if (!updated) {
+      const [current] = await tx
+        .select()
+        .from(issues)
+        .where(
+          and(
+            eq(issues.id, input.issueId),
+            eq(issues.organizationId, input.organizationId),
+            eq(issues.projectId, input.projectId),
+          ),
+        );
+      return current ? { status: "conflict", current } : { status: "not_found" };
+    }
+
+    await tx.insert(issueEvents).values({
+      issueId: updated.id,
+      actorId: input.actorId,
+      type: input.sprintId ? "issue.sprint_assigned" : "issue.sprint_removed",
+      payload: input.sprintId ? { sprintId: input.sprintId, sprintName } : { sprintId: null },
+    });
+
+    return { status: "assigned", issue: updated };
+  });
 }

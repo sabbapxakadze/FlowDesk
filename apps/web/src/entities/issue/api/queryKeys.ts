@@ -29,6 +29,10 @@ export const issueKeys = {
   // calls already invalidate the board too, same reasoning as list()'s
   // filtered variants above. No changes needed in either file.
   board: (projectId: string) => [...issueKeys.all, projectId, "board"] as const,
+  // Same "list() with no filters is a prefix" reasoning as board — the
+  // existing invalidateQueries({ queryKey: issueKeys.list(projectId) })
+  // calls already invalidate this too.
+  backlog: (projectId: string) => [...issueKeys.all, projectId, "backlog"] as const,
   detail: (issueId: string) => [...issueKeys.all, issueId] as const,
   labels: (issueId: string) => [...issueKeys.all, issueId, "labels"] as const,
   events: (issueId: string) => [...issueKeys.all, issueId, "events"] as const,

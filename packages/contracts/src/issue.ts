@@ -13,6 +13,7 @@ export const issueSchema = z.object({
   status: issueStatusSchema,
   reporterId: z.uuid(),
   version: z.number().int(),
+  sprintId: z.uuid().nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
@@ -113,3 +114,12 @@ export type MoveIssueRequest = z.infer<typeof moveIssueRequestSchema>;
 // schema needed, moveIssueResponseSchema would just be an alias.
 
 export type UpdateIssueResponse = z.infer<typeof updateIssueResponseSchema>;
+
+// null means "move to the backlog". Response reuses
+// updateIssueResponseSchema's shape, same precedent as moveIssueRequestSchema.
+export const assignIssueSprintRequestSchema = z.object({
+  version: z.number().int(),
+  sprintId: z.uuid().nullable(),
+});
+
+export type AssignIssueSprintRequest = z.infer<typeof assignIssueSprintRequestSchema>;

@@ -16,7 +16,8 @@ win.
 
 ## Current phase
 
-**Phase 5 — Kanban board.** See `docs/roadmap.md`.
+**Phase 5 — Kanban board — fully complete.** See `docs/roadmap.md`.
+Next up is Phase 6 (Real-time, Socket.IO) — not started.
 
 Slice 1 (board data model + read-only board view) is done: `board_rank`
 column (a Postgres `numeric`, never a float — see ADR 0007 for the whole
@@ -53,7 +54,30 @@ layer). Verified live end to end: cross-column and within-column
 pointer drags via the real API response, a mocked 409 confirming
 rollback to the exact pre-drag state, and an actual keyboard-only pass
 (focus, Space, arrow key, Space) producing a real successful move
-request. Slice 4 (sprints) is the last slice in this phase.
+request.
+
+Slice 4 (sprints — the last slice in this phase) is done: new ADR 0008
+designs the full `planned` → `active` → `completed` lifecycle (chosen
+over a minimal two-state model with the owner — see the ADR), a new
+`sprints` table with a **database-enforced** at-most-one-active-sprint
+constraint (a partial unique index, not a service-layer check —
+verified live and with a concurrent-start race test), and a nullable
+`issues.sprintId`. `PATCH .../sprints/:id/complete` returns its
+remaining issues to the backlog in the same transaction and tags their
+`issue.sprint_removed` events with `reason: "sprint_completed"`, so the
+timeline can tell an automatic release apart from a manual
+drag-to-backlog. New `PATCH .../issues/:issueId/sprint` (assign/
+unassign, same conditional-version-UPDATE shape as `move`) and a new
+unpaginated `GET .../backlog` composing the whole working view in one
+call. New `ProjectSprintsPage`: a sprint-history list with Start/
+Complete actions, plus a backlog/active-sprint drag surface using
+`@dnd-kit/core`'s plain `useDraggable`/`useDroppable` (membership only,
+not `@dnd-kit/sortable`'s ordering — this page doesn't need insert-
+before-this-card semantics, see ADR 0008). Verified live end to end:
+created and started a sprint, dragged an issue between backlog and
+active sprint both ways via real pointer drags and a full keyboard-only
+pass, and completed the sprint, watching its issue return to the
+backlog and the timeline update correctly — all against the real API.
 
 Phase 4 (React depth) is **fully done** across three slices — every
 bullet in its original checklist is covered: cursor pagination (slice 1,

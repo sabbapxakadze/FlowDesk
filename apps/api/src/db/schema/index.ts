@@ -9,3 +9,4 @@ export * from "./issue-events.js";
 export * from "./labels.js";
 export * from "./issue-labels.js";
 export * from "./comments.js";
+export * from "./sprints.js";

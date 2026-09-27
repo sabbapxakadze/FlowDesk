@@ -18,6 +18,7 @@ declare global {
         role: Role;
         projectId?: string;
         issueId?: string;
+        sprintId?: string;
       };
     }
   }

@@ -35,6 +35,17 @@ issuesRouter.get(
   issuesController.getBoard,
 );
 
+// Not nested under /issues, same reasoning as /board — the resource is
+// "the backlog view," composed from both sprints and issues.
+issuesRouter.get(
+  "/organizations/:organizationId/projects/:projectId/backlog",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requirePermission("view_issue"),
+  issuesController.getBacklog,
+);
+
 issuesRouter.get(
   "/organizations/:organizationId/projects/:projectId/issues/:issueId",
   requireAuth,
@@ -72,6 +83,16 @@ issuesRouter.patch(
   requireIssue,
   requirePermission("manage_issue"),
   issuesController.moveIssue,
+);
+
+issuesRouter.patch(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId/sprint",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("manage_issue"),
+  issuesController.assignIssueSprint,
 );
 
 issuesRouter.get(

@@ -601,8 +601,62 @@ Slice 3 (real drag & drop with optimistic updates) shipped:
       not just a visual-only interaction. Both cross-column and
       within-column pointer drags confirmed via the board's real API
       response after the drop, not just the DOM.
-- [ ] Slice 4 — sprints: create, assign issues, backlog vs active. Not
-      started.
+Slice 4 (sprints) shipped:
+
+- [x] **Sprint lifecycle designed and documented** — new ADR 0008:
+      `planned` → `active` → `completed`, chosen with the owner over a
+      minimal active/completed-only model (see the ADR's "Alternatives
+      rejected" — the minimal model still needs a transition to reuse
+      the active slot, so it saves no real complexity while losing the
+      ability to plan ahead). New `sprints` table (`sprint_status` enum,
+      `version` for optimistic concurrency, nullable `startDate`/
+      `endDate`) and a nullable `issues.sprintId` FK (`onDelete: "set
+      null"` — a sprint isn't a tenant boundary, so deleting one returns
+      its issues to the backlog rather than deleting them). One
+      migration, no backfill needed this time (unlike ADR 0007's
+      `board_rank`): the column is nullable from creation.
+- [x] **At most one active sprint per project, enforced by the
+      database** — a partial unique index
+      (`UNIQUE (project_id) WHERE status = 'active'`), not a
+      service-layer check-then-write. `PATCH .../sprints/:id/start` is a
+      conditional `UPDATE ... WHERE status = 'planned' AND version =
+      $expected`; a second concurrent start hits the index violation,
+      caught the same `isUniqueViolation()` way as duplicate project
+      keys/label names and translated to a real `409
+      sprint_already_active` — verified live (tried starting a second
+      planned sprint while one was active, confirmed the clear error,
+      not a raw 500) and with an automated concurrent-start race test.
+- [x] `PATCH .../sprints/:id/complete` returns the sprint's remaining
+      issues to the backlog in the same transaction as the status
+      change, writing one `issue.sprint_removed` event per issue with
+      `reason: "sprint_completed"` — the `reason` field is what lets the
+      activity timeline phrase an automatic release differently from a
+      manual drag-to-backlog, without a second event type. Verified
+      live: completed an active sprint with an issue still in it,
+      confirmed the issue reappeared in the backlog and its timeline
+      read "moved this issue back to the backlog (Sprint 1 completed)".
+- [x] New `PATCH .../issues/:issueId/sprint` (`{ version, sprintId:
+      string | null }`, `null` = backlog) — an issue mutation, not a
+      sprint one, same conditional-UPDATE-on-version shape as `move`
+      (ADR 0007). Writes `issue.sprint_assigned`/`issue.sprint_removed`.
+      New unpaginated `GET .../backlog` composes the whole working view
+      in one call (`{ activeSprint, backlog, activeSprintIssues }`),
+      same "see everything at a glance" precedent as `getBoard`.
+- [x] New `ProjectSprintsPage` (`/projects/:projectId/sprints`) — a
+      sprint-history list (name, status, Start/Complete buttons gated on
+      status) plus a two-zone backlog/active-sprint drag surface. Drag
+      via `@dnd-kit/core`'s plain `useDraggable`/`useDroppable` (not
+      `@dnd-kit/sortable` — this page only needs container membership,
+      not insert-before-this-card ordering, see ADR 0008), with the same
+      dedicated-drag-handle fix `BoardCard` needed. Cross-linked from
+      the board and list pages. Verified live end to end: created a
+      sprint, started it, dragged an issue from the backlog into the
+      active sprint and back via real pointer drags, a full
+      keyboard-only pass (Tab to the handle, Space, arrow keys, Space —
+      confirmed via dnd-kit's own live-region announcer text reaching
+      "dropped over droppable area active-sprint"), and completed the
+      sprint, watching its issue return to the backlog and the timeline
+      update correctly — all against the real API, not mocked.
 
 ## Phase 6 — Real-time
 

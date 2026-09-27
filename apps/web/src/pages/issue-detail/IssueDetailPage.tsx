@@ -57,6 +57,12 @@ function describeEvent(event: IssueEvent): string {
         ? "reordered this issue"
         : `moved this issue to ${STATUS_LABELS[toStatus as keyof typeof STATUS_LABELS] ?? toStatus}`;
     }
+    case "issue.sprint_assigned":
+      return `assigned this issue to ${String(event.payload.sprintName)}`;
+    case "issue.sprint_removed":
+      return event.payload.reason === "sprint_completed"
+        ? `moved this issue back to the backlog (${String(event.payload.sprintName)} completed)`
+        : "moved this issue back to the backlog";
     default:
       return event.type;
   }

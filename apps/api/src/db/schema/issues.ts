@@ -13,6 +13,7 @@ import {
 import { organizations } from "./organizations.js";
 import { projects } from "./projects.js";
 import { users } from "./users.js";
+import { sprints } from "./sprints.js";
 
 export const issueStatus = pgEnum("issue_status", ["todo", "in_progress", "done"]);
 
@@ -55,6 +56,10 @@ export const issues = pgTable(
     // bisection between the same two neighbors never loses precision;
     // never parsed into a JS number, only ever round-tripped as a string.
     boardRank: numeric("board_rank").notNull(),
+    // Nullable = backlog. onDelete: "set null" (not "cascade") — a sprint
+    // isn't a tenant boundary, so removing one returns its issues to the
+    // backlog instead of deleting them. See Phase 5 slice 4's plan.
+    sprintId: uuid("sprint_id").references(() => sprints.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -81,5 +86,8 @@ export const issues = pgTable(
       table.id,
     ),
     uniqueIndex("issues_project_id_number_unique").on(table.projectId, table.number),
+    // Serves both the backlog query (sprint_id IS NULL) and the
+    // active-sprint query (sprint_id = ?), both scoped to a project.
+    index("issues_project_id_sprint_id_idx").on(table.projectId, table.sprintId),
   ],
 );

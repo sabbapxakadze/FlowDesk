@@ -1,11 +1,13 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import {
+  assignIssueSprintRequestSchema,
   attachLabelRequestSchema,
   createCommentRequestSchema,
   createCommentResponseSchema,
   createIssueRequestSchema,
   createIssueResponseSchema,
+  getBacklogResponseSchema,
   getBoardResponseSchema,
   getIssueResponseSchema,
   listIssueEventsResponseSchema,
@@ -243,6 +245,61 @@ export async function getBoard(req: Request, res: Response) {
   // which is exactly the point: rank never leaves the server. See ADR
   // 0007 / the Phase 5 slice 1 plan's "Decisions" section.
   const body = getBoardResponseSchema.parse({ data: rows.map(toWireFormat) });
+  res.json(body);
+}
+
+export async function getBacklog(req: Request, res: Response) {
+  if (!req.ctx?.projectId) {
+    throw new Error("getBacklog requires requireProject to have run first");
+  }
+
+  const result = await issuesService.getBacklog(req.ctx.organizationId, req.ctx.projectId);
+  const body = getBacklogResponseSchema.parse({
+    activeSprint: result.activeSprint ? toWireFormat(result.activeSprint) : null,
+    backlog: result.backlog.map(toWireFormat),
+    activeSprintIssues: result.activeSprintIssues.map(toWireFormat),
+  });
+  res.json(body);
+}
+
+export async function assignIssueSprint(req: Request, res: Response) {
+  if (!req.ctx?.projectId || !req.ctx.issueId) {
+    throw new Error("assignIssueSprint requires requireIssue to have run first");
+  }
+
+  const parsed = assignIssueSprintRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError("validation_error", 400, "Invalid sprint assignment", parsed.error.flatten().fieldErrors);
+  }
+
+  const result = await issuesService.assignSprint({
+    organizationId: req.ctx.organizationId,
+    projectId: req.ctx.projectId,
+    issueId: req.ctx.issueId,
+    expectedVersion: parsed.data.version,
+    sprintId: parsed.data.sprintId,
+    actorId: req.ctx.userId,
+  });
+
+  if (result.status === "invalid_sprint") {
+    throw new AppError("invalid_sprint", 400, "That sprint doesn't belong to this project.");
+  }
+
+  if (result.status === "conflict") {
+    throw new AppError(
+      "version_conflict",
+      409,
+      "This issue was changed by someone else since you loaded it.",
+      undefined,
+      { current: toWireFormat(result.current) },
+    );
+  }
+
+  if (result.status === "not_found") {
+    throw new AppError("issue_not_found", 404, "Issue not found.");
+  }
+
+  const body = updateIssueResponseSchema.parse({ data: toWireFormat(result.issue) });
   res.json(body);
 }
 

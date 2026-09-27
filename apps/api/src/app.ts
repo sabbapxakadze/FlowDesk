@@ -7,6 +7,7 @@ import { projectsRouter } from "./modules/projects/projects.routes.js";
 import { issuesRouter } from "./modules/issues/issues.routes.js";
 import { labelsRouter } from "./modules/labels/labels.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
+import { sprintsRouter } from "./modules/sprints/sprints.routes.js";
 
 /**
  * Split from index.ts so tests can exercise the real middleware chain
@@ -27,6 +28,7 @@ app.use("/api/v1", projectsRouter);
 app.use("/api/v1", issuesRouter);
 app.use("/api/v1", labelsRouter);
 app.use("/api/v1", authRouter);
+app.use("/api/v1", sprintsRouter);
 
 // Must be registered after every route — see error-handler.ts.
 app.use(errorHandler);

@@ -5,6 +5,7 @@ import { resetDatabase } from "../../db/test-utils.js";
 import { comments, issueEvents, issues, labels, organizations, projects, users } from "../../db/schema/index.js";
 import * as issuesRepository from "./issues.repository.js";
 import * as issuesService from "./issues.service.js";
+import * as sprintsRepository from "../sprints/sprints.repository.js";
 
 async function seedOrgProjectUser(orgName: string, orgSlug: string, projectKey: string) {
   const [org] = await db.insert(organizations).values({ name: orgName, slug: orgSlug }).returning();
@@ -1109,6 +1110,220 @@ describe("issues repository — labels", () => {
       .from(issueEvents)
       .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.label_removed")));
     expect(removeEvents).toHaveLength(0);
+  });
+});
+
+/**
+ * assignSprint() / listByProjectAndSprint() / getBacklog() — see the
+ * Phase 5 slice 4 plan. This is a plain conditional-update mutation, same
+ * shape as update()/move(), so the important cases are the same:
+ * version conflicts, cross-tenant defense in depth, and that backlog vs.
+ * active-sprint membership is actually correct after a real assign.
+ */
+describe("issues repository — sprints", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("assigns an issue to a sprint and writes an issue.sprint_assigned event with the sprint name", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+    const sprint = await sprintsRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      name: "Sprint 1",
+      startDate: null,
+      endDate: null,
+    });
+
+    const result = await issuesRepository.assignSprint({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: issue.id,
+      expectedVersion: issue.version,
+      sprintId: sprint.id,
+      actorId: user.id,
+    });
+
+    if (result.status !== "assigned") throw new Error("expected assigned");
+    expect(result.issue.sprintId).toBe(sprint.id);
+    expect(result.issue.version).toBe(issue.version + 1);
+
+    const events = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.sprint_assigned")));
+    expect(events).toHaveLength(1);
+    expect(events[0]?.payload).toEqual({ sprintId: sprint.id, sprintName: "Sprint 1" });
+  });
+
+  it("moves an issue back to the backlog (sprintId null) and writes an issue.sprint_removed event", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+    const sprint = await sprintsRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      name: "Sprint 1",
+      startDate: null,
+      endDate: null,
+    });
+    const assigned = await issuesRepository.assignSprint({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: issue.id,
+      expectedVersion: issue.version,
+      sprintId: sprint.id,
+      actorId: user.id,
+    });
+    if (assigned.status !== "assigned") throw new Error("expected assigned");
+
+    const result = await issuesRepository.assignSprint({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: issue.id,
+      expectedVersion: assigned.issue.version,
+      sprintId: null,
+      actorId: user.id,
+    });
+
+    if (result.status !== "assigned") throw new Error("expected assigned");
+    expect(result.issue.sprintId).toBeNull();
+
+    const events = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.sprint_removed")));
+    expect(events).toHaveLength(1);
+    expect(events[0]?.payload).toEqual({ sprintId: null });
+  });
+
+  it("rejects assigning a sprint from a different organization", async () => {
+    const a = await seedOrgProjectUser("Org A", "org-a", "AAA");
+    const b = await seedOrgProjectUser("Org B", "org-b", "BBB");
+    const issue = await issuesRepository.create({
+      organizationId: a.org.id,
+      projectId: a.project.id,
+      title: "Issue",
+      description: null,
+      reporterId: a.user.id,
+    });
+    const foreignSprint = await sprintsRepository.create({
+      organizationId: b.org.id,
+      projectId: b.project.id,
+      name: "Foreign Sprint",
+      startDate: null,
+      endDate: null,
+    });
+
+    const result = await issuesRepository.assignSprint({
+      organizationId: a.org.id,
+      projectId: a.project.id,
+      issueId: issue.id,
+      expectedVersion: issue.version,
+      sprintId: foreignSprint.id,
+      actorId: a.user.id,
+    });
+
+    expect(result.status).toBe("invalid_sprint");
+  });
+
+  it("returns a conflict without assigning when the version is stale", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+    const sprint = await sprintsRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      name: "Sprint 1",
+      startDate: null,
+      endDate: null,
+    });
+
+    const result = await issuesRepository.assignSprint({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: issue.id,
+      expectedVersion: issue.version + 5,
+      sprintId: sprint.id,
+      actorId: user.id,
+    });
+
+    expect(result.status).toBe("conflict");
+  });
+
+  it("getBacklog splits issues into the active sprint and the backlog", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const sprint = await sprintsRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      name: "Sprint 1",
+      startDate: null,
+      endDate: null,
+    });
+    await sprintsRepository.start({ organizationId: org.id, projectId: project.id, sprintId: sprint.id, expectedVersion: sprint.version });
+
+    const inSprint = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "In sprint",
+      description: null,
+      reporterId: user.id,
+    });
+    await issuesRepository.assignSprint({
+      organizationId: org.id,
+      projectId: project.id,
+      issueId: inSprint.id,
+      expectedVersion: inSprint.version,
+      sprintId: sprint.id,
+      actorId: user.id,
+    });
+    const inBacklog = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "In backlog",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const result = await issuesRepository.getBacklog(org.id, project.id);
+
+    expect(result.activeSprint?.id).toBe(sprint.id);
+    expect(result.activeSprintIssues.map((i) => i.id)).toEqual([inSprint.id]);
+    expect(result.backlog.map((i) => i.id)).toEqual([inBacklog.id]);
+  });
+
+  it("getBacklog reports no active sprint and everything in the backlog when none is active", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Only issue",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const result = await issuesRepository.getBacklog(org.id, project.id);
+
+    expect(result.activeSprint).toBeNull();
+    expect(result.backlog).toHaveLength(1);
+    expect(result.activeSprintIssues).toHaveLength(0);
   });
 });
 

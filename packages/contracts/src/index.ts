@@ -6,3 +6,4 @@ export * from "./issue.js";
 export * from "./label.js";
 export * from "./comment.js";
 export * from "./issue-event.js";
+export * from "./sprint.js";
