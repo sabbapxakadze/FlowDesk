@@ -841,8 +841,47 @@ Slice 3 (live comments — `issue:{id}` room) shipped:
       detail page open confirmed it reconnected and rejoined **both**
       `org:{id}` and `issue:{id}` automatically, with a subsequent
       comment still broadcasting correctly afterward.
-- [ ] Slice 4 — presence on an issue (ephemeral, not persisted). Not
-      started.
+Slice 4 (presence on an issue — last slice in this phase) shipped:
+
+- [x] A genuinely different shape from slices 1-3: ephemeral, in-memory
+      only — `Map<issueId, Map<socketId, {userId, name}>>` in
+      `realtime/socket-server.ts`, no DB table, no `issue_events` row.
+      Keyed by `socketId`, not `userId`, so two tabs from the same
+      person are tracked independently (closing one correctly leaves
+      the other's presence intact); the broadcast payload dedupes by
+      `userId` so they still show as one entry, not "Alice, Alice".
+- [x] `SocketData` gains a lazily-cached `name`, fetched once (reusing
+      `auth.repository.ts`'s existing `findUserById`) the first time a
+      socket actually joins an issue room — not in the connection-wide
+      auth middleware, which would cost every board-only session a DB
+      read it never needed.
+- [x] Presence tracking rides on the existing `join:issue`/
+      `leave:issue` handlers (slice 3), not new join events — joining
+      adds the viewer and broadcasts `presence:update`; `leave:issue`
+      and a real `disconnect` both remove it and broadcast again.
+      `disconnect` scans every currently-tracked issue (no per-socket
+      reverse index — not worth it at this app's real scale).
+- [x] `useLiveIssueDetailUpdates` (already owning the `issue:{id}` join/
+      leave lifecycle since slice 3) gained a return value instead of a
+      new sibling hook — presence is one more kind of data arriving on
+      a room this hook already manages.
+- [x] **Verified live with a genuinely different second user**, not
+      just two tabs of the same account — this app has no invite flow
+      yet (every registration creates its own personal org), so a real
+      second member of the same org was seeded directly (mirroring
+      `socket-server.test.ts`'s own seeding pattern) and driven through
+      a real `socket.io-client` connection with a real
+      `signAccessToken()`-issued token. Confirmed the actual rendered
+      page — not a simulated event — showed "Presence Viewer is also
+      viewing" the moment that connection joined, and confirmed the
+      line disappeared the instant a real `.disconnect()` call fired
+      (not just a clean unmount/`leave:issue`), proving the
+      disconnect-triggered cleanup path specifically. Also confirmed
+      two tabs of the *same* account correctly show no presence line
+      (dedup working as designed), and that navigating between two
+      different issues leaves no stale presence flash.
+
+**Phase 6 is now fully complete.**
 
 ## Phase 7 — Search, notifications, uploads
 

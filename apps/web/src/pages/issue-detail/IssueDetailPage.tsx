@@ -68,6 +68,15 @@ function describeEvent(event: IssueEvent): string {
   }
 }
 
+/** "Alice is also viewing" / "Alice and Bob are also viewing" / "Alice,
+ * Bob, and Carol are also viewing" — plain English list join, not
+ * worth a shared/ui component for the one place this is used. */
+function describeViewers(names: string[]): string {
+  if (names.length === 1) return `${names[0]} is also viewing`;
+  if (names.length === 2) return `${names[0]} and ${names[1]} are also viewing`;
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]} are also viewing`;
+}
+
 function TimelineEntry({ event }: { event: IssueEvent }) {
   if (event.type === "issue.commented") {
     return (
@@ -86,7 +95,7 @@ function TimelineEntry({ event }: { event: IssueEvent }) {
 }
 
 export function IssueDetailPage() {
-  const { organization } = useAuth();
+  const { organization, user } = useAuth();
   const { projectId, issueId } = useParams<{ projectId: string; issueId: string }>();
   const { data: projects, isPending: projectsPending } = useProjects(organization!.id);
   const project = projects?.find((p) => p.id === projectId);
@@ -98,7 +107,8 @@ export function IssueDetailPage() {
     projectId!,
     issueId!,
   );
-  useLiveIssueDetailUpdates(projectId!, issueId!);
+  const { viewers } = useLiveIssueDetailUpdates(projectId!, issueId!);
+  const otherViewers = viewers.filter((viewer) => viewer.userId !== user?.id);
 
   const [isEditing, setIsEditing] = useState(false);
   const [showConflictNotice, setShowConflictNotice] = useState(false);
@@ -149,6 +159,11 @@ export function IssueDetailPage() {
               Edit
             </button>
           </div>
+          {otherViewers.length > 0 && (
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              {describeViewers(otherViewers.map((viewer) => viewer.name))}
+            </p>
+          )}
           {issue.description && <p className="mt-2">{issue.description}</p>}
         </div>
       )}

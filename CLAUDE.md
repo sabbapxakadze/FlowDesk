@@ -16,8 +16,8 @@ win.
 
 ## Current phase
 
-**Phase 6 — Real-time.** See `docs/roadmap.md`. Phase 5 (Kanban board)
-is fully complete.
+**Phase 7 — Search, notifications, uploads.** See `docs/roadmap.md`.
+Phase 6 (Real-time) is fully complete.
 
 Slice 1 (Socket.IO connection, handshake auth, org room) is done: a
 new `attachSocketServer()` wires an authenticated, tenant-scoped
@@ -83,6 +83,24 @@ separate detail-page tab's status badge *and* timeline; and a full
 API kill/restart with a detail page open confirmed it reconnected and
 rejoined both `org:{id}` and `issue:{id}`, with a subsequent comment
 still broadcasting correctly afterward.
+
+Slice 4 (presence on an issue — last slice in this phase) is done: a
+genuinely different shape from slices 1-3 — ephemeral, in-memory only
+(`Map<issueId, Map<socketId, {userId, name}>>` in
+`realtime/socket-server.ts`), no DB table, no `issue_events` row.
+Presence rides on the existing `join:issue`/`leave:issue` handlers
+rather than new events; `SocketData` gained a lazily-cached `name`
+(fetched once, only by sessions that actually open an issue, reusing
+`auth.repository.ts`'s existing `findUserById`). **Verified live with a
+genuinely different second user**, not two tabs of the same account —
+this app has no invite flow yet, so a real second org member was seeded
+directly and driven through a real `socket.io-client` connection with a
+real `signAccessToken()`-issued token. Confirmed the actual rendered
+page (not a simulated event) showed "Presence Viewer is also viewing"
+the moment that connection joined, and that the line disappeared the
+instant a real `.disconnect()` fired — proving the disconnect-triggered
+cleanup path specifically, not just a clean unmount. **Phase 6 is now
+fully complete.**
 
 Slice 1 (board data model + read-only board view) is done: `board_rank`
 column (a Postgres `numeric`, never a float — see ADR 0007 for the whole

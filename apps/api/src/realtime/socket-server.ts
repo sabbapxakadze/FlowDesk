@@ -1,6 +1,7 @@
 import type { Server as HttpServer } from "node:http";
 import { Server, type DefaultEventsMap } from "socket.io";
 import { verifyAccessToken } from "../modules/auth/tokens.js";
+import { findUserById } from "../modules/auth/auth.repository.js";
 import * as organizationsRepository from "../modules/organizations/organizations.repository.js";
 import * as projectsRepository from "../modules/projects/projects.repository.js";
 import * as issuesRepository from "../modules/issues/issues.repository.js";
@@ -14,10 +15,14 @@ import { logger } from "../lib/logger.js";
 // generics. organizationId is the socket-side equivalent of
 // req.ctx.organizationId — null until a successful join:org sets it,
 // which join:project then relies on the same way requireProject relies
-// on requireOrgMembership having already run.
+// on requireOrgMembership having already run. name is lazily fetched and
+// cached the first time join:issue actually needs it for presence — not
+// fetched eagerly in the auth middleware, which would cost every
+// connection a DB read even for sessions that never open an issue.
 interface SocketData {
   userId: string;
   organizationId: string | null;
+  name: string | null;
 }
 
 type IOServer = Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, SocketData>;
@@ -38,6 +43,56 @@ type JoinIssueAck =
 // case, which is the correct behavior, not a workaround: there is
 // genuinely nothing to broadcast to.
 let ioInstance: IOServer | null = null;
+
+type PresenceViewer = { userId: string; name: string };
+
+// issueId -> (socketId -> viewer). Keyed by socketId, not userId, so two
+// tabs from the same person are tracked independently — closing one
+// correctly leaves the other's presence intact. Ephemeral, in-memory
+// only: presence has no DB table and writes no issue_events row, unlike
+// every other piece of real-time data in this app so far.
+const issuePresence = new Map<string, Map<string, PresenceViewer>>();
+
+/** Deduped by userId — two tabs from the same person show as one entry,
+ * not "Alice, Alice". */
+function broadcastPresence(issueId: string) {
+  const viewers = issuePresence.get(issueId);
+  const byUserId = new Map<string, PresenceViewer>();
+  if (viewers) {
+    for (const viewer of viewers.values()) byUserId.set(viewer.userId, viewer);
+  }
+  ioInstance
+    ?.to(`issue:${issueId}`)
+    .emit("presence:update", { issueId, viewers: [...byUserId.values()] });
+}
+
+function addPresence(issueId: string, socketId: string, viewer: PresenceViewer) {
+  let viewers = issuePresence.get(issueId);
+  if (!viewers) {
+    viewers = new Map();
+    issuePresence.set(issueId, viewers);
+  }
+  viewers.set(socketId, viewer);
+  broadcastPresence(issueId);
+}
+
+function removePresence(issueId: string, socketId: string) {
+  const viewers = issuePresence.get(issueId);
+  if (!viewers?.delete(socketId)) return; // wasn't present — no real change, no broadcast
+  if (viewers.size === 0) issuePresence.delete(issueId);
+  broadcastPresence(issueId);
+}
+
+/** Called on disconnect — a socket's own state doesn't track which
+ * issue room(s) it's in, so this scans every currently-tracked issue.
+ * Fine at this app's real scale (a handful of concurrently-viewed
+ * issues, not thousands); removePresence is a safe no-op for any issue
+ * this socket wasn't actually present in. */
+function removePresenceFromAll(socketId: string) {
+  for (const issueId of [...issuePresence.keys()]) {
+    removePresence(issueId, socketId);
+  }
+}
 
 /**
  * Wires auth + room-joining onto a real http.Server and returns the io
@@ -69,7 +124,7 @@ export function attachSocketServer(httpServer: HttpServer): IOServer {
 
     try {
       const { userId } = verifyAccessToken(token);
-      socket.data = { userId, organizationId: null };
+      socket.data = { userId, organizationId: null, name: null };
       next();
     } catch {
       logger.warn({ socketId: socket.id }, "socket handshake rejected — invalid or expired access token");
@@ -196,6 +251,16 @@ export function attachSocketServer(httpServer: HttpServer): IOServer {
 
         await socket.join(`issue:${issueId}`);
         logger.info({ userId: socket.data.userId, issueId }, "socket joined issue room");
+
+        // Lazily fetched and cached on socket.data — only sessions that
+        // actually open an issue ever pay this DB read, and only once
+        // per connection even if they hop between several issues.
+        if (socket.data.name === null) {
+          const user = await findUserById(socket.data.userId);
+          socket.data.name = user?.name ?? "Unknown";
+        }
+        addPresence(issueId, socket.id, { userId: socket.data.userId, name: socket.data.name });
+
         ack({ ok: true });
       },
     );
@@ -207,11 +272,13 @@ export function attachSocketServer(httpServer: HttpServer): IOServer {
           : undefined;
       if (typeof issueId === "string") {
         void socket.leave(`issue:${issueId}`);
+        removePresence(issueId, socket.id);
       }
     });
 
     socket.on("disconnect", (reason) => {
       logger.info({ userId: socket.data.userId, socketId: socket.id, reason }, "socket disconnected");
+      removePresenceFromAll(socket.id);
     });
   });
 

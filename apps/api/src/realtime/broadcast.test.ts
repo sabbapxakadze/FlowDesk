@@ -4,7 +4,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { type Socket as ClientSocket, io as ioClient } from "socket.io-client";
 import { app } from "../app.js";
+import { db } from "../db/client.js";
 import { resetDatabase } from "../db/test-utils.js";
+import { organizationMembers, users } from "../db/schema/index.js";
+import { signAccessToken } from "../modules/auth/tokens.js";
 import { attachSocketServer } from "./socket-server.js";
 
 let httpServer: ReturnType<typeof createServer>;
@@ -337,5 +340,155 @@ describe("broadcast into the issue room", () => {
     });
 
     expect(ack.ok).toBe(false);
+  });
+});
+
+/**
+ * There's no invite flow yet (Phase 2 — every registration creates its
+ * own personal org), so a second real member of userA's *same* org
+ * can't be produced through the public API the way registerAndLogIn's
+ * users are — seeded directly instead, same pattern
+ * socket-server.test.ts already uses. signAccessToken sidesteps needing
+ * a real password hash for a user this test never logs in through HTTP.
+ */
+async function addSecondUserToOrg(organizationId: string, name: string) {
+  const [user] = await db
+    .insert(users)
+    .values({ email: `${name.toLowerCase().replace(" ", "-")}@example.com`, passwordHash: "not-a-real-hash", name })
+    .returning();
+  if (!user) throw new Error("setup failed");
+  await db.insert(organizationMembers).values({ organizationId, userId: user.id, role: "member" });
+  return { accessToken: signAccessToken(user.id), userId: user.id };
+}
+
+describe("presence on the issue room", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+    httpServer = createServer(app);
+    attachSocketServer(httpServer);
+    await new Promise<void>((resolve) => httpServer.listen(0, resolve));
+    const { port } = httpServer.address() as AddressInfo;
+    url = `http://127.0.0.1:${port}`;
+    clients = [];
+  });
+
+  afterEach(async () => {
+    for (const client of clients) client.disconnect();
+    await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+  });
+
+  it("broadcasts presence:update including the new viewer on join", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Viewable");
+
+    const socket = ioClient(url, { auth: { token: userA.accessToken } });
+    clients.push(socket);
+    await new Promise<void>((resolve, reject) => {
+      socket.on("connect", () => resolve());
+      socket.on("connect_error", reject);
+    });
+    await new Promise<{ ok: boolean }>((resolve) =>
+      socket.emit("join:org", { organizationId: userA.organizationId }, resolve),
+    );
+
+    const received = new Promise<{ issueId: string; viewers: { userId: string; name: string }[] }>((resolve) => {
+      socket.on("presence:update", resolve);
+    });
+
+    await new Promise<{ ok: boolean }>((resolve) =>
+      socket.emit("join:issue", { projectId, issueId: issue.id }, resolve),
+    );
+
+    const event = await received;
+    expect(event.issueId).toBe(issue.id);
+    expect(event.viewers).toHaveLength(1);
+    expect(event.viewers[0]?.name).toBe("Test User");
+  });
+
+  it("broadcasts the viewer's removal when they leave:issue", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Viewable");
+    const userB = await addSecondUserToOrg(userA.organizationId, "Second Viewer");
+
+    const socketA = await connectAndJoinIssue(userA.accessToken, userA.organizationId, projectId, issue.id);
+    clients.push(socketA);
+    const socketB = await connectAndJoinIssue(userB.accessToken, userA.organizationId, projectId, issue.id);
+    clients.push(socketB);
+
+    const received = new Promise<{ viewers: { userId: string; name: string }[] }>((resolve) => {
+      socketB.on("presence:update", resolve);
+    });
+
+    socketA.emit("leave:issue", { issueId: issue.id });
+
+    const event = await received;
+    expect(event.viewers).toHaveLength(1);
+    expect(event.viewers[0]?.userId).toBe(userB.userId);
+  });
+
+  it("broadcasts the viewer's removal on a real disconnect, not just leave:issue", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Viewable");
+    const userB = await addSecondUserToOrg(userA.organizationId, "Second Viewer");
+
+    const socketA = await connectAndJoinIssue(userA.accessToken, userA.organizationId, projectId, issue.id);
+    clients.push(socketA);
+    const socketB = await connectAndJoinIssue(userB.accessToken, userA.organizationId, projectId, issue.id);
+    clients.push(socketB);
+
+    const received = new Promise<{ viewers: { userId: string; name: string }[] }>((resolve) => {
+      socketB.on("presence:update", resolve);
+    });
+
+    socketA.disconnect();
+
+    const event = await received;
+    expect(event.viewers).toHaveLength(1);
+    expect(event.viewers[0]?.userId).toBe(userB.userId);
+  });
+
+  it("dedupes two tabs from the same user into one presence entry", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Viewable");
+
+    const tabOne = await connectAndJoinIssue(userA.accessToken, userA.organizationId, projectId, issue.id);
+    clients.push(tabOne);
+
+    const received = new Promise<{ viewers: { userId: string; name: string }[] }>((resolve) => {
+      tabOne.on("presence:update", resolve);
+    });
+
+    // A second connection with the *same* access token — the same user,
+    // a second tab.
+    const tabTwo = await connectAndJoinIssue(userA.accessToken, userA.organizationId, projectId, issue.id);
+    clients.push(tabTwo);
+
+    const event = await received;
+    expect(event.viewers).toHaveLength(1);
+  });
+
+  it("never broadcasts presence from one issue into another issue's room", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issueA = await createIssue(userA.accessToken, userA.organizationId, projectId, "A");
+    const issueB = await createIssue(userA.accessToken, userA.organizationId, projectId, "B");
+
+    const socketB = await connectAndJoinIssue(userA.accessToken, userA.organizationId, projectId, issueB.id);
+    clients.push(socketB);
+
+    let receivedByB = false;
+    socketB.on("presence:update", () => {
+      receivedByB = true;
+    });
+
+    const socketA = await connectAndJoinIssue(userA.accessToken, userA.organizationId, projectId, issueA.id);
+    clients.push(socketA);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(receivedByB).toBe(false);
   });
 });
