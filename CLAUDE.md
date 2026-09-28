@@ -41,6 +41,29 @@ page load with zero prior interaction, and `EXPLAIN ANALYZE` against
 20,000 real seeded rows confirmed a `Bitmap Index Scan` on the new GIN
 index, not a sequential scan.
 
+Slice 2 (command palette, Ctrl+K/Cmd+K) is done: the first real widget
+in the codebase (`widgets/command-palette/`, empty since Phase 0),
+mounted once in `App.tsx` and rendering nothing while logged out. No
+backend changes — reuses slice 1's search endpoint via the existing
+`useSearch` hook, with a colocated `useDebouncedValue` (250ms) in
+front of it. Uses the native `<dialog>` element rather than adding a
+dialog library — Phase 3.5 deliberately skipped Radix, and one modal
+doesn't justify it now. **A real bug found and fixed live**: the
+palette's `useProjects()` call (needed to resolve each result's
+`projectKey`) fired with an empty `organizationId` while logged out,
+since `useProjects` had no `enabled` guard — none of its five other
+callers needed one, they all render inside `RequireAuth`. This sent a
+real request to `/organizations//projects` on a repeating background-
+refetch loop, 404-ing every few seconds, caught via the browser
+console rather than assumed safe. Fixed with an optional `{ enabled }`
+param on `useProjects` (defaults to `true`, every existing caller
+unaffected). Verified live end to end from two different pages: Ctrl+K
+open/close, live-typed results matching `/search`'s own ranking, both
+a full keyboard-only selection (Arrow Down, Enter) and a pointer click
+navigating correctly and closing the palette, query resetting on
+reopen, and confirming both the no-op and the fixed 404 loop while
+logged out.
+
 Slice 1 (Socket.IO connection, handshake auth, org room) is done: a
 new `attachSocketServer()` wires an authenticated, tenant-scoped
 connection onto the real `http.Server` (`index.ts` now builds one

@@ -4,4 +4,7 @@ Composed, self-contained UI blocks: `IssueBoard`, `Sidebar`, `ActivityFeed`.
 Widgets may import from `features`, `entities` and `shared`, not from `pages`
 or `app`.
 
-First widget lands in Phase 3+ (board comes in Phase 5).
+First widget: `command-palette` (Phase 7 slice 2) — the board
+(`ProjectBoardPage`, Phase 5) ended up living directly in `pages/`
+instead, since it's a single dedicated route rather than a block reused
+across pages.

@@ -940,7 +940,56 @@ Slice 1 (Postgres full-text search: `tsvector` column, GIN index, ranking) shipp
       `Bitmap Index Scan` on `issues_search_vector_idx`, not a
       sequential scan, then removed the seeded rows.
 
-- [ ] Command palette (⌘K)
+Slice 2 (command palette, ⌘K) shipped:
+
+- [x] First real widget in the codebase — `widgets/command-palette/` had
+      been empty since Phase 0. Mounted once in `App.tsx`, inside
+      `BrowserRouter`, as a sibling of `ErrorBoundary`, so it survives
+      every route change. Renders nothing while logged out (`useAuth()`
+      has no `organization`).
+- [x] Ctrl+K / Cmd+K globally toggles the palette (`preventDefault()` —
+      Chrome/Edge otherwise bind Ctrl+K to the address bar search). No
+      new dialog library: the native HTML `<dialog>` element gives a
+      real top-layer overlay, `Escape`-to-close, and backdrop-click-to-
+      close for free — Phase 3.5 deliberately skipped Radix, and one
+      modal doesn't justify adding it now.
+  - Reuses slice 1's search endpoint exactly as built via the existing
+    `useSearch` hook — no backend or contract changes this slice.
+    Input is debounced 250ms (`useDebouncedValue`, colocated, not
+    `shared/lib` — no second consumer yet) before hitting `useSearch`.
+  - Result rows are a dedicated `<button>`, not a reused `IssueCard` —
+    the palette needs one selection model for both pointer clicks and
+    arrow-key + Enter, which a real `<Link>` (IssueCard's own row)
+    doesn't cover on its own.
+  - Query and highlighted-row state reset on every close, whether that
+    came from selecting a result, Escape, or a backdrop click (the
+    dialog's own native `close` event) — reopening never shows a stale
+    query.
+- [x] **A real bug found and fixed via live testing, not assumed away**:
+      the palette calls `useProjects()` unconditionally (hooks can't be
+      called conditionally), passing an empty string for `organizationId`
+      while logged out. `useProjects` had no `enabled` guard at all —
+      every one of its five pre-existing callers renders inside
+      `RequireAuth`, where `organizationId` is always real, so this had
+      never mattered before. The palette is the first caller that can
+      render pre-login, and the empty id fired a real request against
+      `/organizations//projects` every few seconds (TanStack Query's
+      background refetch), 404-ing in a loop — caught live via the
+      browser console, not predicted from reading the code. Fixed by
+      giving `useProjects` an optional `{ enabled }` param (defaults to
+      `true`, so all five existing call sites are unaffected) and
+      passing `enabled: !!organization` from the palette; confirmed live
+      that the repeating 404 stopped and stayed stopped.
+- [x] Verified live end to end, from more than one page: Ctrl+K opened
+      the palette from both `/projects` and an issue detail page;
+      typing returned the same ranked results `/search` itself returns
+      for the same query (a title match still outranked a description-
+      only match); clicking a result and a full keyboard-only pass
+      (Ctrl+K, type, Arrow Down, Enter) both navigated to the right
+      issue and closed the palette; reopening after a close always
+      showed an empty query; and Ctrl+K while logged out did nothing —
+      no dialog, and (after the fix above) no background request either.
+
 - [ ] Notifications derived from events; in-app feed + read state
 - [ ] File attachments: validation, storage, signed URLs
 

@@ -14,10 +14,12 @@ import { ResetPasswordPage } from "../pages/reset-password/ResetPasswordPage";
 import { DesignSystemPage } from "../pages/design-system/DesignSystemPage";
 import { RequireAuth } from "../shared/auth/RequireAuth";
 import { ErrorBoundary } from "../shared/error-boundary/ErrorBoundary";
+import { CommandPalette } from "../widgets/command-palette";
 
 export function App() {
   return (
     <BrowserRouter>
+      <CommandPalette />
       <ErrorBoundary>
         <Routes>
           <Route path="/" element={<HomePage />} />
