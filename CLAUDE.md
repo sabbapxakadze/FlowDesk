@@ -19,6 +19,37 @@ win.
 **Phase 7 — Search, notifications, uploads.** See `docs/roadmap.md`.
 Phase 6 (Real-time) is fully complete.
 
+Slice 3 (notifications derived from events; in-app feed + read state)
+is done: no assignee field exists on issues, so recipients are
+**event participants** — every distinct actor from an issue's past
+`issue_events` rows, minus whoever just caused the new one (confirmed
+with the owner before building). A new `notifications` table (no
+`organizationId` column, joined through `issue_events` → `issues` for
+tenant scoping, same pattern `issue_events` itself already uses) and a
+new `notifications` module — unlike search, this earned its own module
+(its own table, its own mutation, its own recipient). A new
+`writeIssueEvent()` helper in `issues.repository.ts` replaces all 7
+previously-duplicated event-insert call sites and fans out one
+notification per participant in the same transaction; also reused by
+`sprints.repository.ts`'s `completeSprint()` for its bulk
+`issue.sprint_removed` writes — no carve-out for that path. Live
+delivery rides a new `user:{userId}` Socket.IO room, auto-joined on
+connect (not a client-emitted `join:*` — your own notifications are
+always wanted). New `entities/notification` + `widgets/notification-bell`
+(a fixed-position bell, non-modal dropdown, read-on-click-through plus
+"Mark all read"); `describeEvent` moved out of `IssueDetailPage.tsx`
+into `entities/issue/lib/` as a second real consumer. **A real bug
+found and fixed live, the same class as slice 2's**: `useNotifications`/
+`useUnreadCount` fired with an empty `organizationId` while logged out
+(the bell is mounted globally) — caught via the browser console, fixed
+with an `enabled` guard on both. Verified live end to end with a real
+second org member driven via authenticated HTTP requests: a comment
+updated the first user's badge and panel live with no reload, from
+more than one page; click-through and "Mark all read" both worked; no
+self-notification; and an API kill/restart confirmed the socket
+reconnected, rejoined `user:{id}`, and a subsequent comment still
+delivered live afterward.
+
 Slice 1 (Postgres full-text search backend + results page) is done: a
 new generated `search_vector` column on `issues`
 (`GENERATED ALWAYS AS (...) STORED`, built through Drizzle's

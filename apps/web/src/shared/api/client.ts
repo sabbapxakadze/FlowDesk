@@ -117,6 +117,20 @@ export async function apiPostVoid(path: string, body?: unknown): Promise<void> {
   }
 }
 
+/** Same as apiPostVoid, for PATCH endpoints that return 204 No Content —
+ * first use: notifications' mark-read/mark-all-read (Phase 7 slice 3). */
+export async function apiPatchVoid(path: string, body?: unknown): Promise<void> {
+  const res = await fetch(`/api${path}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw await toApiError(res, path, "PATCH");
+  }
+}
+
 async function toApiError(res: Response, path: string, method: string): Promise<Error> {
   const body: unknown = await res.json().catch(() => null);
   const error =

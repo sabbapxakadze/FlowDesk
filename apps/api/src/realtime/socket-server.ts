@@ -135,6 +135,14 @@ export function attachSocketServer(httpServer: HttpServer): IOServer {
   io.on("connection", (socket) => {
     logger.info({ userId: socket.data.userId, socketId: socket.id }, "socket connected");
 
+    // Auto-joined, not a client-emitted join:* like org/project/issue —
+    // those are page-scoped (you only care about a project's traffic
+    // while looking at it); your own notifications are always wanted
+    // regardless of what page you're on. socket.data.userId is already
+    // verified at handshake time, so no extra membership check is
+    // needed the way join:org's is.
+    void socket.join(`user:${socket.data.userId}`);
+
     socket.on(
       "join:org",
       async (payload: unknown, ack: (response: JoinOrgAck) => void) => {
@@ -313,4 +321,17 @@ export function broadcastIssueChanged(projectId: string, issueId: string): void 
  */
 export function broadcastIssueCommented(issueId: string): void {
   ioInstance?.to(`issue:${issueId}`).emit("issue:commented", { issueId });
+}
+
+/**
+ * Bare event, no payload — unlike issue:changed/issue:commented, the
+ * client can't cheaply already have the right list cached locally, so
+ * there's nothing to usefully attach anyway. The receiving client just
+ * invalidates its notifications list + unread-count queries and re-
+ * fetches via the real REST endpoints, same "just refetch" precedent
+ * useLiveIssueUpdates already uses for issue:changed — avoids
+ * duplicating notifications.repository.ts's join logic in the payload.
+ */
+export function broadcastNotificationCreated(userId: string): void {
+  ioInstance?.to(`user:${userId}`).emit("notification:created");
 }

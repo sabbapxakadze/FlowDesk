@@ -8,6 +8,7 @@ export { useBacklog } from "./api/useBacklog";
 export { useSearch } from "./api/useSearch";
 export { useLiveIssueUpdates } from "./api/useLiveIssueUpdates";
 export { useLiveIssueDetailUpdates } from "./api/useLiveIssueDetailUpdates";
+export { describeEvent } from "./lib/describeEvent";
 export { issueKeys } from "./api/queryKeys";
 export { IssueCard } from "./ui/IssueCard";
 export { BoardCard } from "./ui/BoardCard";

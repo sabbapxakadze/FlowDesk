@@ -2,7 +2,17 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { resetDatabase } from "../../db/test-utils.js";
-import { comments, issueEvents, issues, labels, organizations, projects, users } from "../../db/schema/index.js";
+import {
+  comments,
+  issueEvents,
+  issues,
+  labels,
+  notifications,
+  organizationMembers,
+  organizations,
+  projects,
+  users,
+} from "../../db/schema/index.js";
 import * as issuesRepository from "./issues.repository.js";
 import * as issuesService from "./issues.service.js";
 import * as sprintsRepository from "../sprints/sprints.repository.js";
@@ -1342,7 +1352,7 @@ describe("issues repository — comments and activity timeline", () => {
       reporterId: user.id,
     });
 
-    const comment = await issuesRepository.addComment({
+    const { comment } = await issuesRepository.addComment({
       issueId: issue.id,
       authorId: user.id,
       body: "This is a comment",
@@ -1504,5 +1514,82 @@ describe("issues repository — search", () => {
     const results = await issuesRepository.search(org.id, "nonexistent term xyz", 25);
 
     expect(results).toEqual([]);
+  });
+});
+
+/**
+ * Proves writeIssueEvent's real wiring inside create()/addComment(),
+ * not just createForIssueEvent() in isolation (that's covered by
+ * notifications.repository.test.ts). See the Phase 7 slice 3 plan's
+ * "Decisions" — participants are every distinct actor from an issue's
+ * past events, minus whoever just caused the new one, so the reporter
+ * (from their own issue.created event) is the one who gets notified
+ * here, never the commenter who caused it.
+ */
+describe("issues repository — notification fan-out", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  async function seedSecondUser(orgId: string, email: string) {
+    const [user] = await db
+      .insert(users)
+      .values({ email, passwordHash: "not-a-real-hash", name: "Second User" })
+      .returning();
+    if (!user) throw new Error("setup failed");
+    await db.insert(organizationMembers).values({ organizationId: orgId, userId: user.id, role: "member" });
+    return user;
+  }
+
+  it("notifies the reporter when someone else comments, never the commenter", async () => {
+    const { org, project, user: reporter } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const commenter = await seedSecondUser(org.id, "commenter@example.com");
+
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Fan-out test issue",
+      description: null,
+      reporterId: reporter.id,
+    });
+
+    const { comment } = await issuesRepository.addComment({
+      issueId: issue.id,
+      authorId: commenter.id,
+      body: "A comment from someone else",
+    });
+
+    const rows = await db.select().from(notifications).where(eq(notifications.userId, reporter.id));
+    expect(rows).toHaveLength(1);
+
+    const [commentEvent] = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.commented")));
+    expect(rows[0]?.issueEventId).toBe(commentEvent?.id);
+    expect(commentEvent?.payload).toMatchObject({ commentId: comment.id });
+
+    const commenterRows = await db.select().from(notifications).where(eq(notifications.userId, commenter.id));
+    expect(commenterRows).toHaveLength(0);
+  });
+
+  it("never notifies the actor of their own action", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Solo issue",
+      description: null,
+      reporterId: user.id,
+    });
+
+    await issuesRepository.addComment({
+      issueId: issue.id,
+      authorId: user.id,
+      body: "Commenting on my own issue",
+    });
+
+    const rows = await db.select().from(notifications).where(eq(notifications.userId, user.id));
+    expect(rows).toHaveLength(0);
   });
 });

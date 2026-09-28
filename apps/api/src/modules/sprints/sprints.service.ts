@@ -1,4 +1,5 @@
 import { AppError } from "../../shared/errors.js";
+import { broadcastNotificationCreated } from "../../realtime/socket-server.js";
 import * as sprintsRepository from "./sprints.repository.js";
 
 export async function listSprints(organizationId: string, projectId: string) {
@@ -56,5 +57,9 @@ export async function completeSprint(input: {
   expectedVersion: number;
   actorId: string;
 }) {
-  return sprintsRepository.complete(input);
+  const result = await sprintsRepository.complete(input);
+  if (result.status === "completed") {
+    for (const userId of result.notifiedUserIds) broadcastNotificationCreated(userId);
+  }
+  return result;
 }

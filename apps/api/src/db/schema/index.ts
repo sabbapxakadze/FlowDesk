@@ -10,3 +10,4 @@ export * from "./labels.js";
 export * from "./issue-labels.js";
 export * from "./comments.js";
 export * from "./sprints.js";
+export * from "./notifications.js";

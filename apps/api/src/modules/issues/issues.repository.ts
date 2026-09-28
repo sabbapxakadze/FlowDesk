@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { comments, issueEvents, issueLabels, issues, labels, projects, sprints, users } from "../../db/schema/index.js";
+import * as notificationsRepository from "../notifications/notifications.repository.js";
 import type { IssueStatus } from "@flowdesk/contracts";
 
 type IssueRow = typeof issues.$inferSelect;
@@ -286,6 +287,36 @@ async function computeBisectedRank(
 }
 
 /**
+ * Writes the issue_events row and fans out notifications to every
+ * participant on this issue (every distinct actor from its past events,
+ * minus whoever just caused this one) in the same transaction — see the
+ * Phase 7 slice 3 plan's "Decisions". Replaces what used to be 7 near-
+ * identical `tx.insert(issueEvents).values(...)` blocks across this
+ * file. Returns the notified user ids so callers can broadcast live
+ * *after* the transaction commits (never from inside it — a broadcast
+ * mid-transaction could announce a change that then rolls back, same
+ * rule Phase 6 slice 2 established for broadcastIssueChanged).
+ *
+ * Exported: sprints.repository.ts's completeSprint() also writes
+ * issue_events rows (issue.sprint_removed, one per released issue) and
+ * reuses this same helper rather than duplicating the fan-out logic —
+ * no carve-out for a bulk path, same "no carve-out" precedent
+ * issue.moved's audit event already established.
+ */
+export async function writeIssueEvent(
+  tx: Tx,
+  input: { issueId: string; actorId: string; type: string; payload: Record<string, unknown> },
+): Promise<string[]> {
+  const [event] = await tx.insert(issueEvents).values(input).returning({ id: issueEvents.id });
+  if (!event) throw new Error("Failed to write issue event");
+  return notificationsRepository.createForIssueEvent(tx, {
+    issueEventId: event.id,
+    issueId: input.issueId,
+    excludeActorId: input.actorId,
+  });
+}
+
+/**
  * One transaction: increment the project's counter, insert the issue with
  * the pre-increment value as its number, insert the issue_events row.
  * All three commit together or none do — see the Phase 3 slice 1 plan's
@@ -325,7 +356,14 @@ export async function create(input: {
       .returning();
     if (!issue) throw new Error("Failed to create issue");
 
-    await tx.insert(issueEvents).values({
+    // Participants are "every actor from this issue's past events" —
+    // for the very first event, that set is always empty (nobody but
+    // the reporter has acted yet, and they're excluded as the current
+    // actor). writeIssueEvent's return is provably always [] here, so
+    // there's nothing to bubble up — create() keeps its original bare-
+    // issue return shape rather than wrapping it for a broadcast that
+    // could never have a recipient.
+    await writeIssueEvent(tx, {
       issueId: issue.id,
       actorId: input.reporterId,
       type: "issue.created",
@@ -363,7 +401,7 @@ export async function update(input: {
   changes: Partial<{ title: string; description: string | null; status: IssueStatus }>;
   actorId: string;
 }): Promise<
-  | { status: "updated"; issue: typeof issues.$inferSelect }
+  | { status: "updated"; issue: typeof issues.$inferSelect; notifiedUserIds: string[] }
   | { status: "conflict"; current: typeof issues.$inferSelect }
   | { status: "not_found" }
 > {
@@ -401,13 +439,13 @@ export async function update(input: {
       .returning();
 
     if (updated) {
-      await tx.insert(issueEvents).values({
+      const notifiedUserIds = await writeIssueEvent(tx, {
         issueId: updated.id,
         actorId: input.actorId,
         type: "issue.updated",
         payload: input.changes,
       });
-      return { status: "updated", issue: updated };
+      return { status: "updated", issue: updated, notifiedUserIds };
     }
 
     const [current] = await tx
@@ -458,7 +496,7 @@ export async function move(input: {
   nextIssueId?: string;
   actorId: string;
 }): Promise<
-  | { status: "moved"; issue: IssueRow }
+  | { status: "moved"; issue: IssueRow; notifiedUserIds: string[] }
   | { status: "conflict"; current: IssueRow }
   | { status: "not_found" }
   | { status: "invalid_neighbor" }
@@ -525,14 +563,14 @@ export async function move(input: {
       return current ? { status: "conflict", current } : { status: "not_found" };
     }
 
-    await tx.insert(issueEvents).values({
+    const notifiedUserIds = await writeIssueEvent(tx, {
       issueId: updated.id,
       actorId: input.actorId,
       type: "issue.moved",
       payload: { fromStatus, toStatus: input.status },
     });
 
-    return { status: "moved", issue: updated };
+    return { status: "moved", issue: updated, notifiedUserIds };
   });
 }
 
@@ -568,7 +606,7 @@ export async function attachLabel(input: {
   issueId: string;
   labelId: string;
   actorId: string;
-}): Promise<{ status: "attached" } | { status: "label_not_found" }> {
+}): Promise<{ status: "attached"; notifiedUserIds: string[] } | { status: "label_not_found" }> {
   return db.transaction(async (tx) => {
     const [label] = await tx
       .select()
@@ -578,14 +616,14 @@ export async function attachLabel(input: {
 
     await tx.insert(issueLabels).values({ issueId: input.issueId, labelId: input.labelId });
 
-    await tx.insert(issueEvents).values({
+    const notifiedUserIds = await writeIssueEvent(tx, {
       issueId: input.issueId,
       actorId: input.actorId,
       type: "issue.label_added",
       payload: { labelId: label.id, labelName: label.name },
     });
 
-    return { status: "attached" };
+    return { status: "attached", notifiedUserIds };
   });
 }
 
@@ -599,7 +637,7 @@ export async function detachLabel(input: {
   issueId: string;
   labelId: string;
   actorId: string;
-}): Promise<{ status: "detached" } | { status: "label_not_found" }> {
+}): Promise<{ status: "detached"; notifiedUserIds: string[] } | { status: "label_not_found" }> {
   return db.transaction(async (tx) => {
     const [label] = await tx
       .select()
@@ -612,8 +650,9 @@ export async function detachLabel(input: {
       .where(and(eq(issueLabels.issueId, input.issueId), eq(issueLabels.labelId, input.labelId)))
       .returning();
 
+    let notifiedUserIds: string[] = [];
     if (deleted.length > 0) {
-      await tx.insert(issueEvents).values({
+      notifiedUserIds = await writeIssueEvent(tx, {
         issueId: input.issueId,
         actorId: input.actorId,
         type: "issue.label_removed",
@@ -621,7 +660,7 @@ export async function detachLabel(input: {
       });
     }
 
-    return { status: "detached" };
+    return { status: "detached", notifiedUserIds };
   });
 }
 
@@ -639,14 +678,14 @@ export async function addComment(input: { issueId: string; authorId: string; bod
       .returning();
     if (!comment) throw new Error("Failed to create comment");
 
-    await tx.insert(issueEvents).values({
+    const notifiedUserIds = await writeIssueEvent(tx, {
       issueId: input.issueId,
       actorId: input.authorId,
       type: "issue.commented",
       payload: { commentId: comment.id, body: comment.body },
     });
 
-    return comment;
+    return { comment, notifiedUserIds };
   });
 }
 
@@ -754,7 +793,7 @@ export async function assignSprint(input: {
   sprintId: string | null;
   actorId: string;
 }): Promise<
-  | { status: "assigned"; issue: IssueRow }
+  | { status: "assigned"; issue: IssueRow; notifiedUserIds: string[] }
   | { status: "conflict"; current: IssueRow }
   | { status: "not_found" }
   | { status: "invalid_sprint" }
@@ -803,14 +842,14 @@ export async function assignSprint(input: {
       return current ? { status: "conflict", current } : { status: "not_found" };
     }
 
-    await tx.insert(issueEvents).values({
+    const notifiedUserIds = await writeIssueEvent(tx, {
       issueId: updated.id,
       actorId: input.actorId,
       type: input.sprintId ? "issue.sprint_assigned" : "issue.sprint_removed",
       payload: input.sprintId ? { sprintId: input.sprintId, sprintName } : { sprintId: null },
     });
 
-    return { status: "assigned", issue: updated };
+    return { status: "assigned", issue: updated, notifiedUserIds };
   });
 }
 

@@ -1,7 +1,15 @@
 import type { IssueStatus } from "@flowdesk/contracts";
 import { AppError } from "../../shared/errors.js";
-import { broadcastIssueChanged, broadcastIssueCommented } from "../../realtime/socket-server.js";
+import {
+  broadcastIssueChanged,
+  broadcastIssueCommented,
+  broadcastNotificationCreated,
+} from "../../realtime/socket-server.js";
 import * as issuesRepository from "./issues.repository.js";
+
+function broadcastNotifications(notifiedUserIds: string[]): void {
+  for (const userId of notifiedUserIds) broadcastNotificationCreated(userId);
+}
 
 /**
  * Was a pure pass-through until Phase 6 slice 1 — this is where business
@@ -48,6 +56,7 @@ export async function updateIssue(input: {
   const result = await issuesRepository.update(input);
   if (result.status === "updated") {
     broadcastIssueChanged(input.projectId, input.issueId);
+    broadcastNotifications(result.notifiedUserIds);
   }
   return result;
 }
@@ -77,7 +86,9 @@ export async function attachLabel(input: {
   actorId: string;
 }) {
   try {
-    return await issuesRepository.attachLabel(input);
+    const result = await issuesRepository.attachLabel(input);
+    if (result.status === "attached") broadcastNotifications(result.notifiedUserIds);
+    return result;
   } catch (err) {
     if (isUniqueViolation(err, "issue_labels_issue_id_label_id_pk")) {
       throw new AppError("label_already_attached", 409, "This label is already attached to the issue.");
@@ -92,12 +103,15 @@ export async function detachLabel(input: {
   labelId: string;
   actorId: string;
 }) {
-  return issuesRepository.detachLabel(input);
+  const result = await issuesRepository.detachLabel(input);
+  if (result.status === "detached") broadcastNotifications(result.notifiedUserIds);
+  return result;
 }
 
 export async function addComment(input: { issueId: string; authorId: string; body: string }) {
-  const comment = await issuesRepository.addComment(input);
+  const { comment, notifiedUserIds } = await issuesRepository.addComment(input);
   broadcastIssueCommented(input.issueId);
+  broadcastNotifications(notifiedUserIds);
   return comment;
 }
 
@@ -122,6 +136,7 @@ export async function moveIssue(input: {
   const result = await issuesRepository.move(input);
   if (result.status === "moved") {
     broadcastIssueChanged(input.projectId, input.issueId);
+    broadcastNotifications(result.notifiedUserIds);
   }
   return result;
 }
@@ -138,7 +153,9 @@ export async function assignSprint(input: {
   sprintId: string | null;
   actorId: string;
 }) {
-  return issuesRepository.assignSprint(input);
+  const result = await issuesRepository.assignSprint(input);
+  if (result.status === "assigned") broadcastNotifications(result.notifiedUserIds);
+  return result;
 }
 
 export async function searchIssues(organizationId: string, query: string, limit: number) {

@@ -7,4 +7,6 @@ or `app`.
 First widget: `command-palette` (Phase 7 slice 2) — the board
 (`ProjectBoardPage`, Phase 5) ended up living directly in `pages/`
 instead, since it's a single dedicated route rather than a block reused
-across pages.
+across pages. `notification-bell` (Phase 7 slice 3) followed the same
+shape: globally mounted, composes `entities/notification` +
+`entities/issue`.

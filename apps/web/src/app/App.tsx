@@ -15,11 +15,13 @@ import { DesignSystemPage } from "../pages/design-system/DesignSystemPage";
 import { RequireAuth } from "../shared/auth/RequireAuth";
 import { ErrorBoundary } from "../shared/error-boundary/ErrorBoundary";
 import { CommandPalette } from "../widgets/command-palette";
+import { NotificationBell } from "../widgets/notification-bell";
 
 export function App() {
   return (
     <BrowserRouter>
       <CommandPalette />
+      <NotificationBell />
       <ErrorBoundary>
         <Routes>
           <Route path="/" element={<HomePage />} />

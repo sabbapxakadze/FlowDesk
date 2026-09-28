@@ -492,3 +492,78 @@ describe("presence on the issue room", () => {
     expect(receivedByB).toBe(false);
   });
 });
+
+/**
+ * user:{userId} is auto-joined on connect (see socket-server.ts) — no
+ * join:* event needed, unlike org/project/issue. See the Phase 7 slice
+ * 3 plan's "Decisions" for why: your own notifications are always
+ * wanted regardless of what page you're on.
+ */
+describe("broadcast into the user's own notification room", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+    httpServer = createServer(app);
+    attachSocketServer(httpServer);
+    await new Promise<void>((resolve) => httpServer.listen(0, resolve));
+    const { port } = httpServer.address() as AddressInfo;
+    url = `http://127.0.0.1:${port}`;
+    clients = [];
+  });
+
+  afterEach(async () => {
+    for (const client of clients) client.disconnect();
+    await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+  });
+
+  it("notifies the reporter when a real second org member comments, live", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Reported by A");
+    const userB = await addSecondUserToOrg(userA.organizationId, "Commenter B");
+
+    const socketA = ioClient(url, { auth: { token: userA.accessToken } });
+    clients.push(socketA);
+    await new Promise<void>((resolve, reject) => {
+      socketA.on("connect", () => resolve());
+      socketA.on("connect_error", reject);
+    });
+
+    const received = new Promise<void>((resolve) => socketA.on("notification:created", () => resolve()));
+
+    await request(httpServer)
+      .post(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/comments`)
+      .set("Authorization", `Bearer ${userB.accessToken}`)
+      .send({ body: "A real comment from a real second user" })
+      .expect(201);
+
+    await received;
+  });
+
+  it("never notifies the commenter of their own comment", async () => {
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issue = await createIssue(userA.accessToken, userA.organizationId, projectId, "Reported by A");
+    const userB = await addSecondUserToOrg(userA.organizationId, "Commenter B");
+
+    const socketB = ioClient(url, { auth: { token: userB.accessToken } });
+    clients.push(socketB);
+    await new Promise<void>((resolve, reject) => {
+      socketB.on("connect", () => resolve());
+      socketB.on("connect_error", reject);
+    });
+
+    let receivedByB = false;
+    socketB.on("notification:created", () => {
+      receivedByB = true;
+    });
+
+    await request(httpServer)
+      .post(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issue.id}/comments`)
+      .set("Authorization", `Bearer ${userB.accessToken}`)
+      .send({ body: "Commenting on my own — well, A's — issue" })
+      .expect(201);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(receivedByB).toBe(false);
+  });
+});

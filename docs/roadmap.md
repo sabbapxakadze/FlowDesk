@@ -990,7 +990,77 @@ Slice 2 (command palette, ⌘K) shipped:
       showed an empty query; and Ctrl+K while logged out did nothing —
       no dialog, and (after the fix above) no background request either.
 
-- [ ] Notifications derived from events; in-app feed + read state
+Slice 3 (notifications derived from events; in-app feed + read state) shipped:
+
+- [x] No assignee field exists on issues, so recipients are **event
+      participants** — every distinct actor from an issue's past
+      `issue_events` rows (the reporter is always in there via their own
+      `issue.created` row), minus whoever just caused the new event.
+      Confirmed with the owner before building — see the Phase 7 slice
+      3 plan.
+- [x] New `notifications` table (`{ id, userId, issueEventId, readAt,
+      createdAt }`) — no `organizationId` column, joined through
+      `issue_events → issues` for tenant scoping, same pattern
+      `issue_events` itself already uses. New `notifications` module
+      (its own table, its own mutation, its own recipient — unlike
+      search, which stayed inside `issues` with no new state).
+- [x] A new `writeIssueEvent()` helper in `issues.repository.ts`
+      replaces all 7 previously-duplicated `tx.insert(issueEvents)`
+      call sites (create, update, move, attachLabel, detachLabel,
+      addComment, assignSprint) — inserts the event, then fans out one
+      notification per participant in the same transaction via a single
+      `INSERT ... SELECT DISTINCT ... WHERE actor_id != $current`.
+      **Also reused by `sprints.repository.ts`'s `completeSprint()`**,
+      which bulk-writes `issue.sprint_removed` events for every
+      released issue — no carve-out for that bulk path, same "no
+      carve-out" precedent `issue.moved`'s own audit event already set.
+- [x] New `user:{userId}` Socket.IO room, auto-joined on connect (not a
+      client-emitted `join:*` like org/project/issue — your own
+      notifications are always wanted regardless of what page you're
+      on). New `broadcastNotificationCreated(userId)`, called from
+      `issues.service.ts`'s 7 mutating functions and
+      `sprints.service.ts`'s `completeSprint`, strictly after each
+      repository call resolves — never from inside the transaction,
+      same rule Phase 6 slice 2 established for `broadcastIssueChanged`.
+- [x] New endpoints: `GET .../notifications` (fixed 25-item cap, same
+      deliberate scope cut as search's own cap), `GET
+      .../notifications/unread-count` (a separate cheap indexed count,
+      not derived from the capped list — which would silently
+      undercount past 25 unread), `PATCH .../notifications/:id/read`,
+      `PATCH .../notifications/read-all`. `requireOrgMembership` only,
+      no `requirePermission` — these are always the caller's own data.
+- [x] `describeEvent` (the "actor did X" sentence generator) moved out
+      of `IssueDetailPage.tsx` into `entities/issue/lib/` — the
+      notification feed is a second real consumer needing the same
+      sentences for issues the viewer isn't currently looking at.
+- [x] New `entities/notification` + `widgets/notification-bell` — a
+      fixed-position bell (no persistent nav shell yet, same honest-
+      placeholder reasoning as the command palette), a non-modal
+      dropdown (not `<dialog>` — a notification panel shouldn't block
+      the page the way the palette's modal search should), read-on-
+      click-through plus an explicit "Mark all read", and
+      `useLiveNotifications` invalidating on a live `notification:created`
+      push.
+- [x] **A real bug found and fixed live, the same class as slice 2's**:
+      `useNotifications`/`useUnreadCount` fired with an empty
+      `organizationId` while logged out (`NotificationBell` is mounted
+      globally, the first two callers of these particular hooks that
+      can render pre-login) — caught via the browser console
+      (`/organizations//notifications` 404-looping), fixed with an
+      `enabled: organizationId !== ""` guard on both.
+- [x] Verified live end to end with a real second org member (seeded
+      directly + added to the org's membership table, then driven via
+      real authenticated HTTP requests — this app still has no invite
+      flow): a comment from that second user updated the first user's
+      bell badge and panel **live**, with no reload, from more than one
+      page; clicking a notification navigated to the right issue and
+      cleared it; "Mark all read" cleared the rest; the commenter's own
+      unread count stayed at zero (no self-notification, confirmed
+      against the real running system, not just the automated test);
+      and killing/restarting the API dev server with a tab open
+      confirmed it reconnected, rejoined `user:{id}` automatically, and
+      a subsequent comment still delivered live afterward.
+
 - [ ] File attachments: validation, storage, signed URLs
 
 ## Phase 8 — Analytics

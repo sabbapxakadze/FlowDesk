@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Link, useParams } from "react-router";
 import type { IssueEvent } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
-import { useIssue, useIssueEvents, useLiveIssueDetailUpdates } from "../../entities/issue";
+import { describeEvent, useIssue, useIssueEvents, useLiveIssueDetailUpdates } from "../../entities/issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { CommentForm } from "../../features/post-comment";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, Skeleton, STATUS_LABELS, StatusBadge } from "../../shared/ui";
+import { Card, Skeleton, StatusBadge } from "../../shared/ui";
 
 function IssueDetailSkeleton() {
   return (
@@ -33,39 +33,6 @@ function TimelineSkeleton() {
       <Skeleton className="h-4 w-40" />
     </div>
   );
-}
-
-function describeEvent(event: IssueEvent): string {
-  switch (event.type) {
-    case "issue.created":
-      return "created this issue";
-    case "issue.label_added":
-      return `added the "${String(event.payload.labelName)}" label`;
-    case "issue.label_removed":
-      return `removed the "${String(event.payload.labelName)}" label`;
-    case "issue.updated": {
-      const parts: string[] = [];
-      if ("title" in event.payload) parts.push(`changed the title to "${String(event.payload.title)}"`);
-      if ("status" in event.payload) parts.push(`changed status to ${String(event.payload.status)}`);
-      if ("description" in event.payload) parts.push("updated the description");
-      return parts.length > 0 ? parts.join(", ") : "updated this issue";
-    }
-    case "issue.moved": {
-      const fromStatus = String(event.payload.fromStatus);
-      const toStatus = String(event.payload.toStatus);
-      return fromStatus === toStatus
-        ? "reordered this issue"
-        : `moved this issue to ${STATUS_LABELS[toStatus as keyof typeof STATUS_LABELS] ?? toStatus}`;
-    }
-    case "issue.sprint_assigned":
-      return `assigned this issue to ${String(event.payload.sprintName)}`;
-    case "issue.sprint_removed":
-      return event.payload.reason === "sprint_completed"
-        ? `moved this issue back to the backlog (${String(event.payload.sprintName)} completed)`
-        : "moved this issue back to the backlog";
-    default:
-      return event.type;
-  }
 }
 
 /** "Alice is also viewing" / "Alice and Bob are also viewing" / "Alice,

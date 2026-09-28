@@ -1,6 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { sprints, issues, issueEvents } from "../../db/schema/index.js";
+import { sprints, issues } from "../../db/schema/index.js";
+import { writeIssueEvent } from "../issues/issues.repository.js";
 
 type SprintRow = typeof sprints.$inferSelect;
 
@@ -98,7 +99,9 @@ export async function complete(input: {
   expectedVersion: number;
   actorId: string;
 }): Promise<
-  { status: "completed"; sprint: SprintRow } | { status: "conflict"; current: SprintRow } | { status: "not_found" }
+  | { status: "completed"; sprint: SprintRow; notifiedUserIds: string[] }
+  | { status: "conflict"; current: SprintRow }
+  | { status: "not_found" }
 > {
   return db.transaction(async (tx) => {
     const [updated] = await tx
@@ -135,17 +138,22 @@ export async function complete(input: {
       .where(eq(issues.sprintId, input.sprintId))
       .returning({ id: issues.id });
 
-    if (released.length > 0) {
-      await tx.insert(issueEvents).values(
-        released.map((issue) => ({
-          issueId: issue.id,
-          actorId: input.actorId,
-          type: "issue.sprint_removed",
-          payload: { sprintId: input.sprintId, sprintName: updated.name, reason: "sprint_completed" },
-        })),
-      );
+    // One writeIssueEvent call per released issue, not a single bulk
+    // insert — each issue has its own distinct set of participants, so
+    // the notification fan-out genuinely needs to run per-issue. Sprints
+    // are small (a handful of issues), so this is a few extra queries
+    // inside the transaction, not a real cost.
+    const notifiedUserIds = new Set<string>();
+    for (const issue of released) {
+      const notified = await writeIssueEvent(tx, {
+        issueId: issue.id,
+        actorId: input.actorId,
+        type: "issue.sprint_removed",
+        payload: { sprintId: input.sprintId, sprintName: updated.name, reason: "sprint_completed" },
+      });
+      for (const userId of notified) notifiedUserIds.add(userId);
     }
 
-    return { status: "completed", sprint: updated };
+    return { status: "completed", sprint: updated, notifiedUserIds: [...notifiedUserIds] };
   });
 }
