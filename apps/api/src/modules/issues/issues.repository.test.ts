@@ -1427,3 +1427,82 @@ describe("issues repository — comments and activity timeline", () => {
     expect(events).toEqual([]);
   });
 });
+
+/**
+ * search() — see the Phase 7 slice 1 plan. The ranking test is the
+ * important one: title is weighted 'A' and description 'B' in the
+ * generated tsvector, but that's only actually true if ts_rank scores a
+ * title match above a description-only match for real, not provable by
+ * reading the column definition. The GIN index itself (Bitmap Index Scan,
+ * not a sequential scan) is verified live via EXPLAIN ANALYZE against
+ * seeded data, not here — same "psql, not a test" precedent as every
+ * other EXPLAIN ANALYZE check in this codebase (see docs/roadmap.md).
+ */
+describe("issues repository — search", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("ranks a title match above a description-only match for the same term", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+
+    const descriptionOnly = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Unrelated title",
+      description: "This mentions payment gateway somewhere in the body",
+      reporterId: user.id,
+    });
+    const titleMatch = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Fix payment gateway bug",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const results = await issuesRepository.search(org.id, "payment gateway", 25);
+
+    expect(results.map((r) => r.id)).toEqual([titleMatch.id, descriptionOnly.id]);
+  });
+
+  it("never returns another organization's matching issue", async () => {
+    const a = await seedOrgProjectUser("Org A", "org-a", "AAA");
+    const b = await seedOrgProjectUser("Org B", "org-b", "BBB");
+
+    await issuesRepository.create({
+      organizationId: a.org.id,
+      projectId: a.project.id,
+      title: "Widget rollout plan",
+      description: null,
+      reporterId: a.user.id,
+    });
+    await issuesRepository.create({
+      organizationId: b.org.id,
+      projectId: b.project.id,
+      title: "Widget rollout plan",
+      description: null,
+      reporterId: b.user.id,
+    });
+
+    const results = await issuesRepository.search(a.org.id, "widget rollout", 25);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.organizationId).toBe(a.org.id);
+  });
+
+  it("returns no results when nothing matches the query", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Completely unrelated",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const results = await issuesRepository.search(org.id, "nonexistent term xyz", 25);
+
+    expect(results).toEqual([]);
+  });
+});

@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import { ProjectCard, useProjects } from "../../entities/project";
 import { CreateProjectForm } from "../../features/create-project";
 import { useAuth } from "../../shared/auth/useAuth";
@@ -30,7 +31,12 @@ export function ProjectsPage() {
 
   return (
     <main className="p-8">
-      <h1 className="mb-4 text-2xl font-semibold">Projects</h1>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Projects</h1>
+        <Link to="/search" className="text-sm text-[var(--color-text-link)] underline">
+          Search →
+        </Link>
+      </div>
 
       <CreateProjectForm organizationId={organization!.id} />
 

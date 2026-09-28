@@ -140,3 +140,7 @@ export async function assignSprint(input: {
 }) {
   return issuesRepository.assignSprint(input);
 }
+
+export async function searchIssues(organizationId: string, query: string, limit: number) {
+  return issuesRepository.search(organizationId, query, limit);
+}

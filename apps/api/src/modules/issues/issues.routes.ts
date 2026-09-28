@@ -46,6 +46,19 @@ issuesRouter.get(
   issuesController.getBacklog,
 );
 
+// Org-scoped, not nested under /projects/:projectId — a command palette
+// (Phase 7 slice 2) needs to search across the whole org, not one project.
+// requireOrgMembership only, no requireProject: there's no :projectId in
+// this path to verify. Same view_issue permission listIssues already
+// requires, no new permission.
+issuesRouter.get(
+  "/organizations/:organizationId/search",
+  requireAuth,
+  requireOrgMembership,
+  requirePermission("view_issue"),
+  issuesController.search,
+);
+
 issuesRouter.get(
   "/organizations/:organizationId/projects/:projectId/issues/:issueId",
   requireAuth,

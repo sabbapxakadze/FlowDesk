@@ -19,6 +19,28 @@ win.
 **Phase 7 — Search, notifications, uploads.** See `docs/roadmap.md`.
 Phase 6 (Real-time) is fully complete.
 
+Slice 1 (Postgres full-text search backend + results page) is done: a
+new generated `search_vector` column on `issues`
+(`GENERATED ALWAYS AS (...) STORED`, built through Drizzle's
+`customType()` since pg-core has no first-class `tsvector` type) plus a
+GIN index, a new org-scoped `search()` repository function using raw
+`sql` for `websearch_to_tsquery`/`ts_rank` (Drizzle has no first-class
+full-text operator), a new `GET
+/organizations/:organizationId/search?q=` endpoint, and a new
+`SearchPage` at `/search` with `?q=` as the URL's source of truth.
+**Unlike `board_rank` (ADR 0007), this needed no hand-written
+migration** — a generated column self-populates every existing row the
+instant it's added, no `NOT NULL` backfill problem to work around;
+verified by reading the actual generated migration SQL and by direct
+`psql` inspection of real rows' weighting and stemming, not just
+assumed. Verified live end to end: a title match ranked above a
+description-only match for the same term in the real UI, a second,
+genuinely different organization never saw the first org's matching
+issue, a bookmarked `?q=...` URL reproduced the same results on a fresh
+page load with zero prior interaction, and `EXPLAIN ANALYZE` against
+20,000 real seeded rows confirmed a `Bitmap Index Scan` on the new GIN
+index, not a sequential scan.
+
 Slice 1 (Socket.IO connection, handshake auth, org room) is done: a
 new `attachSocketServer()` wires an authenticated, tenant-scoped
 connection onto the real `http.Server` (`index.ts` now builds one

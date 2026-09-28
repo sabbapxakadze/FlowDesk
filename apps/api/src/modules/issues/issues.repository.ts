@@ -813,3 +813,27 @@ export async function assignSprint(input: {
     return { status: "assigned", issue: updated };
   });
 }
+
+/**
+ * Org-scoped, not project-scoped — a command palette (Phase 7 slice 2)
+ * needs to jump across the whole org, not one project. websearch_to_
+ * tsquery (not plainto_tsquery) parses the kind of syntax a real search
+ * box gets typed into (quoted phrases, -exclude), not just AND-every-
+ * word. No first-class Drizzle operator for tsvector @@ tsquery or
+ * ts_rank, so both are raw sql — same "drop to sql when the fluent
+ * builder can't express something" pattern as nextRankSql/move() above.
+ * Rank itself is never returned — same ADR 0007 precedent as board_rank
+ * never leaving the server: an internal ordering signal, not something
+ * the client reasons about. Result count is a fixed cap, not real
+ * pagination — a relevance-ranked result set degrades fast past the
+ * first page, and keyset pagination for search isn't needed yet.
+ */
+export async function search(organizationId: string, query: string, limit: number) {
+  const tsquery = sql`websearch_to_tsquery('english', ${query})`;
+  return db
+    .select()
+    .from(issues)
+    .where(and(eq(issues.organizationId, organizationId), sql`${issues.searchVector} @@ ${tsquery}`))
+    .orderBy(sql`ts_rank(${issues.searchVector}, ${tsquery}) DESC`)
+    .limit(limit);
+}

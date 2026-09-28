@@ -5,6 +5,7 @@ import { ProjectDetailPage } from "../pages/project-detail/ProjectDetailPage";
 import { ProjectBoardPage } from "../pages/project-board/ProjectBoardPage";
 import { ProjectSprintsPage } from "../pages/project-sprints/ProjectSprintsPage";
 import { IssueDetailPage } from "../pages/issue-detail/IssueDetailPage";
+import { SearchPage } from "../pages/search/SearchPage";
 import { RegisterPage } from "../pages/register/RegisterPage";
 import { LoginPage } from "../pages/login/LoginPage";
 import { VerifyEmailPage } from "../pages/verify-email/VerifyEmailPage";
@@ -57,6 +58,14 @@ export function App() {
             element={
               <RequireAuth>
                 <IssueDetailPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/search"
+            element={
+              <RequireAuth>
+                <SearchPage />
               </RequireAuth>
             }
           />

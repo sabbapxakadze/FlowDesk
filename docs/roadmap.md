@@ -885,7 +885,61 @@ Slice 4 (presence on an issue — last slice in this phase) shipped:
 
 ## Phase 7 — Search, notifications, uploads
 
-- [ ] Postgres full-text search: `tsvector` column, GIN index, ranking
+Slice 1 (Postgres full-text search: `tsvector` column, GIN index, ranking) shipped:
+
+- [x] New generated `search_vector` column on `issues`
+      (`GENERATED ALWAYS AS (...) STORED`), built through Drizzle's
+      `customType<{ data: string }>({ dataType: () => "tsvector" })` —
+      pg-core has no first-class `tsvector` type (confirmed by listing
+      every file under `pg-core/columns/`), same "round-tripped as an
+      opaque string, never parsed" precedent as `board_rank` (ADR 0007).
+      Weighted `setweight(to_tsvector('english', coalesce(title, '')),
+      'A') || setweight(to_tsvector('english', coalesce(description,
+      '')), 'B')` — title outranks description in `ts_rank`.
+- [x] New GIN index (`index(...).using("gin", ...)`) — the only index
+      type that can serve a `tsvector @@ tsquery` match.
+- [x] **Unlike `board_rank`, this needed no hand-written migration**:
+      `board_rank`'s two-step migration (ADR 0007) existed only because
+      of a `NOT NULL` backfill problem; a `GENERATED ALWAYS AS (...)
+      STORED` column self-populates for every existing row the instant
+      it's added. Verified, not just assumed — read `drizzle-kit
+      generate`'s actual SQL output (matched the intended DDL exactly,
+      zero hand-editing) and confirmed via direct `psql` inspection that
+      existing rows self-populated with correct `'A'`/`'B'` weighting
+      and real English stemming (e.g. "Issue" → `issu`, "Test" →
+      `test`).
+- [x] New org-scoped `search(organizationId, query, limit)` in
+      `issues.repository.ts` — raw `sql` for both the `@@` match
+      (`websearch_to_tsquery`, not `plainto_tsquery`, so quoted phrases
+      and `-exclude` parse the way a real search box is typed) and the
+      `ts_rank`-based `ORDER BY`, since Drizzle has no first-class
+      full-text-search operator. New `GET
+      /organizations/:organizationId/search?q=` (not nested under a
+      project — a future command palette needs to search the whole org),
+      reusing the same `view_issue` permission `listIssues` already
+      requires. Fixed 25-result cap, no pagination — a relevance-ranked
+      result set degrades fast past page one. `ts_rank`'s score never
+      reaches the client, same `board_rank`-never-leaves-the-server
+      precedent — `searchIssuesResponseSchema` reuses `issueSchema`
+      as-is and `.parse()` strips it.
+- [x] New `SearchPage` (`/search`, linked from `ProjectsPage`'s header)
+      — `?q=` is the URL's source of truth, same convention
+      `ProjectDetailPage`'s `?status=`/`?order=` already established.
+      Results span every project in the org, so `IssueCard`'s
+      `projectKey` is resolved per-result from the already-cached
+      `useProjects()` list, same "no dedicated single-project fetch"
+      pattern every other page uses.
+- [x] Verified live end to end, not just via the automated repository
+      test: created a title match and a separate description-only match
+      for the same term and confirmed the title match ranked first in
+      the real UI; confirmed a second, genuinely different organization
+      never saw the first org's matching issue; confirmed a bookmarked
+      `?q=...` URL reproduced the same results on a fresh full page load
+      with zero prior interaction. Seeded 20,000 real rows via `psql`
+      and ran `EXPLAIN ANALYZE` against the actual query — confirmed a
+      `Bitmap Index Scan` on `issues_search_vector_idx`, not a
+      sequential scan, then removed the seeded rows.
+
 - [ ] Command palette (⌘K)
 - [ ] Notifications derived from events; in-app feed + read state
 - [ ] File attachments: validation, storage, signed URLs

@@ -5,6 +5,7 @@ export { useIssueLabels } from "./api/useIssueLabels";
 export { useIssueEvents } from "./api/useIssueEvents";
 export { useBoard } from "./api/useBoard";
 export { useBacklog } from "./api/useBacklog";
+export { useSearch } from "./api/useSearch";
 export { useLiveIssueUpdates } from "./api/useLiveIssueUpdates";
 export { useLiveIssueDetailUpdates } from "./api/useLiveIssueDetailUpdates";
 export { issueKeys } from "./api/queryKeys";

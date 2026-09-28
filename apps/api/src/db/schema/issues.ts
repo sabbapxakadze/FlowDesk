@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   pgEnum,
@@ -9,6 +10,7 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  customType,
 } from "drizzle-orm/pg-core";
 import { organizations } from "./organizations.js";
 import { projects } from "./projects.js";
@@ -16,6 +18,18 @@ import { users } from "./users.js";
 import { sprints } from "./sprints.js";
 
 export const issueStatus = pgEnum("issue_status", ["todo", "in_progress", "done"]);
+
+// Drizzle's pg-core has no first-class tsvector column type (confirmed
+// by checking pg-core/columns/ — there's no tsvector.ts). Same
+// "round-tripped as an opaque string, never parsed" precedent as
+// board_rank (ADR 0007): the value only ever matters to Postgres itself
+// (the @@ match and ts_rank in issues.repository.ts's search()), never
+// something application code reads or constructs.
+const tsvectorType = customType<{ data: string }>({
+  dataType() {
+    return "tsvector";
+  },
+});
 
 /**
  * organizationId is denormalized here (not just projectId) so every
@@ -62,6 +76,15 @@ export const issues = pgTable(
     sprintId: uuid("sprint_id").references(() => sprints.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    // Generated, not maintained by application code — self-populates for
+    // every row (including existing ones) the moment the column is
+    // added, so unlike board_rank this needs no backfill migration.
+    // title outweighs description ('A' vs 'B') so a title match ranks
+    // above a description-only match in ts_rank. See Phase 7 slice 1's
+    // plan and the new search() repository function.
+    searchVector: tsvectorType("search_vector").generatedAlwaysAs(
+      sql`setweight(to_tsvector('english', coalesce(title, '')), 'A') || setweight(to_tsvector('english', coalesce(description, '')), 'B')`,
+    ),
   },
   (table) => [
     index("issues_organization_id_idx").on(table.organizationId),
@@ -89,5 +112,8 @@ export const issues = pgTable(
     // Serves both the backlog query (sprint_id IS NULL) and the
     // active-sprint query (sprint_id = ?), both scoped to a project.
     index("issues_project_id_sprint_id_idx").on(table.projectId, table.sprintId),
+    // GIN, not the default btree — the only index type that can serve a
+    // tsvector @@ tsquery match. See search() in issues.repository.ts.
+    index("issues_search_vector_idx").using("gin", table.searchVector),
   ],
 );

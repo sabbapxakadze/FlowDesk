@@ -15,6 +15,8 @@ import {
   listIssuesResponseSchema,
   listLabelsResponseSchema,
   moveIssueRequestSchema,
+  searchIssuesQuerySchema,
+  searchIssuesResponseSchema,
   updateIssueRequestSchema,
   updateIssueResponseSchema,
 } from "@flowdesk/contracts";
@@ -332,6 +334,27 @@ export async function attachLabel(req: Request, res: Response) {
   const rows = await issuesService.listIssueLabels(req.ctx.organizationId, req.ctx.issueId);
   const body = listLabelsResponseSchema.parse({ data: rows.map(toWireFormat) });
   res.status(201).json(body);
+}
+
+// Org-scoped (requireOrgMembership only, no requireProject/requireIssue) —
+// see the Phase 7 slice 1 plan's "Decisions": a command palette needs to
+// search across the whole org, not one project. Fixed result cap, no
+// pagination — a relevance-ranked result set degrades fast past page one.
+const SEARCH_RESULT_LIMIT = 25;
+
+export async function search(req: Request, res: Response) {
+  if (!req.ctx) {
+    throw new Error("search requires requireOrgMembership to have run first");
+  }
+
+  const parsed = searchIssuesQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    throw new AppError("validation_error", 400, "Invalid search query", parsed.error.flatten().fieldErrors);
+  }
+
+  const rows = await issuesService.searchIssues(req.ctx.organizationId, parsed.data.q, SEARCH_RESULT_LIMIT);
+  const body = searchIssuesResponseSchema.parse({ data: rows.map(toWireFormat) });
+  res.json(body);
 }
 
 export async function detachLabel(req: Request, res: Response) {
