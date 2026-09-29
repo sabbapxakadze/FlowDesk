@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useThroughput, type ThroughputPoint } from "../../entities/analytics";
-import { EmptyState, ErrorText, Skeleton } from "../../shared/ui";
+import { EmptyState, ErrorText, fixedTooltipProps, Skeleton } from "../../shared/ui";
 
 // weekStart is a plain UTC date (Monday). Formatted in UTC on purpose: a
 // local-timezone format would show "Sep 27" for Monday Sep 28 west of UTC.
@@ -102,7 +102,7 @@ export function ThroughputChart({
               tickLine={false}
               axisLine={false}
             />
-            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...fixedTooltipProps()} />
             <Bar
               dataKey="completed"
               fill="var(--color-chart-primary)"

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useBreakdown } from "../../entities/analytics";
-import { EmptyState, ErrorText, Skeleton, STATUS_LABELS } from "../../shared/ui";
+import { EmptyState, ErrorText, fixedTooltipProps, Skeleton, STATUS_LABELS } from "../../shared/ui";
 
 type Row = { name: string; count: number };
 
@@ -60,7 +60,7 @@ function BarSection({
               <CartesianGrid vertical={false} stroke="var(--color-chart-grid)" />
               <XAxis dataKey="name" tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: "var(--color-chart-grid)" }} interval={0} />
               <YAxis allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...fixedTooltipProps()} />
               <Bar dataKey="count" fill="var(--color-chart-primary)" radius={[4, 4, 0, 0]} maxBarSize={48} isAnimationActive={false} />
             </BarChart>
           ) : (
@@ -68,7 +68,7 @@ function BarSection({
               <CartesianGrid horizontal={false} stroke="var(--color-chart-grid)" />
               <XAxis type="number" allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: "var(--color-chart-grid)" }} />
               <YAxis type="category" dataKey="name" width={96} tick={AXIS_TICK} tickLine={false} axisLine={false} interval={0} />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...fixedTooltipProps("bottom-right")} />
               <Bar dataKey="count" fill="var(--color-chart-primary)" radius={[0, 4, 4, 0]} maxBarSize={24} isAnimationActive={false} />
             </BarChart>
           )}

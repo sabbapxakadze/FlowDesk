@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useVelocity, type VelocitySprint } from "../../entities/analytics";
-import { EmptyState, ErrorText, Skeleton } from "../../shared/ui";
+import { EmptyState, ErrorText, fixedTooltipProps, Skeleton } from "../../shared/ui";
 
 function Stat({ label, value, lead = false }: { label: string; value: string; lead?: boolean }) {
   return (
@@ -89,7 +89,7 @@ export function VelocityChart({
               tickLine={false}
               axisLine={false}
             />
-            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...fixedTooltipProps()} />
             <Bar
               dataKey="completed"
               fill="var(--color-chart-primary)"

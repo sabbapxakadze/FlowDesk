@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useCycleTime } from "../../entities/analytics";
-import { EmptyState, ErrorText, Skeleton } from "../../shared/ui";
+import { EmptyState, ErrorText, fixedTooltipProps, Skeleton } from "../../shared/ui";
 
 type Bucket = { label: string; count: number };
 
@@ -106,7 +106,7 @@ export function CycleTimeChart({
               tickLine={false}
               axisLine={false}
             />
-            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...fixedTooltipProps()} />
             <Bar
               dataKey="count"
               fill="var(--color-chart-primary)"
