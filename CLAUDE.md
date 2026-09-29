@@ -16,7 +16,7 @@ win.
 
 ## Current phase
 
-**Phase 8 — Analytics** is in progress (5 slices planned, see
+**Phase 8 — Analytics** is complete (5 slices, see
 `docs/roadmap.md`). Phase 7 (Search, notifications, uploads) and Phase 6
 (Real-time) are fully complete.
 
@@ -51,8 +51,17 @@ tables. Label counts are not additive (an issue with two labels counts under
 both) and the UI and ADR say so; unlabeled and hidden-label counts are shown
 instead of dropped. Mutation checks again exposed two test gaps (unlabeled
 isolation, and the label-organization guard needing a hand-inserted bad
-row) which were fixed before shipping. Slice 5 (dashboard assembly, date
-range in the URL, query performance at volume) is the last in Phase 8.
+row) which were fixed before shipping.
+
+Phase 8 slice 5 (dashboard assembly, range in the URL, performance at
+volume) is done, so **Phase 8 is complete**. `?weeks=` and `?sprints=` drive
+the ranges (defaults out of the URL, bad values fall back). Measured at
+20,000 issues: velocity was 3.9 s because Postgres materialized a CTE that a
+correlated subquery rescanned per row; `NOT MATERIALIZED` plus dropping an
+unused CTE brought it to ~19 ms, and merging cycle time's two replays into
+one halved it to ~75 ms. No index or schema change. Not yet verified live:
+reload persistence, dark mode and layout of the assembled page, and the
+tooltip under a real mouse hover (owner deferred it).
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,
 time-limited download tokens, chosen with the owner because S3 and

@@ -1285,8 +1285,44 @@ Slice 4 (breakdowns) shipped:
       bar colors differ, project with no issues shows the empty message.
 - Still unverified, as in slices 1-3: the tooltip under a real mouse hover.
 
-- [ ] Slice 5 — dashboard assembly, date range in the URL, query
+- [x] Slice 5 — dashboard assembly, date range in the URL, query
       performance at volume
+  - `?weeks=` (4/12/26/52, default 12) drives throughput and cycle time;
+    `?sprints=` (4/8/12, default 8) drives velocity. Defaults are kept out
+    of the URL; unknown values fall back to the default. Breakdowns are a
+    snapshot, so no range. Layout: throughput full width, cycle time and
+    velocity side by side from `lg`, breakdowns full width.
+  - Performance, measured on a throwaway project (20,000 issues, 43,600
+    events, 12 sprints, median of 7 runs after a warm-up), budget ~100 ms:
+    | endpoint | before | after |
+    |---|---|---|
+    | throughput (12 / 52 wk) | 36.7 / 35.6 ms | 34.2 / 33.8 ms (unchanged) |
+    | cycle time (12 / 52 wk) | 128.9 / 125.9 ms | 75.8 / 73.6 ms |
+    | velocity (12 sprints) | 3871 ms | 18.7 ms |
+    | breakdown | 17.4 ms | 18.0 ms (unchanged) |
+  - Finding: Postgres materializes a CTE referenced more than once, and
+    velocity's per-release correlated subquery then did a `CTE Scan` per
+    row (`loops=3600`). The second reference came from an unused
+    `transitions` CTE in the shared fragment. Fix: `status_events` is
+    `NOT MATERIALIZED`, velocity no longer includes `transitions`, and
+    cycle time is one query (FILTER bucket counts) instead of two replays.
+    No index or schema change was needed, so no new ADR.
+  - Throwaway data deleted; dev DB back to 212 issues / 731 events.
+  - Verified live: `?weeks=52` and `?sprints=4` set the URL and selects,
+    choosing the default removed the param, `?weeks=999&sprints=0` fell
+    back to 12 / 8 with a working page, 52 weeks renders (26 x-axis ticks,
+    zero weeks draw no bar).
+  - Also verified live (throwaway QA account seeded via `SEED_ORG_SLUG`):
+    a full page load of `?weeks=26&sprints=12` kept both selects and
+    charts; 1400px light shows throughput full width with cycle time and
+    velocity side by side; a fresh 420px dark render is one column with no
+    horizontal scroll (all charts 309px wide).
+  - Found, not fixed (scope): at 420px the cycle-time bucket labels and
+    velocity sprint labels overlap; and shrinking the window live (without
+    reload) left the charts at their old wide width and the page scrolled
+    sideways, while a fresh load at the same width was fine.
+  - NOT verified: the tooltip under a real mouse hover (owner deferred it
+    to a follow-up).
 
 ## Phase 9 — Production
 

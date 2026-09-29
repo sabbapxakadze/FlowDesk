@@ -16,7 +16,29 @@ import { issueLabels, issues, labels } from "../../db/schema/index.js";
  */
 function statusTransitions(organizationId: string, projectId: string) {
   return sql`
-    status_events AS (
+    ${statusEvents(organizationId, projectId)},
+    transitions AS (
+      SELECT issue_id, created_at, status,
+             LAG(status, 1, 'todo') OVER (PARTITION BY issue_id ORDER BY created_at, id) AS prev_status
+      FROM status_events
+    )`;
+}
+
+/**
+ * Just the status-bearing events, for callers that don't need the replay
+ * (velocity only asks "what was the last status at or before time T").
+ *
+ * NOT MATERIALIZED is load-bearing, found by measurement in Phase 8 slice 5:
+ * Postgres materializes a CTE that is referenced more than once, and
+ * velocity's per-release "last status before T" lookup then rescanned the
+ * whole materialized set for every release row instead of using the
+ * (issue_id, created_at) index — 3.7 s at 20,000 issues versus 22 ms
+ * inlined. Even a second reference from a CTE that is never used counts, so
+ * the hint keeps a future edit from silently reintroducing that.
+ */
+function statusEvents(organizationId: string, projectId: string) {
+  return sql`
+    status_events AS NOT MATERIALIZED (
       SELECT e.id, e.issue_id, e.created_at,
              COALESCE(e.payload->>'toStatus', e.payload->>'status') AS status
       FROM issue_events e
@@ -25,11 +47,6 @@ function statusTransitions(organizationId: string, projectId: string) {
         AND i.project_id = ${projectId}::uuid
         AND e.type IN ('issue.moved', 'issue.updated')
         AND COALESCE(e.payload->>'toStatus', e.payload->>'status') IS NOT NULL
-    ),
-    transitions AS (
-      SELECT issue_id, created_at, status,
-             LAG(status, 1, 'todo') OVER (PARTITION BY issue_id ORDER BY created_at, id) AS prev_status
-      FROM status_events
     )`;
 }
 
@@ -141,13 +158,21 @@ export async function cycleTime(
       GROUP BY issue_id
     )`;
 
-  const summaryResult = await db.execute<{
-    completed: number;
-    without_start: number;
-    average: number | null;
-    median: number | null;
-    p90: number | null;
-  }>(sql`
+  // One query, one replay: the buckets are FILTER counts over the same
+  // `cycles` rows the summary aggregates. Two queries used to run the whole
+  // replay twice (~2x the time at 20,000 issues). The bounds come from code
+  // constants above, never from input, so sql.raw is safe here.
+  const bucketColumns = sql.join(
+    CYCLE_BUCKETS.map(
+      (b, i) =>
+        sql.raw(
+          `COUNT(*) FILTER (WHERE days >= ${b.lo}${b.hi === null ? "" : ` AND days < ${b.hi}`})::int AS b${i}`,
+        ),
+    ),
+    sql`, `,
+  );
+
+  const result = await db.execute<Record<string, number | null>>(sql`
     ${withCycles}
     SELECT
       COUNT(*)::int AS completed,
@@ -156,27 +181,12 @@ export async function cycleTime(
           AND NOT EXISTS (SELECT 1 FROM finished f WHERE f.issue_id = d.issue_id))::int AS without_start,
       ROUND(AVG(days)::numeric, 1)::float8 AS average,
       ROUND((percentile_cont(0.5) WITHIN GROUP (ORDER BY days))::numeric, 1)::float8 AS median,
-      ROUND((percentile_cont(0.9) WITHIN GROUP (ORDER BY days))::numeric, 1)::float8 AS p90
+      ROUND((percentile_cont(0.9) WITHIN GROUP (ORDER BY days))::numeric, 1)::float8 AS p90,
+      ${bucketColumns}
     FROM cycles
   `);
 
-  const bucketResult = await db.execute<{ label: string; count: number }>(sql`
-    ${withCycles}
-    SELECT b.label, COUNT(c.days)::int AS count
-    FROM (VALUES
-      (1, '< 1 day', 0, 1),
-      (2, '1-3 days', 1, 3),
-      (3, '3-7 days', 3, 7),
-      (4, '1-2 weeks', 7, 14),
-      (5, '2-4 weeks', 14, 28),
-      (6, '4+ weeks', 28, NULL)
-    ) AS b(ord, label, lo, hi)
-    LEFT JOIN cycles c ON c.days >= b.lo AND (b.hi IS NULL OR c.days < b.hi)
-    GROUP BY b.ord, b.label
-    ORDER BY b.ord
-  `);
-
-  const row = summaryResult.rows[0];
+  const row = result.rows[0];
   return {
     summary: {
       completed: row?.completed ?? 0,
@@ -185,9 +195,19 @@ export async function cycleTime(
       medianDays: row?.median ?? null,
       p90Days: row?.p90 ?? null,
     },
-    distribution: bucketResult.rows.map((b) => ({ label: b.label, count: b.count })),
+    distribution: CYCLE_BUCKETS.map((b, i) => ({ label: b.label, count: row?.[`b${i}`] ?? 0 })),
   };
 }
+
+/** Fixed buckets, inclusive lower bound; `hi: null` is open-ended. Days. */
+const CYCLE_BUCKETS: ReadonlyArray<{ label: string; lo: number; hi: number | null }> = [
+  { label: "< 1 day", lo: 0, hi: 1 },
+  { label: "1-3 days", lo: 1, hi: 3 },
+  { label: "3-7 days", lo: 3, hi: 7 },
+  { label: "1-2 weeks", lo: 7, hi: 14 },
+  { label: "2-4 weeks", lo: 14, hi: 28 },
+  { label: "4+ weeks", lo: 28, hi: null },
+];
 
 /**
  * The most recent `limit` completed sprints, oldest first, each with how
@@ -226,7 +246,7 @@ export async function sprintVelocity(
     committed: number;
     completed: number;
   }>(sql`
-    WITH ${statusTransitions(organizationId, projectId)},
+    WITH ${statusEvents(organizationId, projectId)},
     releases AS (
       SELECT e.issue_id, e.created_at, e.payload->>'sprintId' AS sprint_id
       FROM issue_events e
