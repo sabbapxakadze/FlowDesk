@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { IssueStatus } from "@flowdesk/contracts";
 import { AppError } from "../../shared/errors.js";
 import {
@@ -5,6 +6,7 @@ import {
   broadcastIssueCommented,
   broadcastNotificationCreated,
 } from "../../realtime/socket-server.js";
+import * as storage from "../../lib/storage.js";
 import * as issuesRepository from "./issues.repository.js";
 
 function broadcastNotifications(notifiedUserIds: string[]): void {
@@ -160,4 +162,64 @@ export async function assignSprint(input: {
 
 export async function searchIssues(organizationId: string, query: string, limit: number) {
   return issuesRepository.search(organizationId, query, limit);
+}
+
+export async function listAttachments(organizationId: string, issueId: string) {
+  return issuesRepository.listAttachmentsForIssue(organizationId, issueId);
+}
+
+/**
+ * The id is generated here, not left to the DB — lib/storage.ts's flat
+ * {attachmentId} filenames mean the file needs a name before it's
+ * written to disk, and the disk write needs to happen (and succeed)
+ * before the DB row is created, so a failed upload never leaves a
+ * dangling row pointing at a file that was never saved. See the Phase
+ * 7 slice 4 plan.
+ */
+export async function uploadAttachment(input: {
+  issueId: string;
+  uploaderId: string;
+  filename: string;
+  mimeType: string;
+  buffer: Buffer;
+}) {
+  const id = randomUUID();
+  const storageKey = await storage.saveFile(id, input.buffer);
+
+  const { attachment, notifiedUserIds } = await issuesRepository.addAttachment({
+    id,
+    issueId: input.issueId,
+    uploaderId: input.uploaderId,
+    filename: input.filename,
+    mimeType: input.mimeType,
+    sizeBytes: input.buffer.length,
+    storageKey,
+  });
+
+  broadcastNotifications(notifiedUserIds);
+  return attachment;
+}
+
+/**
+ * Deletes the DB row first, then the physical file — if the file
+ * delete fails (logged, not thrown, see lib/storage.ts), the DB row is
+ * still correctly gone, which is what the user actually asked for. The
+ * reverse order would risk a row surviving with no file behind it.
+ */
+export async function deleteAttachment(input: {
+  organizationId: string;
+  issueId: string;
+  attachmentId: string;
+  actorId: string;
+}) {
+  const result = await issuesRepository.deleteAttachment(input);
+  if (result.status === "deleted") {
+    broadcastNotifications(result.notifiedUserIds);
+    await storage.deleteFile(result.storageKey);
+  }
+  return result;
+}
+
+export async function getAttachmentForDownload(attachmentId: string) {
+  return issuesRepository.findAttachmentForDownload(attachmentId);
 }

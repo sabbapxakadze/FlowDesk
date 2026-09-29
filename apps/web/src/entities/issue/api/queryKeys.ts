@@ -36,6 +36,7 @@ export const issueKeys = {
   detail: (issueId: string) => [...issueKeys.all, issueId] as const,
   labels: (issueId: string) => [...issueKeys.all, issueId, "labels"] as const,
   events: (issueId: string) => [...issueKeys.all, issueId, "events"] as const,
+  attachments: (issueId: string) => [...issueKeys.all, issueId, "attachments"] as const,
   // Org-scoped, not project-scoped — see issues.routes.ts's search route
   // and the Phase 7 slice 1 plan's "Decisions". Keyed by query too, so
   // typing a new search term is a distinct cache entry, not a stale hit.

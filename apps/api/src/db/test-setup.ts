@@ -20,6 +20,10 @@ if (!process.env.TEST_DATABASE_URL) {
   );
 }
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+// Same reasoning: never let a test run write into the real dev uploads
+// directory. lib/storage.ts reads UPLOADS_DIR through config/env.ts,
+// which hasn't loaded yet at this point in the module graph.
+process.env.UPLOADS_DIR = fileURLToPath(new URL("../../uploads-test", import.meta.url));
 
 const { db, pool } = await import("./client.js");
 

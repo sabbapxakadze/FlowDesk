@@ -17,3 +17,8 @@ coverage/
 # above) IS committed and shared with the team.
 .claude/settings.local.json
 .playwright-mcp/
+
+# Local disk storage for attachments (Phase 7 slice 4) — real S3 is a
+# later phase; these are real uploaded files, never committed.
+apps/api/uploads/
+apps/api/uploads-test/

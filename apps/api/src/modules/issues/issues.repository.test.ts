@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
@@ -1591,5 +1592,175 @@ describe("issues repository — notification fan-out", () => {
 
     const rows = await db.select().from(notifications).where(eq(notifications.userId, user.id));
     expect(rows).toHaveLength(0);
+  });
+});
+
+/**
+ * These tests exercise the database side only — addAttachment is given
+ * a pre-generated id and storageKey directly, the same way
+ * issues.service.ts's uploadAttachment calls it after the real disk
+ * write succeeds (see lib/storage.test.ts for the file-I/O and
+ * signed-token half of this slice).
+ */
+describe("issues repository — attachments", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  async function seedSecondUser(orgId: string, email: string) {
+    const [user] = await db
+      .insert(users)
+      .values({ email, passwordHash: "not-a-real-hash", name: "Second User" })
+      .returning();
+    if (!user) throw new Error("setup failed");
+    await db.insert(organizationMembers).values({ organizationId: orgId, userId: user.id, role: "member" });
+    return user;
+  }
+
+  it("attaches a file, lists it with the uploader's name, and notifies participants", async () => {
+    const { org, project, user: reporter } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const uploader = await seedSecondUser(org.id, "uploader@example.com");
+
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue with an attachment",
+      description: null,
+      reporterId: reporter.id,
+    });
+
+    const { attachment, notifiedUserIds } = await issuesRepository.addAttachment({
+      id: randomUUID(),
+      issueId: issue.id,
+      uploaderId: uploader.id,
+      filename: "screenshot.png",
+      mimeType: "image/png",
+      sizeBytes: 12345,
+      storageKey: randomUUID(),
+    });
+
+    expect(attachment.filename).toBe("screenshot.png");
+    expect(notifiedUserIds).toEqual([reporter.id]);
+
+    const rows = await issuesRepository.listAttachmentsForIssue(org.id, issue.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.filename).toBe("screenshot.png");
+    expect(rows[0]?.uploaderName).toBe("Second User");
+
+    const events = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.attachment_added")));
+    expect(events).toHaveLength(1);
+    expect(events[0]?.payload).toMatchObject({ attachmentId: attachment.id, filename: "screenshot.png" });
+  });
+
+  it("never lists another organization's attachments", async () => {
+    const a = await seedOrgProjectUser("Org A", "org-a", "AAA");
+    const b = await seedOrgProjectUser("Org B", "org-b", "BBB");
+    const issueA = await issuesRepository.create({
+      organizationId: a.org.id,
+      projectId: a.project.id,
+      title: "Issue A",
+      description: null,
+      reporterId: a.user.id,
+    });
+    await issuesRepository.addAttachment({
+      id: randomUUID(),
+      issueId: issueA.id,
+      uploaderId: a.user.id,
+      filename: "a.png",
+      mimeType: "image/png",
+      sizeBytes: 1,
+      storageKey: randomUUID(),
+    });
+
+    const rowsForB = await issuesRepository.listAttachmentsForIssue(b.org.id, issueA.id);
+    expect(rowsForB).toEqual([]);
+  });
+
+  it("deletes an attachment, returns its storageKey, and notifies participants", async () => {
+    const { org, project, user: reporter } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const uploader = await seedSecondUser(org.id, "uploader@example.com");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: reporter.id,
+    });
+    const storageKey = randomUUID();
+    const { attachment } = await issuesRepository.addAttachment({
+      id: randomUUID(),
+      issueId: issue.id,
+      uploaderId: uploader.id,
+      filename: "doc.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 999,
+      storageKey,
+    });
+
+    const result = await issuesRepository.deleteAttachment({
+      organizationId: org.id,
+      issueId: issue.id,
+      attachmentId: attachment.id,
+      actorId: uploader.id,
+    });
+
+    expect(result).toMatchObject({ status: "deleted", storageKey, notifiedUserIds: [reporter.id] });
+    const rows = await issuesRepository.listAttachmentsForIssue(org.id, issue.id);
+    expect(rows).toEqual([]);
+
+    const events = await db
+      .select()
+      .from(issueEvents)
+      .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.attachment_removed")));
+    expect(events).toHaveLength(1);
+  });
+
+  it("reports not_found for a missing or cross-org attachment id", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+
+    const result = await issuesRepository.deleteAttachment({
+      organizationId: org.id,
+      issueId: issue.id,
+      attachmentId: randomUUID(),
+      actorId: user.id,
+    });
+
+    expect(result).toEqual({ status: "not_found" });
+  });
+
+  it("findAttachmentForDownload returns an attachment with no org scoping at all", async () => {
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const issue = await issuesRepository.create({
+      organizationId: org.id,
+      projectId: project.id,
+      title: "Issue",
+      description: null,
+      reporterId: user.id,
+    });
+    const storageKey = randomUUID();
+    const { attachment } = await issuesRepository.addAttachment({
+      id: randomUUID(),
+      issueId: issue.id,
+      uploaderId: user.id,
+      filename: "f.txt",
+      mimeType: "text/plain",
+      sizeBytes: 3,
+      storageKey,
+    });
+
+    const found = await issuesRepository.findAttachmentForDownload(attachment.id);
+    expect(found?.storageKey).toBe(storageKey);
+
+    expect(await issuesRepository.findAttachmentForDownload(randomUUID())).toBeUndefined();
   });
 });

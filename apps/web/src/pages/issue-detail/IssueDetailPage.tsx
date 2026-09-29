@@ -2,9 +2,16 @@ import { useState } from "react";
 import { Link, useParams } from "react-router";
 import type { IssueEvent } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
-import { describeEvent, useIssue, useIssueEvents, useLiveIssueDetailUpdates } from "../../entities/issue";
+import {
+  AttachmentList,
+  describeEvent,
+  useIssue,
+  useIssueEvents,
+  useLiveIssueDetailUpdates,
+} from "../../entities/issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { CommentForm } from "../../features/post-comment";
+import { UploadAttachmentForm } from "../../features/upload-attachment";
 import { useAuth } from "../../shared/auth/useAuth";
 import { Card, Skeleton, StatusBadge } from "../../shared/ui";
 
@@ -134,6 +141,12 @@ export function IssueDetailPage() {
           {issue.description && <p className="mt-2">{issue.description}</p>}
         </div>
       )}
+
+      <h2 className="mt-6 mb-2 text-lg font-semibold">Attachments</h2>
+      <AttachmentList organizationId={organization!.id} projectId={project.id} issueId={issue.id} />
+      <div className="mt-2">
+        <UploadAttachmentForm organizationId={organization!.id} projectId={project.id} issueId={issue.id} />
+      </div>
 
       <h2 className="mt-6 mb-2 text-lg font-semibold">Activity</h2>
       {eventsPending ? (

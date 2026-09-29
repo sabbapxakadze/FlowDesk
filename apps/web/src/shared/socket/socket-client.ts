@@ -8,6 +8,7 @@ import { getStoredAccessToken } from "../auth/token-store";
  * wrapper reaches the stored access token.
  */
 let socket: Socket | null = null;
+let socketOrganizationId: string | null = null;
 
 /**
  * Whether the *current* connection's join:org round-trip has finished.
@@ -68,12 +69,24 @@ function markOrgRoomNotReady() {
  * connection — only the room name does, here, as a closure.
  */
 export function connectSocket(organizationId: string): void {
+  // Idempotent for the same org: a page reload in dev runs the auth
+  // refresh twice (React StrictMode), so login() -> connectSocket()
+  // fires twice. Replacing the socket the second time orphaned any
+  // listener already attached to the first instance — found live in
+  // Phase 7 slice 4: the always-mounted NotificationBell's
+  // "notification:created" listener silently went dead after a reload,
+  // because its effect (keyed on organizationId, unchanged) never
+  // re-ran to re-attach to the new instance. `active` is false after a
+  // manual disconnect(), so logout -> login still gets a fresh socket.
+  if (socket?.active && socketOrganizationId === organizationId) return;
+
   socket?.disconnect();
 
   const s = io({
     auth: (cb) => cb({ token: getStoredAccessToken() }),
   });
   socket = s;
+  socketOrganizationId = organizationId;
   markOrgRoomNotReady();
 
   s.on("connect", () => {
@@ -104,6 +117,7 @@ export function whenOrgRoomReady(): Promise<void> {
 export function disconnectSocket(): void {
   socket?.disconnect();
   socket = null;
+  socketOrganizationId = null;
 }
 
 export function getSocket(): Socket | null {

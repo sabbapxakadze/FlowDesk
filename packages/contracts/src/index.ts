@@ -9,3 +9,4 @@ export * from "./issue-event.js";
 export * from "./sprint.js";
 export * from "./search.js";
 export * from "./notification.js";
+export * from "./attachment.js";

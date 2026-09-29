@@ -1,6 +1,16 @@
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { comments, issueEvents, issueLabels, issues, labels, projects, sprints, users } from "../../db/schema/index.js";
+import {
+  attachments,
+  comments,
+  issueEvents,
+  issueLabels,
+  issues,
+  labels,
+  projects,
+  sprints,
+  users,
+} from "../../db/schema/index.js";
 import * as notificationsRepository from "../notifications/notifications.repository.js";
 import type { IssueStatus } from "@flowdesk/contracts";
 
@@ -875,4 +885,137 @@ export async function search(organizationId: string, query: string, limit: numbe
     .where(and(eq(issues.organizationId, organizationId), sql`${issues.searchVector} @@ ${tsquery}`))
     .orderBy(sql`ts_rank(${issues.searchVector}, ${tsquery}) DESC`)
     .limit(limit);
+}
+
+/**
+ * Storage (the physical file write) happens in the service layer,
+ * before this is ever called — this only ever writes a row for a file
+ * that's already safely on disk. writeIssueEvent's notification
+ * fan-out handles the uploader correctly regardless of whether they're
+ * already a participant (they're always the excluded actor).
+ *
+ * id is supplied by the caller, not left to the column's own
+ * defaultRandom() — the service layer needs a real id *before* this
+ * insert runs, since lib/storage.ts's flat {attachmentId} filenames
+ * mean the file has to be written to disk (and thus needs its name)
+ * before the row that references it can be created. See the Phase 7
+ * slice 4 plan.
+ */
+export async function addAttachment(input: {
+  id: string;
+  issueId: string;
+  uploaderId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  storageKey: string;
+}) {
+  return db.transaction(async (tx) => {
+    const [attachment] = await tx
+      .insert(attachments)
+      .values({
+        id: input.id,
+        issueId: input.issueId,
+        uploaderId: input.uploaderId,
+        filename: input.filename,
+        mimeType: input.mimeType,
+        sizeBytes: input.sizeBytes,
+        storageKey: input.storageKey,
+      })
+      .returning();
+    if (!attachment) throw new Error("Failed to create attachment");
+
+    // Drizzle's insert().returning() can't join — a plain insert row has
+    // no uploaderName, but the wire response needs one (same shape
+    // listAttachmentsForIssue already returns). One cheap extra lookup,
+    // still inside the transaction.
+    const [uploader] = await tx.select({ name: users.name }).from(users).where(eq(users.id, input.uploaderId));
+    if (!uploader) throw new Error("Failed to look up attachment uploader");
+
+    const notifiedUserIds = await writeIssueEvent(tx, {
+      issueId: input.issueId,
+      actorId: input.uploaderId,
+      type: "issue.attachment_added",
+      payload: { attachmentId: attachment.id, filename: attachment.filename },
+    });
+
+    return { attachment: { ...attachment, uploaderName: uploader.name }, notifiedUserIds };
+  });
+}
+
+/**
+ * Joined to users for uploaderName, through issues for organizationId
+ * scoping — attachments has no organizationId column, same shape as
+ * listEvents/listLabelsForIssue. downloadUrl is not computed here —
+ * that's response formatting (signing a token, building a URL), the
+ * controller's job, not this repository's.
+ */
+export async function listAttachmentsForIssue(organizationId: string, issueId: string) {
+  return db
+    .select({
+      id: attachments.id,
+      issueId: attachments.issueId,
+      uploaderId: attachments.uploaderId,
+      uploaderName: users.name,
+      filename: attachments.filename,
+      mimeType: attachments.mimeType,
+      sizeBytes: attachments.sizeBytes,
+      createdAt: attachments.createdAt,
+    })
+    .from(attachments)
+    .innerJoin(users, eq(attachments.uploaderId, users.id))
+    .innerJoin(issues, eq(attachments.issueId, issues.id))
+    .where(and(eq(attachments.issueId, issueId), eq(issues.organizationId, organizationId)))
+    .orderBy(asc(attachments.createdAt));
+}
+
+/**
+ * No org scoping at all — used only by the unauthenticated, token-
+ * gated download route (see issues.controller.ts), where the signed
+ * token itself is the sole authorization. Nothing here is reachable
+ * without a valid token having already been checked first.
+ */
+export async function findAttachmentForDownload(attachmentId: string) {
+  const [attachment] = await db.select().from(attachments).where(eq(attachments.id, attachmentId));
+  return attachment;
+}
+
+/**
+ * Returns the storageKey so the caller (issues.service.ts) can also
+ * remove the physical file — this function only ever touches the
+ * database. "not_found" covers both a genuinely missing id and one
+ * belonging to a different issue/org, same as every other tenant-
+ * scoped 404 in this codebase.
+ */
+export async function deleteAttachment(input: {
+  organizationId: string;
+  issueId: string;
+  attachmentId: string;
+  actorId: string;
+}): Promise<{ status: "deleted"; storageKey: string; notifiedUserIds: string[] } | { status: "not_found" }> {
+  return db.transaction(async (tx) => {
+    const [attachment] = await tx
+      .select({ id: attachments.id, storageKey: attachments.storageKey, filename: attachments.filename })
+      .from(attachments)
+      .innerJoin(issues, eq(attachments.issueId, issues.id))
+      .where(
+        and(
+          eq(attachments.id, input.attachmentId),
+          eq(attachments.issueId, input.issueId),
+          eq(issues.organizationId, input.organizationId),
+        ),
+      );
+    if (!attachment) return { status: "not_found" };
+
+    await tx.delete(attachments).where(eq(attachments.id, attachment.id));
+
+    const notifiedUserIds = await writeIssueEvent(tx, {
+      issueId: input.issueId,
+      actorId: input.actorId,
+      type: "issue.attachment_removed",
+      payload: { attachmentId: attachment.id, filename: attachment.filename },
+    });
+
+    return { status: "deleted", storageKey: attachment.storageKey, notifiedUserIds };
+  });
 }

@@ -16,8 +16,30 @@ win.
 
 ## Current phase
 
-**Phase 7 — Search, notifications, uploads.** See `docs/roadmap.md`.
-Phase 6 (Real-time) is fully complete.
+**Phase 7 — Search, notifications, uploads** is **fully complete** (four
+slices). See `docs/roadmap.md`. Phase 6 (Real-time) is fully complete.
+
+Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,
+time-limited download tokens, chosen with the owner because S3 and
+Docker are explicitly Phase 9 in the stack list. New `lib/storage.ts`
+is the seam real S3 would swap in behind; new `attachments` table inside
+the `issues` module (a sub-resource like labels/comments); `multer`
+(memory storage) with rejections translated to `AppError`s; allowed
+types and the 10MB cap shared through `packages/contracts`. The download
+route is deliberately unauthenticated and token-gated — the signature is
+the authorization. Uploads/deletes go through the existing
+`writeIssueEvent`, so participants are notified with no new wiring.
+Named limits: MIME type is client-supplied, not byte-sniffed; no live
+sync of the attachment list; no inline previews. **A real slice 3 bug
+surfaced here, found only by reloading the page**: `connectSocket()`
+replaced the socket on every call and React StrictMode runs the auth
+refresh twice on reload, so the always-mounted notification bell's
+listener sat on a dead instance and live pushes silently stopped (slice
+3's live test logged in via the form, which only calls it once). Fixed
+by making `connectSocket()` idempotent for an active same-org
+connection; re-verified on the failing path. Live verification used a
+`DataTransfer`-set file, not a native file chooser (Chrome refused the
+injected chooser) — recorded honestly in the roadmap.
 
 Slice 3 (notifications derived from events; in-app feed + read state)
 is done: no assignee field exists on issues, so recipients are

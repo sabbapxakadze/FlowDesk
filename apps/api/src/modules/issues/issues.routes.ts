@@ -1,12 +1,59 @@
-import { Router, type Router as RouterType } from "express";
+import { Router, type Router as RouterType, type NextFunction, type Request, type Response } from "express";
+import multer, { MulterError } from "multer";
+import { ALLOWED_ATTACHMENT_MIME_TYPES, MAX_ATTACHMENT_SIZE_BYTES } from "@flowdesk/contracts";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { requireOrgMembership } from "../../middleware/require-org-membership.js";
 import { requireProject } from "../../middleware/require-project.js";
 import { requireIssue } from "../../middleware/require-issue.js";
 import { requirePermission } from "../../middleware/require-permission.js";
+import { AppError } from "../../shared/errors.js";
 import * as issuesController from "./issues.controller.js";
 
 export const issuesRouter: RouterType = Router();
+
+// Memory storage, not disk storage — the service layer writes the
+// validated buffer to disk itself (lib/storage.ts), right where it
+// also generates the storage key. Fine at this size cap; no streaming
+// complexity needed for single-digit-MB files. See the Phase 7 slice
+// 4 plan's "Decisions".
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_ATTACHMENT_SIZE_BYTES },
+  fileFilter(_req, file, cb) {
+    if (!(ALLOWED_ATTACHMENT_MIME_TYPES as readonly string[]).includes(file.mimetype)) {
+      cb(new AppError("unsupported_file_type", 400, `Files of type "${file.mimetype}" are not allowed.`));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
+// multer's own errors (MulterError, or the AppError thrown from
+// fileFilter above) never reach the client raw — same "no raw throws
+// reaching the client" rule as everywhere else in this codebase.
+function parseAttachmentUpload(req: Request, res: Response, next: NextFunction) {
+  upload.single("file")(req, res, (err: unknown) => {
+    if (err instanceof AppError) {
+      next(err);
+      return;
+    }
+    if (err instanceof MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        next(
+          new AppError(
+            "file_too_large",
+            400,
+            `File exceeds the ${MAX_ATTACHMENT_SIZE_BYTES} byte limit.`,
+          ),
+        );
+        return;
+      }
+      next(new AppError("upload_error", 400, err.message));
+      return;
+    }
+    next(err);
+  });
+}
 
 // Nested under both organization and project: requireAuth -> who are you,
 // requireOrgMembership -> are you in this org, requireProject -> does
@@ -157,3 +204,44 @@ issuesRouter.get(
   requirePermission("view_issue"),
   issuesController.listIssueEvents,
 );
+
+issuesRouter.get(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId/attachments",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("view_issue"),
+  issuesController.listAttachments,
+);
+
+// requirePermission runs before parseAttachmentUpload — an unauthorized
+// caller is rejected before this ever spends effort parsing their
+// upload body.
+issuesRouter.post(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId/attachments",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("manage_issue"),
+  parseAttachmentUpload,
+  issuesController.uploadAttachment,
+);
+
+issuesRouter.delete(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId/attachments/:attachmentId",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("manage_issue"),
+  issuesController.deleteAttachment,
+);
+
+// Deliberately not nested under /organizations/:organizationId/... and
+// no auth middleware chain at all — a signed download link is
+// self-contained authorization, the same trust model a real S3
+// presigned URL has. See issuesController.downloadAttachment and
+// lib/storage.ts.
+issuesRouter.get("/attachments/:attachmentId/download", issuesController.downloadAttachment);

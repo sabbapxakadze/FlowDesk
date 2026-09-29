@@ -32,6 +32,10 @@ export function describeEvent(event: IssueEvent): string {
     }
     case "issue.commented":
       return "commented";
+    case "issue.attachment_added":
+      return `attached "${String(event.payload.filename)}"`;
+    case "issue.attachment_removed":
+      return `removed the attachment "${String(event.payload.filename)}"`;
     case "issue.sprint_assigned":
       return `assigned this issue to ${String(event.payload.sprintName)}`;
     case "issue.sprint_removed":

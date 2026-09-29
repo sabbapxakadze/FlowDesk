@@ -1061,7 +1061,80 @@ Slice 3 (notifications derived from events; in-app feed + read state) shipped:
       confirmed it reconnected, rejoined `user:{id}` automatically, and
       a subsequent comment still delivered live afterward.
 
-- [ ] File attachments: validation, storage, signed URLs
+Slice 4 (file attachments: validation, storage, signed URLs) shipped:
+
+- [x] "Signed URLs" usually implies real S3, but CLAUDE.md's stack list
+      puts S3-compatible storage and Docker under Later (Phase 9).
+      Confirmed with the owner: local disk + our own HMAC-signed,
+      time-limited download tokens — the real signed-URL *concept*
+      (tamper-proof, time-boxed access, no cookie/JWT) without pulling
+      Phase 9's infra forward. New `lib/storage.ts` (`saveFile`/
+      `deleteFile`/`readFileStream` + `signDownloadToken`/
+      `verifyDownloadToken`, HMAC-SHA256 over `attachmentId:expires`,
+      constant-time comparison via `timingSafeEqual`, 5-minute TTL) is
+      the seam real S3 would swap in behind. New required
+      `ATTACHMENT_SIGNING_SECRET` (`min(32)`, validated at boot) and
+      `UPLOADS_DIR` env vars.
+- [x] New `attachments` table, kept inside the `issues` module (a
+      sub-resource like labels/comments, no recipient/read-state of its
+      own — unlike notifications). Flat `{attachmentId}` filenames on
+      disk; the original filename is untrusted input and never used in a
+      path. `multer` 2.x (memory storage) parses uploads; its
+      `fileFilter`/`limits` plus a small wrapper turn every rejection
+      into a real `AppError` (`file_too_large`, `unsupported_file_type`),
+      never a raw 500. Allowed types and the 10MB cap live in
+      `packages/contracts` so the upload form pre-validates against the
+      exact rule the server enforces. **Named limitation, not a silent
+      gap**: the MIME type is client-supplied, not sniffed from bytes.
+- [x] `GET .../attachments` mints a fresh `downloadUrl` per row (no
+      separate "mint" endpoint). The download route itself
+      (`GET /api/v1/attachments/:id/download?expires=&sig=`) is
+      deliberately unauthenticated and token-gated — the signature *is*
+      the authorization, same trust model as a real presigned URL.
+- [x] Upload/delete go through the existing `writeIssueEvent` choke
+      point (`issue.attachment_added`/`_removed`), so participants are
+      notified with zero new wiring — the payoff of slice 3's helper.
+- [x] **Real bugs found and fixed while building/verifying**, not
+      assumed away: (1) the upload response was missing `uploaderName`
+      (a plain `INSERT ... RETURNING` can't join `users`) — caught by
+      the HTTP round-trip test as a 500, fixed with one in-transaction
+      lookup. (2) **A slice 3 bug that only a page reload exposes**:
+      `connectSocket()` replaced the socket on every call, and React
+      StrictMode runs the auth refresh twice on reload, so the
+      always-mounted `NotificationBell`'s `notification:created`
+      listener ended up on a discarded socket instance and live pushes
+      silently stopped (the badge was right after a refresh, wrong
+      until then). Slice 3's live test logged in through the form,
+      which calls it only once, so it never saw this. Fixed by making
+      `connectSocket()` idempotent for an already-active connection to
+      the same org; re-verified on the exact failing path (full reload,
+      then another member's upload moved the badge 2 → 3 live).
+- [x] Frontend: `apiUpload`/`apiDeleteVoid` in the shared client,
+      `useAttachments`/`useDeleteAttachment` + `AttachmentList` in
+      `entities/issue`, a new `features/upload-attachment`, mounted in
+      `IssueDetailPage`. Plain list with a real `<a href>` download
+      link (no inline previews); anyone with `manage_issue` can delete
+      (role-based, not ownership-based, like labels/comments).
+- [x] Verified: 18 files / 158 tests (new: signed-token sign/verify
+      including a genuinely-valid-signature-but-expired case against an
+      independent HMAC reimplementation, repository tests with
+      notification fan-out, and an HTTP round trip through `supertest`
+      `.attach()` proving the bytes survive). Live: a real upload
+      appeared in the list and timeline; the signed URL returned the
+      exact bytes with `Content-Disposition: inline`; a tampered
+      signature and an expired timestamp both got 403; a disallowed
+      type and an oversized file were rejected client-side *and*
+      server-side (400, not 500); deleting removed the DB row, the
+      physical file, and wrote the removal event. Not verified: a real
+      browser file-chooser upload — Chrome refused the injected chooser
+      ("Not allowed"), so the file was set on the input via
+      `DataTransfer`, which drives the app's real `onChange` and upload
+      code but is not a native picker.
+- Known limits, named on purpose: no live cross-tab sync of the
+  attachment *list* (only notifications push live); no inline image
+  preview; local disk only until Phase 9.
+
+**Phase 7 is now fully complete.**
 
 ## Phase 8 — Analytics
 

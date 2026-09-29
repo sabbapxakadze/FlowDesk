@@ -63,6 +63,25 @@ export async function apiGet<T>(path: string, schema: z.ZodType<T>): Promise<T> 
   return schema.parse(await res.json());
 }
 
+/** Multipart upload — no Content-Type header set explicitly, unlike
+ * every other helper here. The browser computes the multipart boundary
+ * itself and needs to set the header to include it; setting it by hand
+ * would omit the boundary and break parsing server-side. First use:
+ * attachment uploads (Phase 7 slice 4). */
+export async function apiUpload<T>(path: string, formData: FormData, schema: z.ZodType<T>): Promise<T> {
+  const res = await fetch(`/api${path}`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw await toApiError(res, path, "POST");
+  }
+
+  return schema.parse(await res.json());
+}
+
 export async function apiPost<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method: "POST",
@@ -102,6 +121,19 @@ export async function apiDelete<T>(path: string, schema: z.ZodType<T>): Promise<
   }
 
   return schema.parse(await res.json());
+}
+
+/** Same as apiDelete, for a DELETE that returns 204 No Content — first
+ * use: attachment deletion (Phase 7 slice 4). */
+export async function apiDeleteVoid(path: string): Promise<void> {
+  const res = await fetch(`/api${path}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+
+  if (!res.ok) {
+    throw await toApiError(res, path, "DELETE");
+  }
 }
 
 /** For endpoints that return 204 No Content — nothing to parse or validate. */

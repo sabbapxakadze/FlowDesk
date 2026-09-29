@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   assignIssueSprintRequestSchema,
   attachLabelRequestSchema,
+  attachmentResponseSchema,
   createCommentRequestSchema,
   createCommentResponseSchema,
   createIssueRequestSchema,
@@ -10,6 +11,7 @@ import {
   getBacklogResponseSchema,
   getBoardResponseSchema,
   getIssueResponseSchema,
+  listAttachmentsResponseSchema,
   listIssueEventsResponseSchema,
   listIssuesQuerySchema,
   listIssuesResponseSchema,
@@ -21,6 +23,7 @@ import {
   updateIssueResponseSchema,
 } from "@flowdesk/contracts";
 import { AppError } from "../../shared/errors.js";
+import * as storage from "../../lib/storage.js";
 import * as issuesService from "./issues.service.js";
 
 // Same Date -> ISO string conversion projects.controller.ts does — Drizzle
@@ -34,6 +37,19 @@ function toWireFormat(row: { createdAt: Date; updatedAt: Date; [key: string]: un
 // and having every other caller need to handle that case too.
 function eventToWireFormat(row: { createdAt: Date; [key: string]: unknown }) {
   return { ...row, createdAt: row.createdAt.toISOString() };
+}
+
+// downloadUrl is computed here, not stored — a fresh signed token on
+// every response, same "controllers format the response" job
+// toWireFormat does, just also building a URL instead of only
+// ISO-stringing dates. See lib/storage.ts's signDownloadToken.
+function toAttachmentWireFormat(row: { id: string; createdAt: Date; [key: string]: unknown }) {
+  const { expires, signature } = storage.signDownloadToken(row.id);
+  return {
+    ...row,
+    createdAt: row.createdAt.toISOString(),
+    downloadUrl: `/api/v1/attachments/${row.id}/download?expires=${expires}&sig=${signature}`,
+  };
 }
 
 export async function listIssues(req: Request, res: Response) {
@@ -381,4 +397,98 @@ export async function detachLabel(req: Request, res: Response) {
   const rows = await issuesService.listIssueLabels(req.ctx.organizationId, req.ctx.issueId);
   const body = listLabelsResponseSchema.parse({ data: rows.map(toWireFormat) });
   res.json(body);
+}
+
+export async function listAttachments(req: Request, res: Response) {
+  if (!req.ctx?.issueId) {
+    throw new Error("listAttachments requires requireIssue to have run first");
+  }
+
+  const rows = await issuesService.listAttachments(req.ctx.organizationId, req.ctx.issueId);
+  const body = listAttachmentsResponseSchema.parse({ data: rows.map(toAttachmentWireFormat) });
+  res.json(body);
+}
+
+// multer's own validation (fileFilter/limits) rejects a bad upload
+// before this ever runs — reaching here means req.file is a real,
+// already-validated file. req.file is still optional per multer's own
+// types (no file field sent at all is a different failure mode than a
+// disallowed one), so this is checked explicitly rather than asserted.
+export async function uploadAttachment(req: Request, res: Response) {
+  if (!req.ctx?.issueId) {
+    throw new Error("uploadAttachment requires requireIssue to have run first");
+  }
+  if (!req.file) {
+    throw new AppError("validation_error", 400, "No file was uploaded.");
+  }
+
+  const attachment = await issuesService.uploadAttachment({
+    issueId: req.ctx.issueId,
+    uploaderId: req.ctx.userId,
+    filename: req.file.originalname,
+    mimeType: req.file.mimetype,
+    buffer: req.file.buffer,
+  });
+
+  const body = attachmentResponseSchema.parse({ data: toAttachmentWireFormat(attachment) });
+  res.status(201).json(body);
+}
+
+export async function deleteAttachment(req: Request, res: Response) {
+  if (!req.ctx?.issueId) {
+    throw new Error("deleteAttachment requires requireIssue to have run first");
+  }
+
+  const parsedAttachmentId = z.uuid().safeParse(req.params.attachmentId);
+  if (!parsedAttachmentId.success) {
+    throw new AppError("invalid_attachment_id", 400, "attachmentId must be a UUID.");
+  }
+
+  const result = await issuesService.deleteAttachment({
+    organizationId: req.ctx.organizationId,
+    issueId: req.ctx.issueId,
+    attachmentId: parsedAttachmentId.data,
+    actorId: req.ctx.userId,
+  });
+
+  if (result.status === "not_found") {
+    throw new AppError("attachment_not_found", 404, "Attachment not found.");
+  }
+
+  res.status(204).end();
+}
+
+const downloadTokenQuerySchema = z.object({
+  expires: z.coerce.number(),
+  sig: z.string().min(1),
+});
+
+/**
+ * Deliberately no requireAuth/requireOrgMembership/requireIssue chain
+ * — the signed token in the query string is the sole authorization,
+ * matching real presigned-URL semantics (see lib/storage.ts and the
+ * Phase 7 slice 4 plan). Anyone with a valid, unexpired token can
+ * download — that's the intended trust model, not an oversight.
+ */
+export async function downloadAttachment(req: Request, res: Response) {
+  const parsedAttachmentId = z.uuid().safeParse(req.params.attachmentId);
+  const parsedQuery = downloadTokenQuerySchema.safeParse(req.query);
+  if (!parsedAttachmentId.success || !parsedQuery.success) {
+    throw new AppError("invalid_download_link", 400, "This download link is malformed.");
+  }
+
+  const attachmentId = parsedAttachmentId.data;
+  const { expires, sig } = parsedQuery.data;
+  if (!storage.verifyDownloadToken(attachmentId, expires, sig)) {
+    throw new AppError("invalid_download_link", 403, "This download link is invalid or has expired.");
+  }
+
+  const attachment = await issuesService.getAttachmentForDownload(attachmentId);
+  if (!attachment) {
+    throw new AppError("attachment_not_found", 404, "Attachment not found.");
+  }
+
+  res.setHeader("Content-Type", attachment.mimeType);
+  res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(attachment.filename)}"`);
+  storage.readFileStream(attachment.storageKey).pipe(res);
 }

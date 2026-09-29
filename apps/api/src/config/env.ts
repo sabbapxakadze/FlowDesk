@@ -22,6 +22,17 @@ const envSchema = z.object({
   // The *frontend's* origin — verification/reset emails link back to the
   // web app (/verify-email, /reset-password), not the API.
   APP_URL: z.url("APP_URL must be a full URL, e.g. http://localhost:5173"),
+  // Local disk storage for attachments (Phase 7 slice 4) — real S3 swaps
+  // in later (Phase 9) behind the same lib/storage.ts interface. Relative
+  // to apps/api's cwd. db/test-setup.ts overrides this to a separate
+  // directory for test runs, same pattern it already uses for
+  // DATABASE_URL.
+  UPLOADS_DIR: z.string().min(1).default("./uploads"),
+  // Signs every attachment download token — anyone with this can forge a
+  // valid download link. Same min(32) convention as JWT_SECRET.
+  ATTACHMENT_SIGNING_SECRET: z
+    .string()
+    .min(32, "ATTACHMENT_SIGNING_SECRET must be at least 32 characters — this signs every download token"),
 });
 
 function loadEnv() {
