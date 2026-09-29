@@ -1182,7 +1182,34 @@ Slice 1 (foundations + throughput) shipped:
 - Observed, not fixed (out of scope): a full reload right after login can
   bounce to `/login` (refresh-token rotation), as noted since slice 1.
 
-- [ ] Slice 2 — cycle time
+Slice 2 (cycle time) shipped:
+
+- [x] ADR 0010: cycle time = **first entry into in_progress -> first
+      completion at or after it**, one value per issue. First entry so a
+      bounce back doesn't reset the clock; first completion so a
+      reopened issue isn't two cycles (that is throughput's job). Issues
+      finished without ever being in progress have no cycle time and are
+      reported as `withoutStart`, not hidden. Reported as median (leads),
+      mean, p90 plus six fixed buckets (inclusive lower bound).
+- [x] `GET .../analytics/cycle-time?weeks=`. The replay CTE from slice 1 is
+      now one shared fragment used by both metrics, so they cannot
+      disagree about what a transition is. The `?weeks=` schema was
+      renamed `weeksQuerySchema` now that two endpoints share it.
+- [x] Proved, not assumed: mutation checks — using MAX instead of MIN for
+      the start fails 2 tests; dropping "completion must be at/after the
+      start" fails the skip-then-reopen test with the exact bug it guards
+      (a **-4 day** span). An independent plain-JS replay of the seeded
+      project matched the SQL: 37 finished, median 3.5 / mean 3.4 / p90
+      5.8 days, 27 withoutStart, identical bucket counts (4,12,20,1,0,0).
+- [x] Frontend: `CycleTimeChart` (stat row led by the median, histogram on
+      the same chart tokens, text summary + table view, empty state that
+      explains the no-start case). Live: values equal the verified
+      numbers, six labels, 4 bars for 4 non-empty buckets, light/dark bar
+      colors differ, tooltip via keyboard, empty project shows the message.
+- Still unverified, as in slice 1: the tooltip under a real mouse hover.
+- Observation (seed, not a bug): 27 of 64 seeded finishes skip in-progress
+  by design (40%), so the demo shows a large withoutStart.
+
 - [ ] Slice 3 — sprint velocity (decision pending: event replay vs snapshot
       at sprint completion; `complete()` clears `issues.sprint_id`)
 - [ ] Slice 4 — breakdowns (by status, by label)

@@ -4,4 +4,5 @@
 export const analyticsKeys = {
   all: (projectId: string) => ["analytics", projectId] as const,
   throughput: (projectId: string, weeks: number) => [...analyticsKeys.all(projectId), "throughput", weeks] as const,
+  cycleTime: (projectId: string, weeks: number) => [...analyticsKeys.all(projectId), "cycle-time", weeks] as const,
 };

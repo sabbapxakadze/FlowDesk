@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router";
 import { useProjects } from "../../entities/project";
 import { useAuth } from "../../shared/auth/useAuth";
 import { Card, Skeleton } from "../../shared/ui";
+import { CycleTimeChart } from "../../widgets/cycle-time-chart";
 import { ThroughputChart } from "../../widgets/throughput-chart";
 
 // Fixed window for this first slice; a URL-driven range selector (same
@@ -37,6 +38,14 @@ export function ProjectAnalyticsPage() {
         <h2 className="mb-2 text-lg font-semibold">Throughput</h2>
         <p className="mb-3 text-sm text-[var(--color-text-muted)]">Issues completed per week.</p>
         <ThroughputChart organizationId={organization!.id} projectId={project.id} weeks={WEEKS} />
+      </Card>
+
+      <Card className="mt-4">
+        <h2 className="mb-2 text-lg font-semibold">Cycle time</h2>
+        <p className="mb-3 text-sm text-[var(--color-text-muted)]">
+          How long finished issues took, from first in progress to done.
+        </p>
+        <CycleTimeChart organizationId={organization!.id} projectId={project.id} weeks={WEEKS} />
       </Card>
     </main>
   );

@@ -17,3 +17,12 @@ analyticsRouter.get(
   requirePermission("view_issue"),
   analyticsController.getThroughput,
 );
+
+analyticsRouter.get(
+  "/organizations/:organizationId/projects/:projectId/analytics/cycle-time",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requirePermission("view_issue"),
+  analyticsController.getCycleTime,
+);

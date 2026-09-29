@@ -29,6 +29,13 @@ module and `GET .../analytics/throughput`; Recharts on new semantic
 proven to fail when the previous-status check is removed, and an
 independent JS replay matched the SQL for all 12 seeded weeks. Not yet
 verified: tooltip on a real mouse hover (verified via keyboard only).
+Phase 8 slice 2 (cycle time) is done: ADR 0010 defines it as first
+entry into in_progress to the first completion after it, with
+never-started issues reported as `withoutStart` instead of hidden;
+median leads, plus mean, p90 and six buckets. The replay CTE is now
+shared with throughput. Mutation checks confirmed the tests catch a
+MAX-instead-of-MIN start and a missing at-or-after-start guard, and an
+independent JS replay matched the SQL exactly.
 Slice 3 (sprint velocity) has an open decision: `complete()` clears
 `issues.sprint_id`, so past sprint membership must come from events or a
 snapshot taken at completion.

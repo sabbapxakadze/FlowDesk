@@ -83,3 +83,38 @@ describe("analytics — HTTP", () => {
       .expect(401);
   });
 });
+
+describe("analytics cycle-time — HTTP", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("returns the summary and all six buckets, with nulls, for a project with no finished issues", async () => {
+    const a = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(a.accessToken, a.organizationId, "AAA");
+
+    const res = await request(app)
+      .get(`/api/v1/organizations/${a.organizationId}/projects/${projectId}/analytics/cycle-time`)
+      .set("Authorization", `Bearer ${a.accessToken}`)
+      .expect(200);
+
+    expect(res.body.summary).toEqual({
+      completed: 0,
+      withoutStart: 0,
+      averageDays: null,
+      medianDays: null,
+      p90Days: null,
+    });
+    expect(res.body.distribution).toHaveLength(6);
+  });
+
+  it("rejects an out-of-range ?weeks= and a non-member", async () => {
+    const a = await registerAndLogIn("a@example.com", "Org A");
+    const b = await registerAndLogIn("b@example.com", "Org B");
+    const projectId = await createProject(a.accessToken, a.organizationId, "AAA");
+    const url = `/api/v1/organizations/${a.organizationId}/projects/${projectId}/analytics/cycle-time`;
+
+    await request(app).get(`${url}?weeks=0`).set("Authorization", `Bearer ${a.accessToken}`).expect(400);
+    await request(app).get(url).set("Authorization", `Bearer ${b.accessToken}`).expect(403);
+  });
+});

@@ -2,11 +2,11 @@ import { z } from "zod";
 
 // coerce because query params arrive as strings. 52 = a year of weekly
 // bars, plenty for a chart; the cap keeps the generate_series bounded.
-export const throughputQuerySchema = z.object({
+export const weeksQuerySchema = z.object({
   weeks: z.coerce.number().int().min(1).max(52).default(12),
 });
 
-export type ThroughputQuery = z.infer<typeof throughputQuerySchema>;
+export type WeeksQuery = z.infer<typeof weeksQuerySchema>;
 
 // weekStart is the Monday (UTC) that begins the week, as YYYY-MM-DD.
 // See docs/adr/0009-analytics-from-events.md for what "completed" means.
@@ -21,3 +21,29 @@ export const throughputResponseSchema = z.object({
 
 export type ThroughputPoint = z.infer<typeof throughputPointSchema>;
 export type ThroughputResponse = z.infer<typeof throughputResponseSchema>;
+
+// One value per finished issue: first entry into in_progress -> first
+// completion after it. Issues that finished without ever being in progress
+// have no cycle time; they are counted in withoutStart, not hidden.
+// Days carry one decimal. See docs/adr/0010-cycle-time-definition.md.
+export const cycleTimeSummarySchema = z.object({
+  completed: z.number().int().nonnegative(),
+  withoutStart: z.number().int().nonnegative(),
+  averageDays: z.number().nullable(),
+  medianDays: z.number().nullable(),
+  p90Days: z.number().nullable(),
+});
+
+export const cycleTimeBucketSchema = z.object({
+  label: z.string(),
+  count: z.number().int().nonnegative(),
+});
+
+export const cycleTimeResponseSchema = z.object({
+  summary: cycleTimeSummarySchema,
+  distribution: z.array(cycleTimeBucketSchema),
+});
+
+export type CycleTimeSummary = z.infer<typeof cycleTimeSummarySchema>;
+export type CycleTimeBucket = z.infer<typeof cycleTimeBucketSchema>;
+export type CycleTimeResponse = z.infer<typeof cycleTimeResponseSchema>;
