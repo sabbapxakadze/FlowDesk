@@ -463,6 +463,11 @@ pnpm db:migrate     # apply migrations to $DATABASE_URL
 pnpm db:seed        # idempotent local demo data
 ```
 
+A Husky `pre-push` hook (`.husky/pre-push`) runs `pnpm typecheck && pnpm lint
+&& pnpm test` before every `git push`, so Postgres must be running. It is
+installed by `pnpm install` (the `prepare` script). Skip once with
+`git push --no-verify`.
+
 Local Postgres setup (one-time, not automated — a fresh clone needs this
 before `pnpm db:migrate` works): create a least-privilege role and the two
 databases, then put the connection strings in `apps/api/.env` (copy

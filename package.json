@@ -17,6 +17,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "test": "vitest run",
+    "prepare": "husky",
     "db:generate": "pnpm --filter @flowdesk/api db:generate",
     "db:migrate": "pnpm --filter @flowdesk/api db:migrate",
     "db:seed": "pnpm --filter @flowdesk/api db:seed"
@@ -31,6 +32,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "figlet": "^1.11.4",
+    "husky": "^9.1.7",
     "prettier": "^3.9.8",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.0",

@@ -1,0 +1,3 @@
+# Runs before every git push; a failure cancels the push.
+# Skip in an emergency with: git push --no-verify
+pnpm typecheck && pnpm lint && pnpm test
