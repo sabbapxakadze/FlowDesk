@@ -1138,8 +1138,56 @@ Slice 4 (file attachments: validation, storage, signed URLs) shipped:
 
 ## Phase 8 — Analytics
 
-- [ ] Sprint velocity, cycle time, throughput, breakdowns
-- [ ] Recharts dashboard on the semantic token palette
+Planned as 5 slices: (1) foundations + throughput, (2) cycle time,
+(3) sprint velocity, (4) breakdowns, (5) dashboard assembly + performance
+(`EXPLAIN ANALYZE` at volume, date-range in the URL).
+
+Slice 1 (foundations + throughput) shipped:
+
+- [x] New ADR 0009: analytics are computed **on read from `issue_events`**
+      (no rollup tables), transitions come from **replaying each issue's
+      events in order** (`LAG`, default `todo`), "completed" = a real
+      transition into `done` (reopened-then-redone counts again), UTC
+      Monday weeks, issues counted not points, per project with the
+      existing `view_issue` permission.
+- [x] New `analytics` module (own module: a growing set of read-only
+      cross-table queries), `GET .../projects/:projectId/analytics/
+      throughput?weeks=` (default 12, max 52, zero-filled). The reason for
+      the replay: `issue.updated` carries `status` even when it didn't
+      change (the edit form resends it), so trusting the payload would
+      invent completions.
+- [x] Proved, not assumed: the two "trap" tests (unchanged-status edit,
+      same-column reorder) were confirmed to **fail** when the
+      previous-status check is removed, then restored. An independent
+      plain-JS replay over the 100 seeded issues matched the SQL for all
+      12 weeks (67 completions, 0 mismatches).
+- [x] Seed: an idempotent "Analytics Demo" project (deterministic PRNG,
+      100 issues, 234 backdated events incl. reopens and unchanged-status
+      edits); `SEED_ORG_SLUG` seeds it into an existing org.
+- [x] Frontend: Recharts on new semantic tokens `--color-chart-primary/
+      -grid/-axis` (light + dark redefinitions), `entities/analytics`,
+      `widgets/throughput-chart` (thin rounded bars, no legend for one
+      series, text summary + "View as table", empty state), page at
+      `/projects/:id/analytics`, linked from the project page.
+- [x] Verified live (token-lean: `find`/`evaluate`, devtools closed): 11
+      bars for 12 weeks (the zero week draws no bar; the table lists all
+      12) and table values equal the verified numbers; bar contrast vs the
+      surface 4.18:1 light / 6.89:1 dark (≥3:1 needed), grid deliberately
+      ~1.2:1; colors change with `data-theme`; a project with no
+      completions shows the empty state.
+- **Not verified:** tooltip on real *mouse* hover — in this automated
+  browser Recharts never reacted to pointer moves (it did receive them).
+  The tooltip component itself is verified through keyboard focus (renders
+  "Week of Jul 13 · 4 issues completed"). Worth one manual hover.
+- Observed, not fixed (out of scope): a full reload right after login can
+  bounce to `/login` (refresh-token rotation), as noted since slice 1.
+
+- [ ] Slice 2 — cycle time
+- [ ] Slice 3 — sprint velocity (decision pending: event replay vs snapshot
+      at sprint completion; `complete()` clears `issues.sprint_id`)
+- [ ] Slice 4 — breakdowns (by status, by label)
+- [ ] Slice 5 — dashboard assembly, date range in the URL, query
+      performance at volume
 
 ## Phase 9 — Production
 

@@ -5,6 +5,7 @@ import { ProjectDetailPage } from "../pages/project-detail/ProjectDetailPage";
 import { ProjectBoardPage } from "../pages/project-board/ProjectBoardPage";
 import { ProjectSprintsPage } from "../pages/project-sprints/ProjectSprintsPage";
 import { IssueDetailPage } from "../pages/issue-detail/IssueDetailPage";
+import { ProjectAnalyticsPage } from "../pages/project-analytics/ProjectAnalyticsPage";
 import { SearchPage } from "../pages/search/SearchPage";
 import { RegisterPage } from "../pages/register/RegisterPage";
 import { LoginPage } from "../pages/login/LoginPage";
@@ -54,6 +55,14 @@ export function App() {
             element={
               <RequireAuth>
                 <ProjectSprintsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/projects/:projectId/analytics"
+            element={
+              <RequireAuth>
+                <ProjectAnalyticsPage />
               </RequireAuth>
             }
           />

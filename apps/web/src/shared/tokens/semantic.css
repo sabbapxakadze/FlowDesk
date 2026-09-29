@@ -36,6 +36,13 @@
   --color-status-todo: var(--color-gray-400);
   --color-status-in-progress: var(--color-accent-500);
   --color-status-done: var(--color-emerald-600);
+
+  /* Charts (Phase 8). Semantic, so a chart never hardcodes a color and
+     dark mode is a redefinition here, not a flip in the component. Grid
+     and axis are deliberately recessive; the mark carries the color. */
+  --color-chart-primary: var(--color-accent-600);
+  --color-chart-grid: var(--color-gray-200);
+  --color-chart-axis: var(--color-gray-500);
 }
 
 /**
@@ -71,6 +78,10 @@
     --color-status-todo: var(--color-gray-400);
     --color-status-in-progress: var(--color-accent-400);
     --color-status-done: var(--color-emerald-400);
+
+    --color-chart-primary: var(--color-accent-400);
+    --color-chart-grid: var(--color-gray-800);
+    --color-chart-axis: var(--color-gray-400);
   }
 }
 
@@ -94,4 +105,8 @@
   --color-status-todo: var(--color-gray-400);
   --color-status-in-progress: var(--color-accent-400);
   --color-status-done: var(--color-emerald-400);
+
+  --color-chart-primary: var(--color-accent-400);
+  --color-chart-grid: var(--color-gray-800);
+  --color-chart-axis: var(--color-gray-400);
 }

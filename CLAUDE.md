@@ -16,8 +16,22 @@ win.
 
 ## Current phase
 
-**Phase 7 — Search, notifications, uploads** is **fully complete** (four
-slices). See `docs/roadmap.md`. Phase 6 (Real-time) is fully complete.
+**Phase 8 — Analytics** is in progress (5 slices planned, see
+`docs/roadmap.md`). Phase 7 (Search, notifications, uploads) and Phase 6
+(Real-time) are fully complete.
+
+Phase 8 slice 1 (foundations + throughput) is done: ADR 0009 decides
+analytics are computed on read from `issue_events`, with transitions found
+by replaying each issue's events in order (an `issue.updated` can carry an
+unchanged `status`, so the payload alone can't be trusted). New `analytics`
+module and `GET .../analytics/throughput`; Recharts on new semantic
+`--color-chart-*` tokens; `/projects/:id/analytics`. The trap tests were
+proven to fail when the previous-status check is removed, and an
+independent JS replay matched the SQL for all 12 seeded weeks. Not yet
+verified: tooltip on a real mouse hover (verified via keyboard only).
+Slice 3 (sprint velocity) has an open decision: `complete()` clears
+`issues.sprint_id`, so past sprint membership must come from events or a
+snapshot taken at completion.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,
 time-limited download tokens, chosen with the owner because S3 and

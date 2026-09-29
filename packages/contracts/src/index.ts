@@ -10,3 +10,4 @@ export * from "./sprint.js";
 export * from "./search.js";
 export * from "./notification.js";
 export * from "./attachment.js";
+export * from "./analytics.js";

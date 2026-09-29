@@ -112,6 +112,9 @@ export function ProjectDetailPage() {
           ← All projects
         </Link>
         <div className="flex items-center gap-4">
+          <Link to={`/projects/${project.id}/analytics`} className="text-sm text-[var(--color-text-link)] underline">
+            Analytics →
+          </Link>
           <Link to={`/projects/${project.id}/sprints`} className="text-sm text-[var(--color-text-link)] underline">
             Sprints →
           </Link>
