@@ -44,6 +44,16 @@ there is no schema change (ADR 0011). "Done" is judged as of the close,
 not today. The tests use the real sprint/issue repositories, and mutation
 checks exposed and fixed a too-weak test before it shipped.
 
+Phase 8 slice 4 (breakdowns) is done: ADR 0012 draws the line that history
+(throughput, cycle time, velocity) comes from issue_events while the
+present (issues per status, open issues per label) comes straight from the
+tables. Label counts are not additive (an issue with two labels counts under
+both) and the UI and ADR say so; unlabeled and hidden-label counts are shown
+instead of dropped. Mutation checks again exposed two test gaps (unlabeled
+isolation, and the label-organization guard needing a hand-inserted bad
+row) which were fixed before shipping. Slice 5 (dashboard assembly, date
+range in the URL, query performance at volume) is the last in Phase 8.
+
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,
 time-limited download tokens, chosen with the owner because S3 and
 Docker are explicitly Phase 9 in the stack list. New `lib/storage.ts`

@@ -1,7 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db, pool } from "./client.js";
-import { issueEvents, issues, organizationMembers, organizations, projects, sprints, users } from "./schema/index.js";
+import {
+  issueEvents,
+  issueLabels,
+  issues,
+  labels,
+  organizationMembers,
+  organizations,
+  projects,
+  sprints,
+  users,
+} from "./schema/index.js";
 
 // Small deterministic PRNG (mulberry32): the same seed always yields the
 // same history, so the chart looks the same every time it is rebuilt.
@@ -44,6 +54,7 @@ async function seedAnalyticsDemo(organizationId: string) {
     // Issues were seeded by an earlier run; still make sure the sprint
     // history exists (added later, so older seeded orgs need it too).
     await seedSprintHistory(demoProject.id, organizationId);
+    await seedLabels(demoProject.id, organizationId);
     return;
   }
 
@@ -125,6 +136,54 @@ async function seedAnalyticsDemo(organizationId: string) {
   await db.update(projects).set({ nextIssueNumber: 101 }).where(eq(projects.id, demoProject.id));
   console.log(`Seeded ${issueRows.length} analytics demo issues (${eventRows.length} events) in project ANL.`);
   await seedSprintHistory(demoProject.id, organizationId);
+  await seedLabels(demoProject.id, organizationId);
+}
+
+/**
+ * Five labels attached to a deterministic ~65% of the project's issues (a
+ * quarter of those get a second label), skewed so some labels are clearly
+ * more common than others — enough variety for the label breakdown to show
+ * something. Rows only, no issue.label_added events: a seed shortcut, unlike
+ * the real attach path. Skipped when the org already has a label named
+ * "bug", so re-running is a no-op and an org's own labels are left alone.
+ */
+async function seedLabels(projectId: string, organizationId: string) {
+  const existing = await db.query.labels.findFirst({
+    where: and(eq(labels.organizationId, organizationId), eq(labels.name, "bug")),
+  });
+  if (existing) return;
+
+  const names = ["bug", "feature", "design", "docs", "tech-debt"];
+  const colors = ["#dc2626", "#2563eb", "#9333ea", "#059669", "#d97706"];
+  await db
+    .insert(labels)
+    .values(names.map((name, i) => ({ organizationId, name, color: colors[i]! })))
+    .onConflictDoNothing();
+  const labelRows = await db
+    .select({ id: labels.id, name: labels.name })
+    .from(labels)
+    .where(eq(labels.organizationId, organizationId));
+  const labelIds = names.map((name) => labelRows.find((l) => l.name === name)!.id);
+
+  const projectIssues = await db
+    .select({ id: issues.id })
+    .from(issues)
+    .where(eq(issues.projectId, projectId))
+    .orderBy(asc(issues.number));
+
+  const rand = mulberry32(34);
+  const rows: (typeof issueLabels.$inferInsert)[] = [];
+  for (const issue of projectIssues) {
+    if (rand() < 0.35) continue;
+    const first = Math.floor(rand() ** 1.6 * labelIds.length);
+    rows.push({ issueId: issue.id, labelId: labelIds[first]! });
+    if (rand() < 0.25) {
+      const second = (first + 1 + Math.floor(rand() * (labelIds.length - 1))) % labelIds.length;
+      rows.push({ issueId: issue.id, labelId: labelIds[second]! });
+    }
+  }
+  await db.insert(issueLabels).values(rows).onConflictDoNothing();
+  console.log(`Seeded ${names.length} labels attached to ${rows.length} issue-label pairs in project ANL.`);
 }
 
 /**

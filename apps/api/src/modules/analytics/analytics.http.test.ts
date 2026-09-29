@@ -147,3 +147,43 @@ describe("analytics velocity — HTTP", () => {
     await request(app).get(url).set("Authorization", `Bearer ${b.accessToken}`).expect(403);
   });
 });
+
+describe("analytics breakdown — HTTP", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("returns three zero statuses and empty lists for a project with no issues", async () => {
+    const a = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(a.accessToken, a.organizationId, "AAA");
+
+    const res = await request(app)
+      .get(`/api/v1/organizations/${a.organizationId}/projects/${projectId}/analytics/breakdown`)
+      .set("Authorization", `Bearer ${a.accessToken}`)
+      .expect(200);
+
+    expect(res.body).toEqual({
+      total: 0,
+      openTotal: 0,
+      byStatus: [
+        { status: "todo", count: 0 },
+        { status: "in_progress", count: 0 },
+        { status: "done", count: 0 },
+      ],
+      byLabel: [],
+      unlabeled: 0,
+      hiddenLabels: 0,
+    });
+  });
+
+  it("rejects a member of a different organization with a 403", async () => {
+    const a = await registerAndLogIn("a@example.com", "Org A");
+    const b = await registerAndLogIn("b@example.com", "Org B");
+    const projectId = await createProject(a.accessToken, a.organizationId, "AAA");
+
+    await request(app)
+      .get(`/api/v1/organizations/${a.organizationId}/projects/${projectId}/analytics/breakdown`)
+      .set("Authorization", `Bearer ${b.accessToken}`)
+      .expect(403);
+  });
+});

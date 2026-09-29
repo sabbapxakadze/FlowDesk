@@ -1251,7 +1251,40 @@ Slice 3 (sprint velocity) shipped:
       with no sprints shows the empty message.
 - Still unverified, as in slices 1-2: the tooltip under a real mouse hover.
 
-- [ ] Slice 4 — breakdowns (by status, by label)
+Slice 4 (breakdowns) shipped:
+
+- [x] ADR 0012: breakdowns are a snapshot of **current state**, so they read
+      the `issues` / `issue_labels` tables directly. The rule this fixes in
+      place: history (throughput, cycle time, velocity) comes from
+      `issue_events`; the present comes from the tables. Plain Drizzle
+      group-by queries, no raw SQL.
+- [x] `GET .../analytics/breakdown`: issues per status (always three, in
+      workflow order, zero-filled) and **open** issues per label (top 10 by
+      count, ties by name). An issue with two labels counts under both, so
+      label counts are not additive; the UI says so. Two gaps are reported,
+      not hidden: `unlabeled` open issues and `hiddenLabels` past the top 10.
+      Both tables are tenant-scoped (labels are org-level, so the label's org
+      is filtered too, not just the issue's).
+- [x] Mutation checks found real test gaps, fixed before shipping: dropping
+      the project filter from the *unlabeled* query passed at first (my
+      isolation test had no unlabeled issue elsewhere to leak), and removing
+      the label-organization guard passed because normal code can never
+      attach a foreign label. Added an unlabeled-elsewhere case and a test
+      that inserts a bad cross-tenant row by hand. All five breaks now fail
+      the matching test.
+- [x] Seed: `seedLabels` (five labels, a deterministic ~65% of issues
+      labelled, some with two), idempotent, runs on both the fresh and the
+      upgrade path. Rows only, no label events (a seed shortcut).
+- [x] Independent plain-JS tally matched the endpoint exactly: 100 issues,
+      37 open; todo 24 / in progress 13 / done 63; bug 16, feature 7, docs 5,
+      design 2; 14 unlabeled. The label counts sum to 30 over 23 labelled open
+      issues, which is the non-additive rule visible in real data.
+- [x] Frontend: `BreakdownCharts` (status columns, horizontal label bars, one
+      chart color for both, text summaries, tables, notes for the gaps, empty
+      states). Live: numbers match, keyboard tooltips, table rows, light/dark
+      bar colors differ, project with no issues shows the empty message.
+- Still unverified, as in slices 1-3: the tooltip under a real mouse hover.
+
 - [ ] Slice 5 — dashboard assembly, date range in the URL, query
       performance at volume
 

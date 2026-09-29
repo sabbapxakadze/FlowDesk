@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import {
+  breakdownResponseSchema,
   cycleTimeResponseSchema,
   sprintsQuerySchema,
   throughputResponseSchema,
@@ -57,4 +58,13 @@ export async function getVelocity(req: Request, res: Response) {
       data: rows.map((row) => ({ ...row, completedAt: new Date(row.completedAt).toISOString() })),
     }),
   );
+}
+
+export async function getBreakdown(req: Request, res: Response) {
+  if (!req.ctx?.projectId) {
+    throw new Error("getBreakdown requires requireProject to have run first");
+  }
+
+  const result = await analyticsService.getBreakdown(req.ctx.organizationId, req.ctx.projectId);
+  res.json(breakdownResponseSchema.parse(result));
 }

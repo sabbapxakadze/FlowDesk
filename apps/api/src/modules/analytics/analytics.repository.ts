@@ -1,5 +1,6 @@
-import { sql } from "drizzle-orm";
+import { and, asc, desc, eq, ne, notExists, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
+import { issueLabels, issues, labels } from "../../db/schema/index.js";
 
 /**
  * The shared replay from ADR 0009, as a CTE fragment both metrics splice
@@ -274,4 +275,57 @@ export async function sprintVelocity(
     committed: row.committed,
     completed: row.completed,
   }));
+}
+
+// --- Breakdowns: a snapshot of CURRENT state, so these read the tables
+// directly (no event replay) — docs/adr/0012-breakdowns-read-current-state.md.
+
+/** One row per status that has issues; the service zero-fills the rest. */
+export async function statusCounts(organizationId: string, projectId: string) {
+  return db
+    .select({ status: issues.status, count: sql<number>`count(*)::int` })
+    .from(issues)
+    .where(and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId)))
+    .groupBy(issues.status);
+}
+
+/**
+ * Open (not done) issues per label, most-used first, ties by name. An issue
+ * with two labels appears under both — issue_labels has one row per
+ * (issue, label), so count(*) per label is a count of distinct issues.
+ * Both the issue and the label are scoped to the organization: the label
+ * table is org-level, and the join must not be the only tenant guard.
+ */
+export async function openLabelCounts(organizationId: string, projectId: string) {
+  return db
+    .select({ labelId: labels.id, name: labels.name, count: sql<number>`count(*)::int` })
+    .from(issueLabels)
+    .innerJoin(issues, eq(issueLabels.issueId, issues.id))
+    .innerJoin(labels, eq(issueLabels.labelId, labels.id))
+    .where(
+      and(
+        eq(issues.organizationId, organizationId),
+        eq(issues.projectId, projectId),
+        eq(labels.organizationId, organizationId),
+        ne(issues.status, "done"),
+      ),
+    )
+    .groupBy(labels.id, labels.name)
+    .orderBy(desc(sql`count(*)`), asc(labels.name));
+}
+
+/** Open issues that carry no label at all. */
+export async function openUnlabeledCount(organizationId: string, projectId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(issues)
+    .where(
+      and(
+        eq(issues.organizationId, organizationId),
+        eq(issues.projectId, projectId),
+        ne(issues.status, "done"),
+        notExists(db.select({ one: sql`1` }).from(issueLabels).where(eq(issueLabels.issueId, issues.id))),
+      ),
+    );
+  return row?.count ?? 0;
 }

@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { resetDatabase } from "../../db/test-utils.js";
-import { issueEvents, issues, organizations, projects, sprints, users } from "../../db/schema/index.js";
+import { issueEvents, issueLabels, issues, labels, organizations, projects, sprints, users } from "../../db/schema/index.js";
 import * as issuesRepository from "../issues/issues.repository.js";
 import * as sprintsRepository from "../sprints/sprints.repository.js";
 import * as analyticsRepository from "./analytics.repository.js";
+import * as analyticsService from "./analytics.service.js";
 
 // Wednesday 2026-03-18 -> current UTC week starts Monday 2026-03-16.
 const NOW = new Date("2026-03-18T12:00:00Z");
@@ -567,5 +568,187 @@ describe("analytics repository — sprint velocity", () => {
     const rows = await analyticsRepository.sprintVelocity(a.org.id, a.project.id, 8);
 
     expect(rows.map((r) => r.name)).toEqual(["Mine"]);
+  });
+});
+
+async function makeLabel(s: Seeded, name: string) {
+  const [label] = await db.insert(labels).values({ organizationId: s.org.id, name, color: "#112233" }).returning();
+  return label!;
+}
+
+async function attachLabel(s: Seeded, issueId: string, labelId: string) {
+  await issuesRepository.attachLabel({ organizationId: s.org.id, issueId, labelId, actorId: s.user.id });
+}
+
+describe("analytics — breakdown (current state)", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("returns all three statuses in workflow order, zero-filled, with the totals", async () => {
+    const s = await seed("org", "PRJ");
+    await makeIssue(s); // stays todo
+    const doing = await makeIssue(s);
+    const done = await makeIssue(s);
+    await setStatus(s, doing.id, "in_progress");
+    await setStatus(s, done.id, "done");
+
+    const result = await analyticsService.getBreakdown(s.org.id, s.project.id);
+
+    expect(result.byStatus).toEqual([
+      { status: "todo", count: 1 },
+      { status: "in_progress", count: 1 },
+      { status: "done", count: 1 },
+    ]);
+    expect(result.total).toBe(3);
+    expect(result.openTotal).toBe(2);
+  });
+
+  it("zero-fills statuses that have no issues", async () => {
+    const s = await seed("org", "PRJ");
+
+    const result = await analyticsService.getBreakdown(s.org.id, s.project.id);
+
+    expect(result.byStatus).toEqual([
+      { status: "todo", count: 0 },
+      { status: "in_progress", count: 0 },
+      { status: "done", count: 0 },
+    ]);
+  });
+
+  it("counts a label's OPEN issues only — a done issue's label is excluded", async () => {
+    const s = await seed("org", "PRJ");
+    const bug = await makeLabel(s, "bug");
+    const open = await makeIssue(s);
+    const finished = await makeIssue(s);
+    await attachLabel(s, open.id, bug.id);
+    await attachLabel(s, finished.id, bug.id);
+    await setStatus(s, finished.id, "done");
+
+    const result = await analyticsService.getBreakdown(s.org.id, s.project.id);
+
+    expect(result.byLabel).toEqual([{ labelId: bug.id, name: "bug", count: 1 }]);
+  });
+
+  it("counts an issue with two labels under both of them", async () => {
+    const s = await seed("org", "PRJ");
+    const bug = await makeLabel(s, "bug");
+    const ui = await makeLabel(s, "ui");
+    const issue = await makeIssue(s);
+    await attachLabel(s, issue.id, bug.id);
+    await attachLabel(s, issue.id, ui.id);
+
+    const result = await analyticsService.getBreakdown(s.org.id, s.project.id);
+
+    expect(result.byLabel.map((l) => [l.name, l.count])).toEqual([
+      ["bug", 1],
+      ["ui", 1],
+    ]);
+    expect(result.openTotal).toBe(1); // one issue, two label rows: not additive
+  });
+
+  it("counts open issues with no label as unlabeled, and ignores done ones", async () => {
+    const s = await seed("org", "PRJ");
+    const bug = await makeLabel(s, "bug");
+    const labelled = await makeIssue(s);
+    await attachLabel(s, labelled.id, bug.id);
+    await makeIssue(s); // open, no label -> counts
+    const doneNoLabel = await makeIssue(s);
+    await setStatus(s, doneNoLabel.id, "done"); // done, no label -> ignored
+
+    const result = await analyticsService.getBreakdown(s.org.id, s.project.id);
+
+    expect(result.unlabeled).toBe(1);
+  });
+
+  it("orders labels by open-issue count, ties by name", async () => {
+    const s = await seed("org", "PRJ");
+    const [zed, alpha, popular] = [await makeLabel(s, "zed"), await makeLabel(s, "alpha"), await makeLabel(s, "popular")];
+    const [i1, i2, i3] = [await makeIssue(s), await makeIssue(s), await makeIssue(s)];
+    await attachLabel(s, i1.id, zed.id);
+    await attachLabel(s, i2.id, alpha.id);
+    await attachLabel(s, i1.id, popular.id);
+    await attachLabel(s, i2.id, popular.id);
+    await attachLabel(s, i3.id, popular.id);
+
+    const result = await analyticsService.getBreakdown(s.org.id, s.project.id);
+
+    expect(result.byLabel.map((l) => [l.name, l.count])).toEqual([
+      ["popular", 3],
+      ["alpha", 1], // tie with zed at 1: name breaks it
+      ["zed", 1],
+    ]);
+  });
+
+  it("returns the top 10 labels and says how many were left out", async () => {
+    const s = await seed("org", "PRJ");
+    for (let n = 1; n <= 12; n++) {
+      const issue = await makeIssue(s);
+      const label = await makeLabel(s, `label-${String(n).padStart(2, "0")}`);
+      await attachLabel(s, issue.id, label.id);
+    }
+
+    const result = await analyticsService.getBreakdown(s.org.id, s.project.id);
+
+    expect(result.byLabel).toHaveLength(10);
+    expect(result.hiddenLabels).toBe(2);
+  });
+
+  it("never counts another project's or another organization's issues or labels", async () => {
+    const a = await seed("org-a", "AAA");
+    const [otherProject] = await db
+      .insert(projects)
+      .values({ organizationId: a.org.id, name: "Other", key: "OTH" })
+      .returning();
+    const b = await seed("org-b", "BBB");
+
+    const bugA = await makeLabel(a, "bug");
+    const mine = await makeIssue(a);
+    await attachLabel(a, mine.id, bugA.id);
+
+    // Same org, different project, same label.
+    const elsewhere = await issuesRepository.create({
+      organizationId: a.org.id,
+      projectId: otherProject!.id,
+      title: "Elsewhere",
+      description: null,
+      reporterId: a.user.id,
+    });
+    await attachLabel(a, elsewhere.id, bugA.id);
+
+    // Different organization entirely.
+    const bugB = await makeLabel(b, "bug");
+    const theirs = await makeIssue(b);
+    await attachLabel(b, theirs.id, bugB.id);
+
+    // Unlabeled open issues elsewhere must not leak into "unlabeled" either.
+    await issuesRepository.create({
+      organizationId: a.org.id,
+      projectId: otherProject!.id,
+      title: "Elsewhere, no label",
+      description: null,
+      reporterId: a.user.id,
+    });
+    await makeIssue(b);
+
+    const result = await analyticsService.getBreakdown(a.org.id, a.project.id);
+
+    expect(result.total).toBe(1);
+    expect(result.byLabel).toEqual([{ labelId: bugA.id, name: "bug", count: 1 }]);
+    expect(result.unlabeled).toBe(0);
+  });
+
+  it("does not return another organization's label even if a bad row links it to this org's issue", async () => {
+    const a = await seed("org-a", "AAA");
+    const b = await seed("org-b", "BBB");
+    const foreignLabel = await makeLabel(b, "foreign");
+    const issue = await makeIssue(a);
+    // attachLabel refuses this; the row is inserted by hand to prove the
+    // query itself holds the tenant line, not only the code that writes rows.
+    await db.insert(issueLabels).values({ issueId: issue.id, labelId: foreignLabel.id });
+
+    const result = await analyticsService.getBreakdown(a.org.id, a.project.id);
+
+    expect(result.byLabel).toEqual([]);
   });
 });

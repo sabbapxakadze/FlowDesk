@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router";
 import { useProjects } from "../../entities/project";
 import { useAuth } from "../../shared/auth/useAuth";
 import { Card, Skeleton } from "../../shared/ui";
+import { BreakdownCharts } from "../../widgets/breakdown-charts";
 import { CycleTimeChart } from "../../widgets/cycle-time-chart";
 import { ThroughputChart } from "../../widgets/throughput-chart";
 import { VelocityChart } from "../../widgets/velocity-chart";
@@ -56,6 +57,12 @@ export function ProjectAnalyticsPage() {
           Issues completed in each recent sprint, as of the day it closed.
         </p>
         <VelocityChart organizationId={organization!.id} projectId={project.id} sprints={SPRINTS} />
+      </Card>
+
+      <Card className="mt-4">
+        <h2 className="mb-2 text-lg font-semibold">Where the work is</h2>
+        <p className="mb-3 text-sm text-[var(--color-text-muted)]">A snapshot of the project right now, not a history.</p>
+        <BreakdownCharts organizationId={organization!.id} projectId={project.id} />
       </Card>
     </main>
   );

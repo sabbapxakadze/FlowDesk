@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { issueStatusSchema } from "./issue.js";
 
 // coerce because query params arrive as strings. 52 = a year of weekly
 // bars, plenty for a chart; the cap keeps the generate_series bounded.
@@ -74,3 +75,20 @@ export const velocityResponseSchema = z.object({
 
 export type VelocitySprint = z.infer<typeof velocitySprintSchema>;
 export type VelocityResponse = z.infer<typeof velocityResponseSchema>;
+
+// A snapshot of the CURRENT state (not history), read from the tables rather
+// than the event log — see docs/adr/0012-breakdowns-read-current-state.md.
+// byStatus always has the three statuses in workflow order. byLabel is the
+// top labels by OPEN issue count; an issue with two labels is counted under
+// both, so those counts can sum to more than openTotal. unlabeled = open
+// issues with no label; hiddenLabels = labels beyond the ones returned.
+export const breakdownResponseSchema = z.object({
+  total: z.number().int().nonnegative(),
+  openTotal: z.number().int().nonnegative(),
+  byStatus: z.array(z.object({ status: issueStatusSchema, count: z.number().int().nonnegative() })),
+  byLabel: z.array(z.object({ labelId: z.uuid(), name: z.string(), count: z.number().int().nonnegative() })),
+  unlabeled: z.number().int().nonnegative(),
+  hiddenLabels: z.number().int().nonnegative(),
+});
+
+export type BreakdownResponse = z.infer<typeof breakdownResponseSchema>;

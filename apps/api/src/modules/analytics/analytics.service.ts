@@ -20,3 +20,31 @@ export async function getVelocity(organizationId: string, projectId: string, spr
     rows.length === 0 ? null : Math.round((rows.reduce((sum, r) => sum + r.completed, 0) / rows.length) * 10) / 10;
   return { averageCompleted, rows };
 }
+
+const TOP_LABELS = 10;
+const STATUS_ORDER = ["todo", "in_progress", "done"] as const;
+
+// Shaping, not querying: zero-fill the three statuses in workflow order,
+// take the top labels, and say how many were left out so a long tail is
+// acknowledged rather than silently cut.
+export async function getBreakdown(organizationId: string, projectId: string) {
+  const [statusRows, labelRows, unlabeled] = await Promise.all([
+    analyticsRepository.statusCounts(organizationId, projectId),
+    analyticsRepository.openLabelCounts(organizationId, projectId),
+    analyticsRepository.openUnlabeledCount(organizationId, projectId),
+  ]);
+
+  const counts = new Map<string, number>(statusRows.map((row) => [row.status, row.count]));
+  const byStatus = STATUS_ORDER.map((status) => ({ status, count: counts.get(status) ?? 0 }));
+  const total = byStatus.reduce((sum, row) => sum + row.count, 0);
+  const openTotal = total - (counts.get("done") ?? 0);
+
+  return {
+    total,
+    openTotal,
+    byStatus,
+    byLabel: labelRows.slice(0, TOP_LABELS),
+    unlabeled,
+    hiddenLabels: Math.max(0, labelRows.length - TOP_LABELS),
+  };
+}

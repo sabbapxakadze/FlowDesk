@@ -35,3 +35,12 @@ analyticsRouter.get(
   requirePermission("view_issue"),
   analyticsController.getVelocity,
 );
+
+analyticsRouter.get(
+  "/organizations/:organizationId/projects/:projectId/analytics/breakdown",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requirePermission("view_issue"),
+  analyticsController.getBreakdown,
+);
