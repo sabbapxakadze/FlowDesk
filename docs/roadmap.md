@@ -1210,8 +1210,47 @@ Slice 2 (cycle time) shipped:
 - Observation (seed, not a bug): 27 of 64 seeded finishes skip in-progress
   by design (40%), so the demo shows a large withoutStart.
 
-- [ ] Slice 3 — sprint velocity (decision pending: event replay vs snapshot
-      at sprint completion; `complete()` clears `issues.sprint_id`)
+Slice 3 (sprint velocity) shipped:
+
+- [x] The open decision from the plan dissolved on reading the code:
+      `complete()` already writes one `issue.sprint_removed` event per
+      issue in the sprint, tagged `{ sprintId, reason: "sprint_completed" }`,
+      in the same transaction and for every status. Those events **are** a
+      snapshot of the sprint's membership at close, so no snapshot column, no
+      membership replay, no ADR 0008 change, and it works retroactively.
+      ADR 0011 records this.
+- [x] `GET .../analytics/velocity?sprints=` (default 8, max 20): per
+      completed sprint, `committed` (members at close) and `completed`
+      (done **as of the close**, from the issue's own status events at or
+      before its release event). Finishing an issue after the close does not
+      credit the sprint; reopening it later does not remove the credit.
+      Headline is the mean completed, computed in the service. A completed
+      sprint with no issues shows 0 / 0.
+- [x] Tests drive the **real** sprint and issue repositories so the events
+      are the ones production writes (10 repository + 2 HTTP tests).
+- [x] Caught a weak test by running the mutation checks: my first
+      "status as of the close" test combined a late finish and a late reopen,
+      which cancel to the same total, so a query using the status *now* still
+      passed. Split into two tests; the "status now" break now fails 3 tests.
+      A second break (dropping the `reason = sprint_completed` filter) passed
+      at first because today a manual removal records `sprintId: null` and
+      can never match a sprint; added a test with a manual removal that
+      *does* name the sprint, so the filter is pinned. Both breaks now fail.
+- [x] Seed: `seedSprintHistory` (six completed two-week sprints, assign +
+      close-time release events mirroring the real code, done-ness decided
+      from each issue's own events so some issues truly carry over). Runs
+      when a project has no sprints, so it also upgrades orgs seeded earlier;
+      re-running is a no-op.
+- [x] Independent plain-JS replay of the seeded project matched the SQL
+      for all six sprints: 0/0, 5/6, 6/11, 8/9, 6/10, 7/16 (average
+      completed 5.3).
+- [x] Frontend: `VelocityChart` (stats: average, latest, carried over;
+      single-series bars; tooltip + table with completed / committed /
+      carried over; empty state). Live: values equal the verified numbers,
+      keyboard tooltip, table rows, light/dark bar colors differ, project
+      with no sprints shows the empty message.
+- Still unverified, as in slices 1-2: the tooltip under a real mouse hover.
+
 - [ ] Slice 4 — breakdowns (by status, by label)
 - [ ] Slice 5 — dashboard assembly, date range in the URL, query
       performance at volume

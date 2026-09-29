@@ -26,3 +26,12 @@ analyticsRouter.get(
   requirePermission("view_issue"),
   analyticsController.getCycleTime,
 );
+
+analyticsRouter.get(
+  "/organizations/:organizationId/projects/:projectId/analytics/velocity",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requirePermission("view_issue"),
+  analyticsController.getVelocity,
+);

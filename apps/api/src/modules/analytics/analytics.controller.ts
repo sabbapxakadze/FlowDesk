@@ -1,5 +1,11 @@
 import type { Request, Response } from "express";
-import { cycleTimeResponseSchema, throughputResponseSchema, weeksQuerySchema } from "@flowdesk/contracts";
+import {
+  cycleTimeResponseSchema,
+  sprintsQuerySchema,
+  throughputResponseSchema,
+  velocityResponseSchema,
+  weeksQuerySchema,
+} from "@flowdesk/contracts";
 import { AppError } from "../../shared/errors.js";
 import * as analyticsService from "./analytics.service.js";
 
@@ -28,4 +34,27 @@ export async function getCycleTime(req: Request, res: Response) {
 
   const result = await analyticsService.getCycleTime(req.ctx.organizationId, req.ctx.projectId, parseWeeks(req));
   res.json(cycleTimeResponseSchema.parse(result));
+}
+
+export async function getVelocity(req: Request, res: Response) {
+  if (!req.ctx?.projectId) {
+    throw new Error("getVelocity requires requireProject to have run first");
+  }
+
+  const parsed = sprintsQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    throw new AppError("validation_error", 400, "Invalid analytics query", parsed.error.flatten().fieldErrors);
+  }
+
+  const { averageCompleted, rows } = await analyticsService.getVelocity(
+    req.ctx.organizationId,
+    req.ctx.projectId,
+    parsed.data.sprints,
+  );
+  res.json(
+    velocityResponseSchema.parse({
+      summary: { averageCompleted },
+      data: rows.map((row) => ({ ...row, completedAt: new Date(row.completedAt).toISOString() })),
+    }),
+  );
 }

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db, pool } from "./client.js";
-import { issueEvents, issues, organizationMembers, organizations, projects, users } from "./schema/index.js";
+import { issueEvents, issues, organizationMembers, organizations, projects, sprints, users } from "./schema/index.js";
 
 // Small deterministic PRNG (mulberry32): the same seed always yields the
 // same history, so the chart looks the same every time it is rebuilt.
@@ -40,7 +40,12 @@ async function seedAnalyticsDemo(organizationId: string) {
   if (!demoProject) throw new Error("Failed to create or find the analytics demo project");
 
   const existing = await db.query.issues.findFirst({ where: eq(issues.projectId, demoProject.id) });
-  if (existing) return;
+  if (existing) {
+    // Issues were seeded by an earlier run; still make sure the sprint
+    // history exists (added later, so older seeded orgs need it too).
+    await seedSprintHistory(demoProject.id, organizationId);
+    return;
+  }
 
   await db
     .insert(users)
@@ -119,6 +124,100 @@ async function seedAnalyticsDemo(organizationId: string) {
   await db.insert(issueEvents).values(eventRows);
   await db.update(projects).set({ nextIssueNumber: 101 }).where(eq(projects.id, demoProject.id));
   console.log(`Seeded ${issueRows.length} analytics demo issues (${eventRows.length} events) in project ANL.`);
+  await seedSprintHistory(demoProject.id, organizationId);
+}
+
+/**
+ * Six completed two-week sprints for the velocity chart, built from the
+ * project's already-seeded issues. Writes what the real code writes: a
+ * sprint_assigned event when an issue joins, and — at the close, all at the
+ * same instant like complete()'s single transaction — a sprint_removed
+ * event with reason "sprint_completed" for every issue still in the sprint.
+ * Those release events are what velocity reads (ADR 0011). Whether an issue
+ * counts as done is decided from its own status events as of the close, so
+ * some issues genuinely carry over into the next sprint. Skipped when the
+ * project already has a sprint, so re-running is a no-op.
+ */
+async function seedSprintHistory(projectId: string, organizationId: string) {
+  const existingSprint = await db.query.sprints.findFirst({ where: eq(sprints.projectId, projectId) });
+  if (existingSprint) return;
+
+  const projectIssues = await db
+    .select({ id: issues.id, createdAt: issues.createdAt, reporterId: issues.reporterId })
+    .from(issues)
+    .where(eq(issues.projectId, projectId));
+  if (projectIssues.length === 0) return;
+
+  const rows = await db
+    .select({ issueId: issueEvents.issueId, type: issueEvents.type, payload: issueEvents.payload, createdAt: issueEvents.createdAt })
+    .from(issueEvents)
+    .where(inArray(issueEvents.issueId, projectIssues.map((i) => i.id)))
+    .orderBy(asc(issueEvents.createdAt));
+
+  const statusEvents = new Map<string, Array<{ at: number; status: string }>>();
+  for (const row of rows) {
+    const payload = row.payload as Record<string, string>;
+    const status = row.type === "issue.moved" ? payload.toStatus : row.type === "issue.updated" ? payload.status : undefined;
+    if (!status) continue;
+    statusEvents.set(row.issueId, [...(statusEvents.get(row.issueId) ?? []), { at: row.createdAt.getTime(), status }]);
+  }
+  const statusAt = (issueId: string, at: number) => {
+    let status = "todo";
+    for (const event of statusEvents.get(issueId) ?? []) {
+      if (event.at > at) break;
+      status = event.status;
+    }
+    return status;
+  };
+
+  const rand = mulberry32(21);
+  const DAY = 86_400_000;
+  const now = Date.now();
+  const actorId = projectIssues[0]!.reporterId;
+  const sprintRows: (typeof sprints.$inferInsert)[] = [];
+  const eventRows: (typeof issueEvents.$inferInsert)[] = [];
+  const finishedEarlier = new Set<string>();
+
+  for (let k = 0; k < 6; k++) {
+    const end = now - (5 - k) * 14 * DAY - DAY;
+    const start = end - 14 * DAY;
+    const sprintId = randomUUID();
+    const name = `Sprint ${k + 1}`;
+    sprintRows.push({
+      id: sprintId,
+      organizationId,
+      projectId,
+      name,
+      status: "completed",
+      startDate: new Date(start).toISOString().slice(0, 10),
+      endDate: new Date(end).toISOString().slice(0, 10),
+      version: 3, // planned -> active -> completed
+      createdAt: new Date(start - DAY),
+      updatedAt: new Date(end),
+    });
+
+    for (const issue of projectIssues) {
+      if (finishedEarlier.has(issue.id)) continue;
+      const created = issue.createdAt.getTime();
+      if (created > end - 4 * DAY) continue;
+      if (rand() > 0.22) continue;
+
+      const assignedAt = Math.max(created + 3_600_000, start);
+      eventRows.push({ issueId: issue.id, actorId, type: "issue.sprint_assigned", payload: { sprintId, sprintName: name }, createdAt: new Date(assignedAt) });
+      eventRows.push({
+        issueId: issue.id,
+        actorId,
+        type: "issue.sprint_removed",
+        payload: { sprintId, sprintName: name, reason: "sprint_completed" },
+        createdAt: new Date(end),
+      });
+      if (statusAt(issue.id, end) === "done") finishedEarlier.add(issue.id);
+    }
+  }
+
+  await db.insert(sprints).values(sprintRows);
+  await db.insert(issueEvents).values(eventRows);
+  console.log(`Seeded ${sprintRows.length} completed sprints (${eventRows.length} events) in project ANL.`);
 }
 
 /**

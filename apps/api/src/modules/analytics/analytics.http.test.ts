@@ -118,3 +118,32 @@ describe("analytics cycle-time — HTTP", () => {
     await request(app).get(url).set("Authorization", `Bearer ${b.accessToken}`).expect(403);
   });
 });
+
+describe("analytics velocity — HTTP", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("returns an empty list and a null average for a project with no completed sprints", async () => {
+    const a = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(a.accessToken, a.organizationId, "AAA");
+
+    const res = await request(app)
+      .get(`/api/v1/organizations/${a.organizationId}/projects/${projectId}/analytics/velocity`)
+      .set("Authorization", `Bearer ${a.accessToken}`)
+      .expect(200);
+
+    expect(res.body).toEqual({ summary: { averageCompleted: null }, data: [] });
+  });
+
+  it("rejects an out-of-range ?sprints= and a non-member", async () => {
+    const a = await registerAndLogIn("a@example.com", "Org A");
+    const b = await registerAndLogIn("b@example.com", "Org B");
+    const projectId = await createProject(a.accessToken, a.organizationId, "AAA");
+    const url = `/api/v1/organizations/${a.organizationId}/projects/${projectId}/analytics/velocity`;
+
+    await request(app).get(`${url}?sprints=0`).set("Authorization", `Bearer ${a.accessToken}`).expect(400);
+    await request(app).get(`${url}?sprints=999`).set("Authorization", `Bearer ${a.accessToken}`).expect(400);
+    await request(app).get(url).set("Authorization", `Bearer ${b.accessToken}`).expect(403);
+  });
+});

@@ -47,3 +47,30 @@ export const cycleTimeResponseSchema = z.object({
 export type CycleTimeSummary = z.infer<typeof cycleTimeSummarySchema>;
 export type CycleTimeBucket = z.infer<typeof cycleTimeBucketSchema>;
 export type CycleTimeResponse = z.infer<typeof cycleTimeResponseSchema>;
+
+// The most recent N completed sprints. Sprint membership at close comes from
+// the issue.sprint_removed events complete() writes, not from issues.sprint_id
+// (which complete() clears). See docs/adr/0011-sprint-velocity-from-completion-events.md.
+export const sprintsQuerySchema = z.object({
+  sprints: z.coerce.number().int().min(1).max(20).default(8),
+});
+
+export type SprintsQuery = z.infer<typeof sprintsQuerySchema>;
+
+// committed = issues in the sprint when it closed; completed = those that
+// were done at that moment (carried over = committed - completed).
+export const velocitySprintSchema = z.object({
+  sprintId: z.uuid(),
+  name: z.string(),
+  completedAt: z.iso.datetime(),
+  committed: z.number().int().nonnegative(),
+  completed: z.number().int().nonnegative(),
+});
+
+export const velocityResponseSchema = z.object({
+  summary: z.object({ averageCompleted: z.number().nullable() }),
+  data: z.array(velocitySprintSchema),
+});
+
+export type VelocitySprint = z.infer<typeof velocitySprintSchema>;
+export type VelocityResponse = z.infer<typeof velocityResponseSchema>;

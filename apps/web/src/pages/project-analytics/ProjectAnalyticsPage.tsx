@@ -4,10 +4,12 @@ import { useAuth } from "../../shared/auth/useAuth";
 import { Card, Skeleton } from "../../shared/ui";
 import { CycleTimeChart } from "../../widgets/cycle-time-chart";
 import { ThroughputChart } from "../../widgets/throughput-chart";
+import { VelocityChart } from "../../widgets/velocity-chart";
 
 // Fixed window for this first slice; a URL-driven range selector (same
 // ?param convention as the issue list's filters) is a later slice.
 const WEEKS = 12;
+const SPRINTS = 8;
 
 export function ProjectAnalyticsPage() {
   const { organization } = useAuth();
@@ -46,6 +48,14 @@ export function ProjectAnalyticsPage() {
           How long finished issues took, from first in progress to done.
         </p>
         <CycleTimeChart organizationId={organization!.id} projectId={project.id} weeks={WEEKS} />
+      </Card>
+
+      <Card className="mt-4">
+        <h2 className="mb-2 text-lg font-semibold">Sprint velocity</h2>
+        <p className="mb-3 text-sm text-[var(--color-text-muted)]">
+          Issues completed in each recent sprint, as of the day it closed.
+        </p>
+        <VelocityChart organizationId={organization!.id} projectId={project.id} sprints={SPRINTS} />
       </Card>
     </main>
   );

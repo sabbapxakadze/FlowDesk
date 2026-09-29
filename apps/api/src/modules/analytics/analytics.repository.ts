@@ -187,3 +187,91 @@ export async function cycleTime(
     distribution: bucketResult.rows.map((b) => ({ label: b.label, count: b.count })),
   };
 }
+
+/**
+ * The most recent `limit` completed sprints, oldest first, each with how
+ * many issues were in it when it closed (`committed`) and how many of
+ * those were done at that moment (`completed`). See
+ * docs/adr/0011-sprint-velocity-from-completion-events.md.
+ *
+ * Membership comes from the issue.sprint_removed events complete() writes
+ * with reason 'sprint_completed' — one per issue in the sprint, in the same
+ * transaction — because complete() clears issues.sprint_id and the table
+ * can no longer say who was in a past sprint. An issue taken out by hand
+ * before the close has a plain sprint_removed (no reason) and is rightly
+ * not counted.
+ *
+ * "Done" is the issue's status AS OF its release event (the last status-
+ * bearing event at or before it), not its status today: finishing an issue
+ * after the sprint closed doesn't retroactively credit that sprint, and
+ * reopening it later doesn't take the credit away.
+ *
+ * A completed sprint with no issues has no events, so it comes from the
+ * sprints table via LEFT JOIN and shows as 0 / 0. sprints.updated_at is
+ * the close time: complete() sets it and no endpoint edits a completed
+ * sprint afterward.
+ */
+export async function sprintVelocity(
+  organizationId: string,
+  projectId: string,
+  limit: number,
+): Promise<
+  Array<{ sprintId: string; name: string; completedAt: Date | string; committed: number; completed: number }>
+> {
+  const result = await db.execute<{
+    sprint_id: string;
+    name: string;
+    completed_at: Date | string;
+    committed: number;
+    completed: number;
+  }>(sql`
+    WITH ${statusTransitions(organizationId, projectId)},
+    releases AS (
+      SELECT e.issue_id, e.created_at, e.payload->>'sprintId' AS sprint_id
+      FROM issue_events e
+      JOIN issues i ON i.id = e.issue_id
+      WHERE i.organization_id = ${organizationId}::uuid
+        AND i.project_id = ${projectId}::uuid
+        AND e.type = 'issue.sprint_removed'
+        AND e.payload->>'reason' = 'sprint_completed'
+    ),
+    released_status AS (
+      SELECT r.sprint_id,
+             COALESCE(
+               (SELECT se.status FROM status_events se
+                 WHERE se.issue_id = r.issue_id AND se.created_at <= r.created_at
+                 ORDER BY se.created_at DESC, se.id DESC
+                 LIMIT 1),
+               'todo') AS status
+      FROM releases r
+    ),
+    per_sprint AS (
+      SELECT sprint_id,
+             COUNT(*)::int AS committed,
+             COUNT(*) FILTER (WHERE status = 'done')::int AS completed
+      FROM released_status
+      GROUP BY sprint_id
+    )
+    SELECT * FROM (
+      SELECT sp.id AS sprint_id, sp.name, sp.updated_at AS completed_at,
+             COALESCE(ps.committed, 0)::int AS committed,
+             COALESCE(ps.completed, 0)::int AS completed
+      FROM sprints sp
+      LEFT JOIN per_sprint ps ON ps.sprint_id = sp.id::text
+      WHERE sp.organization_id = ${organizationId}::uuid
+        AND sp.project_id = ${projectId}::uuid
+        AND sp.status = 'completed'
+      ORDER BY sp.updated_at DESC
+      LIMIT ${limit}::int
+    ) latest
+    ORDER BY completed_at ASC
+  `);
+
+  return result.rows.map((row) => ({
+    sprintId: row.sprint_id,
+    name: row.name,
+    completedAt: row.completed_at,
+    committed: row.committed,
+    completed: row.completed,
+  }));
+}

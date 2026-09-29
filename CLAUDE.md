@@ -36,9 +36,13 @@ median leads, plus mean, p90 and six buckets. The replay CTE is now
 shared with throughput. Mutation checks confirmed the tests catch a
 MAX-instead-of-MIN start and a missing at-or-after-start guard, and an
 independent JS replay matched the SQL exactly.
-Slice 3 (sprint velocity) has an open decision: `complete()` clears
-`issues.sprint_id`, so past sprint membership must come from events or a
-snapshot taken at completion.
+Phase 8 slice 3 (sprint velocity) is done: the open question (where past
+sprint membership comes from, since `complete()` clears `issues.sprint_id`)
+turned out to be already answered by `complete()`'s own
+`sprint_completed` release events, which snapshot membership at close, so
+there is no schema change (ADR 0011). "Done" is judged as of the close,
+not today. The tests use the real sprint/issue repositories, and mutation
+checks exposed and fixed a too-weak test before it shipped.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,
 time-limited download tokens, chosen with the owner because S3 and

@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { resetDatabase } from "../../db/test-utils.js";
-import { issueEvents, organizations, projects, users } from "../../db/schema/index.js";
+import { issueEvents, issues, organizations, projects, sprints, users } from "../../db/schema/index.js";
 import * as issuesRepository from "../issues/issues.repository.js";
+import * as sprintsRepository from "../sprints/sprints.repository.js";
 import * as analyticsRepository from "./analytics.repository.js";
 
 // Wednesday 2026-03-18 -> current UTC week starts Monday 2026-03-16.
@@ -315,5 +317,255 @@ describe("analytics repository — cycle time", () => {
     const result = await analyticsRepository.cycleTime(a.org.id, a.project.id, WEEKS, NOW);
 
     expect(result.summary.completed).toBe(1);
+  });
+});
+
+// Velocity tests drive the REAL sprint and issue repositories rather than
+// hand-placing events: the whole point of ADR 0011 is that complete()'s own
+// release events are the source of truth, so the tests must produce them the
+// way production does.
+async function versionOf(issueId: string) {
+  const [row] = await db.select({ version: issues.version }).from(issues).where(eq(issues.id, issueId));
+  return row!.version;
+}
+
+async function sprintVersionOf(sprintId: string) {
+  const [row] = await db.select({ version: sprints.version }).from(sprints).where(eq(sprints.id, sprintId));
+  return row!.version;
+}
+
+async function startedSprint(s: Seeded, name: string) {
+  const sprint = await sprintsRepository.create({
+    organizationId: s.org.id,
+    projectId: s.project.id,
+    name,
+    startDate: null,
+    endDate: null,
+  });
+  await sprintsRepository.start({
+    organizationId: s.org.id,
+    projectId: s.project.id,
+    sprintId: sprint.id,
+    expectedVersion: sprint.version,
+  });
+  return sprint;
+}
+
+async function addToSprint(s: Seeded, issueId: string, sprintId: string | null) {
+  await issuesRepository.assignSprint({
+    organizationId: s.org.id,
+    projectId: s.project.id,
+    issueId,
+    expectedVersion: await versionOf(issueId),
+    sprintId,
+    actorId: s.user.id,
+  });
+}
+
+async function setStatus(s: Seeded, issueId: string, status: "todo" | "in_progress" | "done") {
+  await issuesRepository.move({
+    organizationId: s.org.id,
+    projectId: s.project.id,
+    issueId,
+    expectedVersion: await versionOf(issueId),
+    status,
+    actorId: s.user.id,
+  });
+}
+
+async function closeSprint(s: Seeded, sprintId: string) {
+  await sprintsRepository.complete({
+    organizationId: s.org.id,
+    projectId: s.project.id,
+    sprintId,
+    expectedVersion: await sprintVersionOf(sprintId),
+    actorId: s.user.id,
+  });
+}
+
+describe("analytics repository — sprint velocity", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("counts issues in the sprint at close as committed and those done at close as completed", async () => {
+    const s = await seed("org", "PRJ");
+    const sprint = await startedSprint(s, "Sprint 1");
+    const [a, b, c] = [await makeIssue(s), await makeIssue(s), await makeIssue(s)];
+    for (const issue of [a, b, c]) await addToSprint(s, issue.id, sprint.id);
+    await setStatus(s, a.id, "done");
+    await setStatus(s, b.id, "done");
+    await setStatus(s, c.id, "in_progress");
+    await closeSprint(s, sprint.id);
+
+    const rows = await analyticsRepository.sprintVelocity(s.org.id, s.project.id, 8);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ sprintId: sprint.id, name: "Sprint 1", committed: 3, completed: 2 });
+  });
+
+  // Two separate tests on purpose: in one combined test the two mistakes
+  // (crediting a late finish, dropping a reopened one) cancel out to the same
+  // total, so a query that used the status "now" would still pass.
+  it("does not credit a sprint for an issue that was only finished after it closed", async () => {
+    const s = await seed("org", "PRJ");
+    const sprint = await startedSprint(s, "Sprint 1");
+    const late = await makeIssue(s);
+    await addToSprint(s, late.id, sprint.id);
+    await setStatus(s, late.id, "in_progress");
+    await closeSprint(s, sprint.id);
+
+    await setStatus(s, late.id, "done"); // finished after the close
+
+    const rows = await analyticsRepository.sprintVelocity(s.org.id, s.project.id, 8);
+
+    expect(rows[0]).toMatchObject({ committed: 1, completed: 0 });
+  });
+
+  it("keeps the credit for an issue that was done at close and reopened afterwards", async () => {
+    const s = await seed("org", "PRJ");
+    const sprint = await startedSprint(s, "Sprint 1");
+    const reopened = await makeIssue(s);
+    await addToSprint(s, reopened.id, sprint.id);
+    await setStatus(s, reopened.id, "done");
+    await closeSprint(s, sprint.id);
+
+    await setStatus(s, reopened.id, "in_progress"); // reopened after the close
+
+    const rows = await analyticsRepository.sprintVelocity(s.org.id, s.project.id, 8);
+
+    expect(rows[0]).toMatchObject({ committed: 1, completed: 1 });
+  });
+
+  it("does not count a manual removal even if it names the sprint (only the close-time release counts)", async () => {
+    const s = await seed("org", "PRJ");
+    const sprint = await startedSprint(s, "Sprint 1");
+    const issue = await makeIssue(s);
+    await addToSprint(s, issue.id, sprint.id);
+    await setStatus(s, issue.id, "done");
+    // Today a manual removal records sprintId: null. If it ever starts naming the
+    // sprint it left, it must still not be mistaken for "in the sprint at close".
+    await event(issue.id, s.user.id, "issue.sprint_removed", { sprintId: sprint.id, sprintName: "Sprint 1" }, new Date().toISOString());
+    await closeSprint(s, sprint.id);
+
+    const rows = await analyticsRepository.sprintVelocity(s.org.id, s.project.id, 8);
+
+    // The real close still released it once; the fake manual event adds nothing.
+    expect(rows[0]).toMatchObject({ committed: 1, completed: 1 });
+  });
+
+  it("does not count an issue that was taken out of the sprint by hand before it closed", async () => {
+    const s = await seed("org", "PRJ");
+    const sprint = await startedSprint(s, "Sprint 1");
+    const stays = await makeIssue(s);
+    const removed = await makeIssue(s);
+    await addToSprint(s, stays.id, sprint.id);
+    await addToSprint(s, removed.id, sprint.id);
+    await setStatus(s, stays.id, "done");
+    await setStatus(s, removed.id, "done");
+    await addToSprint(s, removed.id, null); // a plain sprint_removed, no reason
+    await closeSprint(s, sprint.id);
+
+    const rows = await analyticsRepository.sprintVelocity(s.org.id, s.project.id, 8);
+
+    expect(rows[0]).toMatchObject({ committed: 1, completed: 1 });
+  });
+
+  it("shows a completed sprint with no issues as 0 / 0", async () => {
+    const s = await seed("org", "PRJ");
+    const sprint = await startedSprint(s, "Empty");
+    await closeSprint(s, sprint.id);
+
+    const rows = await analyticsRepository.sprintVelocity(s.org.id, s.project.id, 8);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ name: "Empty", committed: 0, completed: 0 });
+  });
+
+  it("excludes planned and active sprints", async () => {
+    const s = await seed("org", "PRJ");
+    await sprintsRepository.create({
+      organizationId: s.org.id,
+      projectId: s.project.id,
+      name: "Planned",
+      startDate: null,
+      endDate: null,
+    });
+    await startedSprint(s, "Active");
+
+    const rows = await analyticsRepository.sprintVelocity(s.org.id, s.project.id, 8);
+
+    expect(rows).toEqual([]);
+  });
+
+  it("returns the most recent N completed sprints, oldest first", async () => {
+    const s = await seed("org", "PRJ");
+    for (const name of ["Sprint 1", "Sprint 2", "Sprint 3"]) {
+      const sprint = await startedSprint(s, name);
+      await closeSprint(s, sprint.id);
+    }
+
+    const rows = await analyticsRepository.sprintVelocity(s.org.id, s.project.id, 2);
+
+    expect(rows.map((r) => r.name)).toEqual(["Sprint 2", "Sprint 3"]);
+  });
+
+  it("counts a carried-over issue in each sprint by that sprint's own release event", async () => {
+    const s = await seed("org", "PRJ");
+    const first = await startedSprint(s, "Sprint 1");
+    const carried = await makeIssue(s);
+    await addToSprint(s, carried.id, first.id);
+    await setStatus(s, carried.id, "in_progress");
+    await closeSprint(s, first.id);
+
+    const second = await startedSprint(s, "Sprint 2");
+    await addToSprint(s, carried.id, second.id);
+    await setStatus(s, carried.id, "done");
+    await closeSprint(s, second.id);
+
+    const rows = await analyticsRepository.sprintVelocity(s.org.id, s.project.id, 8);
+
+    expect(rows.map((r) => [r.name, r.committed, r.completed])).toEqual([
+      ["Sprint 1", 1, 0],
+      ["Sprint 2", 1, 1],
+    ]);
+  });
+
+  it("never includes another project's or another organization's sprints", async () => {
+    const a = await seed("org-a", "AAA");
+    const [otherProject] = await db
+      .insert(projects)
+      .values({ organizationId: a.org.id, name: "Other", key: "OTH" })
+      .returning();
+    const b = await seed("org-b", "BBB");
+
+    const mine = await startedSprint(a, "Mine");
+    await closeSprint(a, mine.id);
+    const theirs = await startedSprint(b, "Other org");
+    await closeSprint(b, theirs.id);
+    const elsewhere = await sprintsRepository.create({
+      organizationId: a.org.id,
+      projectId: otherProject!.id,
+      name: "Other project",
+      startDate: null,
+      endDate: null,
+    });
+    await sprintsRepository.start({
+      organizationId: a.org.id,
+      projectId: otherProject!.id,
+      sprintId: elsewhere.id,
+      expectedVersion: elsewhere.version,
+    });
+    await sprintsRepository.complete({
+      organizationId: a.org.id,
+      projectId: otherProject!.id,
+      sprintId: elsewhere.id,
+      expectedVersion: await sprintVersionOf(elsewhere.id),
+      actorId: a.user.id,
+    });
+
+    const rows = await analyticsRepository.sprintVelocity(a.org.id, a.project.id, 8);
+
+    expect(rows.map((r) => r.name)).toEqual(["Mine"]);
   });
 });
