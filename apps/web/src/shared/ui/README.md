@@ -13,3 +13,7 @@ fight.
 
 No Radix yet — nothing built so far needs a dialog, portal, or combobox.
 Add the next component here when a real screen needs it, not before.
+
+`Page` and `PageHeader` (Phase 3.6 slice 2d) are the frame of every logged-in
+page. `PageHeader` imports react-router's `Link` for its back link, the one
+router dependency in this library.

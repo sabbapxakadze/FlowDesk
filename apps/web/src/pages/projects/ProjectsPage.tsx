@@ -1,8 +1,7 @@
-import { Link } from "react-router";
 import { ProjectCard, useProjects } from "../../entities/project";
 import { CreateProjectForm } from "../../features/create-project";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, EmptyState, ErrorText, Skeleton } from "../../shared/ui";
+import { Card, EmptyState, ErrorText, Page, PageHeader, Skeleton } from "../../shared/ui";
 
 function ProjectListSkeleton() {
   return (
@@ -30,13 +29,8 @@ export function ProjectsPage() {
   const { data: projects, isPending, isError, error } = useProjects(organization!.id);
 
   return (
-    <main className="p-8">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="font-display text-3xl font-normal">Projects</h1>
-        <Link to="/search" className="text-sm text-[var(--color-text-link)] underline">
-          Search →
-        </Link>
-      </div>
+    <Page>
+      <PageHeader title="Projects" />
 
       <CreateProjectForm organizationId={organization!.id} />
 
@@ -53,6 +47,6 @@ export function ProjectsPage() {
           ))}
         </ul>
       )}
-    </main>
+    </Page>
   );
 }

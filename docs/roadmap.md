@@ -365,9 +365,27 @@ Slice 1 (visual foundations, kept minimal) shipped:
       and verify were only checked by DOM (one main, no sidebar, no sideways
       scroll, right text), not by eye. Not verified: Tab-key order, verify-email with a
       real token, reset with a real emailed token, browsers other than Chrome.
-- [ ] Slice 2d — Page structure for logged-in pages: shared `PageHeader`,
-      content width, and remove the duplicated in-page links ("Board →",
-      "Sprints →", "Analytics →"); the issue page keeps its back link.
+- [x] Slice 2d — **Page structure for logged-in pages (2026-09-30).** New
+      `Page` (the one `<main>`, responsive padding, reading width `max-w-5xl`
+      centered or wide `max-w-7xl`) and `PageHeader` (eyebrow, serif title,
+      optional back link, meta row) in `shared/ui`; all seven logged-in pages
+      use them, and so do their loading and not-found states, which had no
+      `<main>` before (ten places). Project pages are now titled Issues /
+      Board / Sprints / Analytics with the project name as the eyebrow, matching
+      the sidebar. Removed the duplicated links ("Board →", "Sprints →",
+      "Analytics →", "Search →", "← All projects" and the project back links);
+      the issue page keeps "← project", and its edit mode now shows an "Edit
+      issue" header. Checked live: one main and one h1 on each page, no leftover
+      links, bogus project/issue URLs render their message inside a main with
+      the sidebar, status filter still writes `?status=`, a real pointer drag
+      on the board still moves a card (ANL-2 Todo to In progress), mobile
+      layout has 16px padding and no sideways scroll. Note: the automated
+      browser would not go below 467px wide, so the narrow check was at 467px,
+      not 420px. Not checked: saving or cancelling an issue edit, analytics
+      range selects and the sprints drag surface after the change, light-mode
+      screenshots of every page (light: issue detail only), dark 1440px.
+      Seen, not fixed: a bogus issue URL shows the skeleton for about 7 seconds
+      before "Issue not found." because the 404 is retried.
 - [ ] Slice 2e — Data screens (cards, lists, board, sprints, issue detail,
       search, empty states).
 - [ ] Slice 2f — Overlays (command palette, notification panel) and the

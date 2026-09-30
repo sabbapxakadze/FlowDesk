@@ -338,9 +338,10 @@ real tokens; `border-input` (~1.5:1) is a known, unfixed gap. Slice 2b
 (ADR 0014), the bell moved into it, and a mobile drawer. Slice 2c
 (public screens and form controls) is done: an auth layout route, `/` now
 redirects, control borders fixed to 3:1 (`stone-450`, ADR 0015), error text
-darkened. Owner-chosen rollout order: 2d page structure and removing the
-duplicated in-page links, 2e data screens, 2f overlays and the design-system
-page. What follows
+darkened. Slice 2d
+(page structure) is done: `Page`/`PageHeader` in `shared/ui` frame every
+logged-in page, and the duplicated in-page links are gone. Remaining rollout
+order: 2e data screens, 2f overlays and the design-system page. What follows
 is the history of the earlier, paused slice 1: it was **paused after a
 deliberately minimal slice 1**: real structural improvements (hover/focus states, shadow-based
 card elevation, softer radii, a `StatusBadge` status-color system) are in,

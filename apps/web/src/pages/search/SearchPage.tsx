@@ -1,8 +1,8 @@
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { useProjects } from "../../entities/project";
 import { IssueCard, useSearch } from "../../entities/issue";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, EmptyState, ErrorText, Input, Skeleton } from "../../shared/ui";
+import { Card, EmptyState, ErrorText, Input, Page, PageHeader, Skeleton } from "../../shared/ui";
 
 function SearchResultsSkeleton() {
   return (
@@ -53,11 +53,8 @@ export function SearchPage() {
   const trimmed = q.trim();
 
   return (
-    <main className="p-8">
-      <Link to="/projects" className="text-sm text-[var(--color-text-link)] underline">
-        ← All projects
-      </Link>
-      <h1 className="mt-2 mb-4 font-display text-3xl font-normal">Search</h1>
+    <Page>
+      <PageHeader title="Search" />
 
       <Input
         value={q}
@@ -84,6 +81,6 @@ export function SearchPage() {
           })}
         </ul>
       )}
-    </main>
+    </Page>
   );
 }

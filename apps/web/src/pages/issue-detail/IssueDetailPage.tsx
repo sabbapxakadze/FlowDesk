@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import type { IssueEvent } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
 import {
@@ -13,11 +13,11 @@ import { EditIssueForm } from "../../features/edit-issue";
 import { CommentForm } from "../../features/post-comment";
 import { UploadAttachmentForm } from "../../features/upload-attachment";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, Skeleton, StatusBadge } from "../../shared/ui";
+import { Card, Page, PageHeader, Skeleton, StatusBadge } from "../../shared/ui";
 
 function IssueDetailSkeleton() {
   return (
-    <main className="p-8">
+    <Page>
       <Skeleton className="h-4 w-32" />
       <div className="mt-2 mb-4">
         <Skeleton className="mb-2 h-3 w-16" />
@@ -29,7 +29,7 @@ function IssueDetailSkeleton() {
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
       </div>
-    </main>
+    </Page>
   );
 }
 
@@ -92,54 +92,67 @@ export function IssueDetailPage() {
   }
 
   if (!project || !issue) {
-    return <p className="p-8 text-[var(--color-text-danger)]">Issue not found.</p>;
+    return (
+      <Page>
+        <p className="text-[var(--color-text-danger)]">Issue not found.</p>
+      </Page>
+    );
   }
 
   return (
-    <main className="p-8">
-      <Link to={`/projects/${project.id}`} className="text-sm text-[var(--color-text-link)] underline">
-        ← {project.name}
-      </Link>
-
-      {showConflictNotice && (
-        <p className="mt-2 text-sm text-[var(--color-text-warning)]">
-          This issue was updated by someone else — showing the latest version.
-        </p>
-      )}
-
+    <Page>
       {isEditing ? (
-        <EditIssueForm
-          issue={issue}
-          organizationId={organization!.id}
-          projectId={project.id}
-          onDone={() => setIsEditing(false)}
-          onConflict={() => setShowConflictNotice(true)}
-        />
-      ) : (
-        <div className="mt-2 mb-4">
-          <p className="text-sm text-[var(--color-text-muted)]">
-            {project.key}-{issue.number}
-          </p>
-          <h1 className="font-display text-3xl font-normal">{issue.title}</h1>
-          <div className="mt-1 flex items-center gap-3">
-            <StatusBadge status={issue.status} />
-            <button
-              onClick={() => {
-                setShowConflictNotice(false);
-                setIsEditing(true);
-              }}
-              className="text-sm text-[var(--color-text-link)] underline"
-            >
-              Edit
-            </button>
-          </div>
-          {otherViewers.length > 0 && (
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              {describeViewers(otherViewers.map((viewer) => viewer.name))}
+        <>
+          <PageHeader
+            back={{ to: `/projects/${project.id}`, label: project.name }}
+            eyebrow={`${project.key}-${issue.number}`}
+            title="Edit issue"
+          />
+          {showConflictNotice && (
+            <p className="mb-4 text-sm text-[var(--color-text-warning)]">
+              This issue was updated by someone else — showing the latest version.
             </p>
           )}
-          {issue.description && <p className="mt-2">{issue.description}</p>}
-        </div>
+          <EditIssueForm
+            issue={issue}
+            organizationId={organization!.id}
+            projectId={project.id}
+            onDone={() => setIsEditing(false)}
+            onConflict={() => setShowConflictNotice(true)}
+          />
+        </>
+      ) : (
+        <>
+          <PageHeader
+            back={{ to: `/projects/${project.id}`, label: project.name }}
+            eyebrow={`${project.key}-${issue.number}`}
+            title={issue.title}
+          >
+            <div className="flex items-center gap-3">
+              <StatusBadge status={issue.status} />
+              <button
+                onClick={() => {
+                  setShowConflictNotice(false);
+                  setIsEditing(true);
+                }}
+                className="text-sm text-[var(--color-text-link)] underline"
+              >
+                Edit
+              </button>
+            </div>
+            {otherViewers.length > 0 && (
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                {describeViewers(otherViewers.map((viewer) => viewer.name))}
+              </p>
+            )}
+          </PageHeader>
+          {showConflictNotice && (
+            <p className="mb-4 text-sm text-[var(--color-text-warning)]">
+              This issue was updated by someone else — showing the latest version.
+            </p>
+          )}
+          {issue.description && <p className="mb-4">{issue.description}</p>}
+        </>
       )}
 
       <h2 className="mt-6 mb-2 text-lg font-semibold">Attachments</h2>
@@ -162,6 +175,6 @@ export function IssueDetailPage() {
       <div className="mt-4">
         <CommentForm organizationId={organization!.id} projectId={project.id} issueId={issue.id} />
       </div>
-    </main>
+    </Page>
   );
 }

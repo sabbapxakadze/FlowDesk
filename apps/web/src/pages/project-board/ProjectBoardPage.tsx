@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import {
   DndContext,
   DragOverlay,
@@ -18,7 +18,7 @@ import { useProjects } from "../../entities/project";
 import { BoardCard, useBoard, useLiveIssueUpdates } from "../../entities/issue";
 import { useMoveIssue } from "../../features/move-issue";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, EmptyState, ErrorText, Skeleton, STATUS_LABELS } from "../../shared/ui";
+import { Card, EmptyState, ErrorText, Page, PageHeader, Skeleton, STATUS_LABELS } from "../../shared/ui";
 
 const COLUMNS: IssueStatus[] = ["todo", "in_progress", "done"];
 
@@ -115,24 +115,24 @@ export function ProjectBoardPage() {
   }
 
   if (projectsPending) {
-    return <p className="p-8 text-[var(--color-text-muted)]">Loading…</p>;
+    return (
+      <Page>
+        <p className="text-[var(--color-text-muted)]">Loading…</p>
+      </Page>
+    );
   }
 
   if (!project) {
-    return <p className="p-8 text-[var(--color-text-danger)]">Project not found.</p>;
+    return (
+      <Page>
+        <p className="text-[var(--color-text-danger)]">Project not found.</p>
+      </Page>
+    );
   }
 
   return (
-    <main className="p-8">
-      <div className="flex items-center justify-between">
-        <Link to={`/projects/${project.id}`} className="text-sm text-[var(--color-text-link)] underline">
-          ← {project.name} (list)
-        </Link>
-        <Link to={`/projects/${project.id}/sprints`} className="text-sm text-[var(--color-text-link)] underline">
-          Sprints →
-        </Link>
-      </div>
-      <h1 className="mt-2 mb-4 font-display text-3xl font-normal">{project.name} — Board</h1>
+    <Page width="wide">
+      <PageHeader eyebrow={project.name} title="Board" />
 
       {isError ? (
         <ErrorText>Failed to load the board: {error.message}</ErrorText>
@@ -181,6 +181,6 @@ export function ProjectBoardPage() {
           </DragOverlay>
         </DndContext>
       )}
-    </main>
+    </Page>
   );
 }

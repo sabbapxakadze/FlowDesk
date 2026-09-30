@@ -1,8 +1,8 @@
-import { Link, useParams, useSearchParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import { useVelocity } from "../../entities/analytics";
 import { useProjects } from "../../entities/project";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, Select, Skeleton } from "../../shared/ui";
+import { Card, Page, PageHeader, Select, Skeleton } from "../../shared/ui";
 import { BreakdownCharts } from "../../widgets/breakdown-charts";
 import { CycleTimeChart } from "../../widgets/cycle-time-chart";
 import { ThroughputChart } from "../../widgets/throughput-chart";
@@ -68,22 +68,23 @@ export function ProjectAnalyticsPage() {
 
   if (isPending) {
     return (
-      <main className="p-8">
+      <Page width="wide">
         <Skeleton className="h-64 w-full" />
-      </main>
+      </Page>
     );
   }
 
   if (!project) {
-    return <p className="p-8 text-[var(--color-text-danger)]">Project not found.</p>;
+    return (
+      <Page>
+        <p className="text-[var(--color-text-danger)]">Project not found.</p>
+      </Page>
+    );
   }
 
   return (
-    <main className="p-8">
-      <Link to={`/projects/${project.id}`} className="text-sm text-[var(--color-text-link)] underline">
-        ← {project.name}
-      </Link>
-      <h1 className="mt-2 mb-4 font-display text-3xl font-normal">Analytics</h1>
+    <Page width="wide">
+      <PageHeader eyebrow={project.name} title="Analytics" />
 
       <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
         <label className="flex items-center gap-2">
@@ -151,6 +152,6 @@ export function ProjectAnalyticsPage() {
           <BreakdownCharts organizationId={organization!.id} projectId={project.id} />
         </Card>
       </div>
-    </main>
+    </Page>
   );
 }

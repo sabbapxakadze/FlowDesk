@@ -13,3 +13,4 @@ export { cn } from "./lib/cn";
 export { AnchoredTooltip } from "./chartTooltip";
 export { anchoredTooltipProps } from "./anchoredTooltipProps";
 export { WrappingTick } from "./WrappingTick";
+export { Page, PageHeader } from "./Page";

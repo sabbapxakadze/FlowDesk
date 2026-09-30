@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import {
   DndContext,
   KeyboardSensor,
@@ -17,7 +17,7 @@ import { CreateSprintForm } from "../../features/create-sprint";
 import { useStartSprint, useCompleteSprint } from "../../features/manage-sprint";
 import { useAssignIssueSprint } from "../../features/assign-issue-sprint";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Button, Card, EmptyState, ErrorText, Skeleton } from "../../shared/ui";
+import { Button, Card, EmptyState, ErrorText, Page, PageHeader, Skeleton } from "../../shared/ui";
 
 function ListSkeleton() {
   return (
@@ -95,24 +95,24 @@ export function ProjectSprintsPage() {
   }
 
   if (projectsPending) {
-    return <p className="p-8 text-[var(--color-text-muted)]">Loading…</p>;
+    return (
+      <Page>
+        <p className="text-[var(--color-text-muted)]">Loading…</p>
+      </Page>
+    );
   }
 
   if (!project) {
-    return <p className="p-8 text-[var(--color-text-danger)]">Project not found.</p>;
+    return (
+      <Page>
+        <p className="text-[var(--color-text-danger)]">Project not found.</p>
+      </Page>
+    );
   }
 
   return (
-    <main className="p-8">
-      <div className="flex items-center justify-between">
-        <Link to={`/projects/${project.id}`} className="text-sm text-[var(--color-text-link)] underline">
-          ← {project.name} (list)
-        </Link>
-        <Link to={`/projects/${project.id}/board`} className="text-sm text-[var(--color-text-link)] underline">
-          Board →
-        </Link>
-      </div>
-      <h1 className="mt-2 mb-4 font-display text-3xl font-normal">{project.name} — Sprints</h1>
+    <Page width="wide">
+      <PageHeader eyebrow={project.name} title="Sprints" />
 
       <CreateSprintForm organizationId={organization!.id} projectId={project.id} />
 
@@ -204,6 +204,6 @@ export function ProjectSprintsPage() {
           </div>
         </DndContext>
       )}
-    </main>
+    </Page>
   );
 }

@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import type { IssueStatus } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
 import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
 import { CreateIssueForm } from "../../features/create-issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Button, Card, EmptyState, ErrorText, Select, Skeleton, STATUS_LABELS } from "../../shared/ui";
+import { Button, Card, EmptyState, ErrorText, Page, PageHeader, Select, Skeleton, STATUS_LABELS } from "../../shared/ui";
 
 const STATUS_FILTER_VALUES: IssueStatus[] = ["todo", "in_progress", "done"];
 
@@ -98,32 +98,24 @@ export function ProjectDetailPage() {
   }
 
   if (projectsPending) {
-    return <p className="p-8 text-[var(--color-text-muted)]">Loading…</p>;
+    return (
+      <Page>
+        <p className="text-[var(--color-text-muted)]">Loading…</p>
+      </Page>
+    );
   }
 
   if (!project) {
-    return <p className="p-8 text-[var(--color-text-danger)]">Project not found.</p>;
+    return (
+      <Page>
+        <p className="text-[var(--color-text-danger)]">Project not found.</p>
+      </Page>
+    );
   }
 
   return (
-    <main className="p-8">
-      <div className="flex items-center justify-between">
-        <Link to="/projects" className="text-sm text-[var(--color-text-link)] underline">
-          ← All projects
-        </Link>
-        <div className="flex items-center gap-4">
-          <Link to={`/projects/${project.id}/analytics`} className="text-sm text-[var(--color-text-link)] underline">
-            Analytics →
-          </Link>
-          <Link to={`/projects/${project.id}/sprints`} className="text-sm text-[var(--color-text-link)] underline">
-            Sprints →
-          </Link>
-          <Link to={`/projects/${project.id}/board`} className="text-sm text-[var(--color-text-link)] underline">
-            Board →
-          </Link>
-        </div>
-      </div>
-      <h1 className="mt-2 mb-4 font-display text-3xl font-normal">{project.name}</h1>
+    <Page>
+      <PageHeader eyebrow={project.name} title="Issues" />
 
       <CreateIssueForm organizationId={organization!.id} projectId={project.id} />
 
@@ -198,6 +190,6 @@ export function ProjectDetailPage() {
           {isFetchingNextPage ? "Loading…" : "Load more"}
         </Button>
       )}
-    </main>
+    </Page>
   );
 }
