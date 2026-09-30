@@ -464,6 +464,12 @@ pairs in both modes, all pass; checked live: board in light and dark, a keyboard
 drag after the icon swap (one move), and that the bell and grip icons render as
 Lucide. Not re-checked by eye after the change: every other page.
 
+**Theme switch (2026-09-30, owner request):** Light / Dark / System in the
+sidebar footer, the mobile drawer and `/design-system`, saved in localStorage,
+applied before first paint by an inline script in `index.html`, synced across
+tabs, plus `color-scheme` so native controls match. See ADR 0017 for what was
+verified and what was not (no scrollbar pixels, no Firefox/Safari).
+
 **Done when** every existing screen reflects a deliberate visual direction,
 not just the ones touched directly in the minimal slice 1. Met by slices 2a-2f:
 one palette and type pair through the tokens, a shell, and every screen and

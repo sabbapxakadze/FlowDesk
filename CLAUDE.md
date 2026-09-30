@@ -345,7 +345,7 @@ logged-in page, and the duplicated in-page links are gone. Slice 2e
 dashed empty states, sprint status badges, form surfaces, a timeline rail.
 Slice 2f
 (overlays and the design-system page) is done, so **Phase 3.6 is complete**:
-the palette-A look (neutral gray after the owner found warm stone brownish, ADR 0016; icons from Lucide) is on every screen and overlay, `/design-system` documents it
+the palette-A look (neutral gray after the owner found warm stone brownish, ADR 0016; icons from Lucide) is on every screen and overlay, with a Light/Dark/System theme switch in the sidebar (ADR 0017), `/design-system` documents it
 with a theme switch, and a pre-existing command-palette bug (Esc after a
 no-reload login left it stuck) was found and fixed. What follows
 is the history of the earlier, paused slice 1: it was **paused after a

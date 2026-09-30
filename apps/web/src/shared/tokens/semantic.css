@@ -61,9 +61,17 @@
  * --radius-xl/--radius-md are real Tailwind v4 primitives, same as
  * --radius-lg/--radius-sm were.
  */
+/* color-scheme tells the browser to draw its own controls (scrollbars, the
+   select dropdown, date pickers, the file button) in a matching theme. Without
+   it a forced Dark on a light OS keeps light scrollbars and pickers. */
 :root {
   --radius-card: var(--radius-xl);
   --radius-control: var(--radius-md);
+  color-scheme: light dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -101,6 +109,8 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
+
   --color-bg-page: var(--color-neutral-950);
   --color-bg-surface: var(--color-neutral-900);
 

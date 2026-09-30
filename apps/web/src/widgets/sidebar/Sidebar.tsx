@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Link, NavLink, useMatch } from "react-router";
 import { useProjects } from "../../entities/project";
 import { useAuth } from "../../shared/auth/useAuth";
-import { cn, Skeleton } from "../../shared/ui";
+import { cn, Skeleton, ThemeSwitch } from "../../shared/ui";
 
 const LINK =
   "flex items-center rounded-[var(--radius-control)] px-2.5 py-1.5 text-sm text-[var(--color-text-sidebar)] hover:bg-[var(--color-bg-sidebar-active)] hover:text-[var(--color-text-sidebar-active)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-text-sidebar-active)]";
@@ -117,6 +117,9 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
 
       <div className="mt-2 flex flex-col gap-0.5 border-t border-[var(--color-border-sidebar)] pt-3">
         <SideLink to="/design-system">Design system</SideLink>
+        <div className="px-2.5 pt-2">
+          <ThemeSwitch variant="sidebar" />
+        </div>
         {user && (
           <div className="flex items-center justify-between gap-2 px-2.5 pt-2 text-sm">
             <span className="truncate text-[var(--color-text-sidebar-active)]">{user.name}</span>

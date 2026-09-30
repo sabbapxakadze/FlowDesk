@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import type { IssueStatus } from "@flowdesk/contracts";
 import {
@@ -15,6 +15,7 @@ import {
   Skeleton,
   StatusBadge,
   Textarea,
+  ThemeSwitch,
 } from "../../shared/ui";
 
 type SwatchKind = "fill" | "text" | "border";
@@ -136,8 +137,6 @@ const neutralBgClassByShade: Record<(typeof NEUTRAL_SHADES)[number], string> = {
 
 const ALL_STATUSES: IssueStatus[] = ["todo", "in_progress", "done"];
 
-type Theme = "system" | "light" | "dark";
-
 function TokenSwatch({ token }: { token: Token }) {
   return (
     <div className="flex items-center gap-3">
@@ -203,46 +202,20 @@ function Scale({ shades, classes, label }: { shades: readonly number[]; classes:
  * material" (ADR 0006's own phrase) means someone without an account should be
  * able to see it. See App.tsx: not wrapped in RequireAuth, so no sidebar.
  *
- * The theme switch only sets `data-theme` on <html> (the attribute
- * semantic.css already honours) while this page is mounted; "System" removes
- * it so the app goes back to following the OS setting. An app-wide switch is
- * a separate decision.
+ * The theme switch is the same shared ThemeSwitch the sidebar uses, so this
+ * page and the app can never disagree about the theme.
  */
 export function DesignSystemPage() {
   const [showFieldError, setShowFieldError] = useState(false);
-  const [theme, setTheme] = useState<Theme>("system");
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "system") {
-      root.removeAttribute("data-theme");
-    } else {
-      root.setAttribute("data-theme", theme);
-    }
-    return () => root.removeAttribute("data-theme");
-  }, [theme]);
 
   return (
     <Page>
       <PageHeader title="Design system">
         <p className="mb-3 text-sm text-[var(--color-text-muted)]">
-          Every semantic token and base component, live. Switch the theme here, or leave it on System
-          to follow your device.
+          Every semantic token and base component, live. Switch the theme here or in the sidebar, or
+          leave it on System to follow your device.
         </p>
-        <div role="group" aria-label="Theme" className="flex gap-2">
-          {(["system", "light", "dark"] as const).map((option) => (
-            <Button
-              key={option}
-              size="sm"
-              variant={theme === option ? "primary" : "secondary"}
-              aria-pressed={theme === option}
-              onClick={() => setTheme(option)}
-              className="capitalize"
-            >
-              {option}
-            </Button>
-          ))}
-        </div>
+        <ThemeSwitch />
       </PageHeader>
 
       <h2 className="mb-6 border-b border-[var(--color-border-default)] pb-2 text-sm font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">

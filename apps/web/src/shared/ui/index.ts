@@ -15,3 +15,4 @@ export { anchoredTooltipProps } from "./anchoredTooltipProps";
 export { WrappingTick } from "./WrappingTick";
 export { Page, PageHeader } from "./Page";
 export { ColumnHeader } from "./ColumnHeader";
+export { ThemeSwitch } from "./ThemeSwitch";

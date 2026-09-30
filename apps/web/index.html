@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FlowDesk</title>
+    <!-- Applies the saved theme before the first paint so a saved choice does
+         not flash the wrong colours. Same key as src/shared/theme/theme-store.ts
+         (change both together). Guarded: storage can be blocked. -->
+    <script>
+      try {
+        var saved = localStorage.getItem("flowdesk-theme");
+        if (saved === "light" || saved === "dark") {
+          document.documentElement.setAttribute("data-theme", saved);
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
