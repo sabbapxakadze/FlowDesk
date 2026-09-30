@@ -16,3 +16,4 @@ export { WrappingTick } from "./WrappingTick";
 export { Page, PageHeader } from "./Page";
 export { ColumnHeader } from "./ColumnHeader";
 export { ThemeSwitch } from "./ThemeSwitch";
+export { Time } from "./Time";

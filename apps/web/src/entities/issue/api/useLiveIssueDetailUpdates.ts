@@ -54,6 +54,8 @@ export function useLiveIssueDetailUpdates(
     function handleUpdate() {
       void queryClient.invalidateQueries({ queryKey: issueKeys.detail(issueId) });
       void queryClient.invalidateQueries({ queryKey: issueKeys.events(issueId) });
+      // A comment's files arrive after the comment; this also refreshes them.
+      void queryClient.invalidateQueries({ queryKey: issueKeys.attachments(issueId) });
     }
 
     function handlePresenceUpdate(payload: { issueId: string; viewers: PresenceViewer[] }) {

@@ -64,6 +64,14 @@ anchored to the hovered column/row (checked with a real mouse), and the
 sprint selector hides choices that would change nothing. Narrow (~420px)
 x-axis labels wrap onto two lines instead of overlapping.
 
+**Phase 8.5 (Collaboration polish) slice 1 is done**: comments can be edited and
+deleted and can carry files, and the timeline shows times (ADR 0019). History
+stays append-only (new `issue.comment_edited`/`issue.comment_deleted` events,
+folded by the API into the comment; the original text of a deleted comment stays
+in the stored event, hidden not erased). Author edits, author or owner/admin
+deletes, neither notifies, a deleted comment's files stay as plain attachments.
+Remaining Phase 8.5 slices are in `docs/roadmap.md`.
+
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,
 time-limited download tokens, chosen with the owner because S3 and
 Docker are explicitly Phase 9 in the stack list. New `lib/storage.ts`

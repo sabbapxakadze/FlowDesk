@@ -1,19 +1,20 @@
 import { useState } from "react";
 import { useParams } from "react-router";
-import type { IssueEvent } from "@flowdesk/contracts";
+import type { Attachment, IssueEvent } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
 import {
   AttachmentList,
   describeEvent,
+  useAttachments,
   useIssue,
   useIssueEvents,
   useLiveIssueDetailUpdates,
 } from "../../entities/issue";
 import { EditIssueForm } from "../../features/edit-issue";
-import { CommentForm } from "../../features/post-comment";
+import { CommentCard, CommentForm } from "../../features/post-comment";
 import { UploadAttachmentForm } from "../../features/upload-attachment";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, Page, PageHeader, Skeleton, StatusBadge } from "../../shared/ui";
+import { Page, PageHeader, Skeleton, StatusBadge, Time } from "../../shared/ui";
 
 function IssueDetailSkeleton() {
   return (
@@ -58,15 +59,30 @@ function TimelineDot() {
   );
 }
 
-function TimelineEntry({ event }: { event: IssueEvent }) {
+function TimelineEntry({
+  event,
+  files,
+  organizationId,
+  projectId,
+  issueId,
+}: {
+  event: IssueEvent;
+  files: Attachment[];
+  organizationId: string;
+  projectId: string;
+  issueId: string;
+}) {
   if (event.type === "issue.commented") {
     return (
       <li className="relative">
         <TimelineDot />
-        <Card className="rounded-[var(--radius-control)] px-3 py-2">
-          <p className="text-xs text-[var(--color-text-muted)]">{event.actorName} commented</p>
-          <p className="text-sm">{String(event.payload.body)}</p>
-        </Card>
+        <CommentCard
+          event={event}
+          files={files}
+          organizationId={organizationId}
+          projectId={projectId}
+          issueId={issueId}
+        />
       </li>
     );
   }
@@ -74,7 +90,7 @@ function TimelineEntry({ event }: { event: IssueEvent }) {
   return (
     <li className="relative text-sm text-[var(--color-text-muted)]">
       <TimelineDot />
-      {event.actorName} {describeEvent(event)}
+      {event.actorName} {describeEvent(event)} · <Time iso={event.createdAt} />
     </li>
   );
 }
@@ -92,6 +108,7 @@ export function IssueDetailPage() {
     projectId!,
     issueId!,
   );
+  const { data: attachments } = useAttachments(organization!.id, projectId!, issueId!);
   const { viewers } = useLiveIssueDetailUpdates(projectId!, issueId!);
   const otherViewers = viewers.filter((viewer) => viewer.userId !== user?.id);
 
@@ -178,7 +195,14 @@ export function IssueDetailPage() {
       ) : (
         <ul className="flex flex-col gap-3 border-l border-[var(--color-border-input)] pl-5">
           {events?.map((event) => (
-            <TimelineEntry key={event.id} event={event} />
+            <TimelineEntry
+              key={event.id}
+              event={event}
+              files={(attachments ?? []).filter((a) => a.commentId === event.payload.commentId)}
+              organizationId={organization!.id}
+              projectId={project.id}
+              issueId={issue.id}
+            />
           ))}
         </ul>
       )}

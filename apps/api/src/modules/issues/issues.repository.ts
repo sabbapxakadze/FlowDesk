@@ -316,9 +316,13 @@ async function computeBisectedRank(
 export async function writeIssueEvent(
   tx: Tx,
   input: { issueId: string; actorId: string; type: string; payload: Record<string, unknown> },
+  options: { notify?: boolean } = {},
 ): Promise<string[]> {
   const [event] = await tx.insert(issueEvents).values(input).returning({ id: issueEvents.id });
   if (!event) throw new Error("Failed to write issue event");
+  // notify: false writes the audit row but creates no notifications (comment
+  // edits and deletes are quiet by design, see ADR 0019).
+  if (options.notify === false) return [];
   return notificationsRepository.createForIssueEvent(tx, {
     issueEventId: event.id,
     issueId: input.issueId,
@@ -700,10 +704,87 @@ export async function addComment(input: { issueId: string; authorId: string; bod
 }
 
 /**
+ * One comment, scoped to the issue and organization (comments has no
+ * organizationId column: same join-through-issues shape as attachments and
+ * events). Undefined covers "missing" and "belongs to another issue/tenant".
+ */
+export async function findComment(organizationId: string, issueId: string, commentId: string) {
+  const [row] = await db
+    .select({ comment: comments })
+    .from(comments)
+    .innerJoin(issues, eq(comments.issueId, issues.id))
+    .where(
+      and(eq(comments.id, commentId), eq(comments.issueId, issueId), eq(issues.organizationId, organizationId)),
+    );
+  return row?.comment;
+}
+
+/**
+ * The comments row is the read model, so it is updated; the audit trail is
+ * not: a new issue.comment_edited event is appended (history is never
+ * patched). Quiet: no notifications.
+ */
+export async function updateComment(input: { issueId: string; commentId: string; actorId: string; body: string }) {
+  return db.transaction(async (tx) => {
+    const [comment] = await tx
+      .update(comments)
+      .set({ body: input.body, updatedAt: new Date() })
+      .where(and(eq(comments.id, input.commentId), eq(comments.issueId, input.issueId)))
+      .returning();
+    if (!comment) throw new Error("Failed to update comment");
+
+    await writeIssueEvent(
+      tx,
+      {
+        issueId: input.issueId,
+        actorId: input.actorId,
+        type: "issue.comment_edited",
+        payload: { commentId: comment.id, body: comment.body },
+      },
+      { notify: false },
+    );
+    return comment;
+  });
+}
+
+/**
+ * Removes the comments row (files attached to it survive: attachments.comment_id
+ * is ON DELETE SET NULL) and appends issue.comment_deleted. The original
+ * issue.commented event still holds the old text as audit history; listEvents
+ * never serves it once the comment row is gone. Quiet: no notifications.
+ */
+export async function deleteComment(input: { issueId: string; commentId: string; actorId: string }) {
+  return db.transaction(async (tx) => {
+    const deleted = await tx
+      .delete(comments)
+      .where(and(eq(comments.id, input.commentId), eq(comments.issueId, input.issueId)))
+      .returning({ id: comments.id });
+    if (deleted.length === 0) return false;
+
+    await writeIssueEvent(
+      tx,
+      {
+        issueId: input.issueId,
+        actorId: input.actorId,
+        type: "issue.comment_deleted",
+        payload: { commentId: input.commentId },
+      },
+      { notify: false },
+    );
+    return true;
+  });
+}
+
+/**
  * Joined to users for actorName (a timeline that just says a UUID
  * commented isn't readable) and to issues for organizationId scoping —
  * issue_events itself has no organizationId column, same shape as
  * listLabelsForIssue's join through labels.
+ *
+ * LEFT JOINed to comments for issue.commented rows, so the service can show
+ * the CURRENT text (after edits) and notice a deleted comment (the joined row
+ * is gone). The edit/delete audit events are not returned: they are folded
+ * into the comment they belong to, not shown as timeline lines.
  */
 export async function listEvents(organizationId: string, issueId: string) {
   return db
@@ -715,11 +796,28 @@ export async function listEvents(organizationId: string, issueId: string) {
       type: issueEvents.type,
       payload: issueEvents.payload,
       createdAt: issueEvents.createdAt,
+      commentRowId: comments.id,
+      commentBody: comments.body,
+      commentCreatedAt: comments.createdAt,
+      commentUpdatedAt: comments.updatedAt,
     })
     .from(issueEvents)
     .innerJoin(users, eq(issueEvents.actorId, users.id))
     .innerJoin(issues, eq(issueEvents.issueId, issues.id))
-    .where(and(eq(issueEvents.issueId, issueId), eq(issues.organizationId, organizationId)))
+    .leftJoin(
+      comments,
+      and(
+        eq(issueEvents.type, "issue.commented"),
+        sql`${comments.id} = (${issueEvents.payload}->>'commentId')::uuid`,
+      ),
+    )
+    .where(
+      and(
+        eq(issueEvents.issueId, issueId),
+        eq(issues.organizationId, organizationId),
+        sql`${issueEvents.type} NOT IN ('issue.comment_edited', 'issue.comment_deleted')`,
+      ),
+    )
     .orderBy(asc(issueEvents.createdAt));
 }
 
@@ -909,6 +1007,8 @@ export async function addAttachment(input: {
   mimeType: string;
   sizeBytes: number;
   storageKey: string;
+  /** Set when the file belongs to a comment (validated by the service first). */
+  commentId?: string | null;
 }) {
   return db.transaction(async (tx) => {
     const [attachment] = await tx
@@ -921,6 +1021,7 @@ export async function addAttachment(input: {
         mimeType: input.mimeType,
         sizeBytes: input.sizeBytes,
         storageKey: input.storageKey,
+        commentId: input.commentId ?? null,
       })
       .returning();
     if (!attachment) throw new Error("Failed to create attachment");
@@ -932,12 +1033,16 @@ export async function addAttachment(input: {
     const [uploader] = await tx.select({ name: users.name }).from(users).where(eq(users.id, input.uploaderId));
     if (!uploader) throw new Error("Failed to look up attachment uploader");
 
-    const notifiedUserIds = await writeIssueEvent(tx, {
-      issueId: input.issueId,
-      actorId: input.uploaderId,
-      type: "issue.attachment_added",
-      payload: { attachmentId: attachment.id, filename: attachment.filename },
-    });
+    // A comment's file is part of that comment, which already notified and is
+    // already on the timeline: no separate event, no separate notification.
+    const notifiedUserIds = input.commentId
+      ? []
+      : await writeIssueEvent(tx, {
+          issueId: input.issueId,
+          actorId: input.uploaderId,
+          type: "issue.attachment_added",
+          payload: { attachmentId: attachment.id, filename: attachment.filename },
+        });
 
     return { attachment: { ...attachment, uploaderName: uploader.name }, notifiedUserIds };
   });
@@ -961,6 +1066,7 @@ export async function listAttachmentsForIssue(organizationId: string, issueId: s
       mimeType: attachments.mimeType,
       sizeBytes: attachments.sizeBytes,
       createdAt: attachments.createdAt,
+      commentId: attachments.commentId,
     })
     .from(attachments)
     .innerJoin(users, eq(attachments.uploaderId, users.id))

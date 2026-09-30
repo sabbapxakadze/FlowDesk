@@ -54,6 +54,7 @@ export function AttachmentList({
           <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
             <span>
               {formatSize(attachment.sizeBytes)} · {attachment.uploaderName}
+              {attachment.commentId && " · from a comment"}
             </span>
             <button
               type="button"

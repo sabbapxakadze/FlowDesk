@@ -32,6 +32,12 @@ export function describeEvent(event: IssueEvent): string {
     }
     case "issue.commented":
       return "commented";
+    // Edits and deletes are folded into the comment itself on the timeline and
+    // never notify, but the audit rows exist, so describe them if one is shown.
+    case "issue.comment_edited":
+      return "edited a comment";
+    case "issue.comment_deleted":
+      return "deleted a comment";
     case "issue.attachment_added":
       return `attached "${String(event.payload.filename)}"`;
     case "issue.attachment_removed":

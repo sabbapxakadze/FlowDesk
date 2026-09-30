@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { IssueStatus } from "@flowdesk/contracts";
 import { AppError } from "../../shared/errors.js";
+import { hasPermission, type Role } from "../../shared/permissions.js";
 import {
   broadcastIssueChanged,
   broadcastIssueCommented,
@@ -117,8 +118,98 @@ export async function addComment(input: { issueId: string; authorId: string; bod
   return comment;
 }
 
-export async function listIssueEvents(organizationId: string, issueId: string) {
-  return issuesRepository.listEvents(organizationId, issueId);
+/**
+ * The timeline as the viewer should see it. The repository returns raw rows
+ * with each comment's CURRENT row joined on; this folds that into the
+ * issue.commented events: the current text (edits applied), `edited`,
+ * `deleted` (row gone: text blanked, the original never leaves the server),
+ * and whether THIS viewer may edit or delete it, so the client needs no role
+ * logic. Edit: the author. Delete: the author, or an owner/admin. Both need
+ * manage_issue (a viewer who once wrote a comment can no longer change it).
+ */
+export async function listIssueEvents(
+  organizationId: string,
+  issueId: string,
+  viewer: { userId: string; role: Role },
+) {
+  const rows = await issuesRepository.listEvents(organizationId, issueId);
+  const canManage = hasPermission(viewer.role, "manage_issue");
+  const isAdmin = viewer.role === "owner" || viewer.role === "admin";
+
+  return rows.map((row) => {
+    const {
+      commentRowId,
+      commentBody,
+      commentCreatedAt,
+      commentUpdatedAt,
+      ...event
+    } = row;
+    if (event.type !== "issue.commented") return event;
+
+    const deleted = commentRowId === null;
+    const isAuthor = event.actorId === viewer.userId;
+    return {
+      ...event,
+      payload: {
+        // payload is free-form jsonb (unknown); issue.commented always carries commentId.
+        commentId: (event.payload as { commentId?: string }).commentId,
+        body: deleted ? "" : (commentBody ?? ""),
+        edited: !deleted && commentUpdatedAt !== null && commentCreatedAt !== null && commentUpdatedAt > commentCreatedAt,
+        deleted,
+        canEdit: !deleted && canManage && isAuthor,
+        canDelete: !deleted && canManage && (isAuthor || isAdmin),
+      },
+    };
+  });
+}
+
+/**
+ * Edit: the author only. The decision lives here, not in the repository
+ * (which stays logic-free). Quiet by design: no notifications, but open issue
+ * pages are told to refresh.
+ */
+export async function editComment(input: {
+  organizationId: string;
+  issueId: string;
+  commentId: string;
+  actorId: string;
+  body: string;
+}) {
+  const comment = await issuesRepository.findComment(input.organizationId, input.issueId, input.commentId);
+  if (!comment) return { status: "not_found" } as const;
+  if (comment.authorId !== input.actorId) return { status: "forbidden" } as const;
+
+  const updated = await issuesRepository.updateComment({
+    issueId: input.issueId,
+    commentId: input.commentId,
+    actorId: input.actorId,
+    body: input.body,
+  });
+  broadcastIssueCommented(input.issueId);
+  return { status: "edited", comment: updated } as const;
+}
+
+/** Delete: the author, or an owner/admin. Files on the comment are kept. */
+export async function removeComment(input: {
+  organizationId: string;
+  issueId: string;
+  commentId: string;
+  actorId: string;
+  actorRole: Role;
+}) {
+  const comment = await issuesRepository.findComment(input.organizationId, input.issueId, input.commentId);
+  if (!comment) return { status: "not_found" } as const;
+  const isAdmin = input.actorRole === "owner" || input.actorRole === "admin";
+  if (comment.authorId !== input.actorId && !isAdmin) return { status: "forbidden" } as const;
+
+  const deleted = await issuesRepository.deleteComment({
+    issueId: input.issueId,
+    commentId: input.commentId,
+    actorId: input.actorId,
+  });
+  if (!deleted) return { status: "not_found" } as const;
+  broadcastIssueCommented(input.issueId);
+  return { status: "deleted" } as const;
 }
 
 export async function getBoard(organizationId: string, projectId: string) {
@@ -177,12 +268,23 @@ export async function listAttachments(organizationId: string, issueId: string) {
  * 7 slice 4 plan.
  */
 export async function uploadAttachment(input: {
+  organizationId: string;
   issueId: string;
   uploaderId: string;
   filename: string;
   mimeType: string;
   buffer: Buffer;
+  /** Attach the file to this comment (must be the uploader's own, on this issue). */
+  commentId?: string;
 }) {
+  // Validated BEFORE anything is written to disk, so a rejected comment id
+  // never leaves an orphan file behind.
+  if (input.commentId) {
+    const comment = await issuesRepository.findComment(input.organizationId, input.issueId, input.commentId);
+    if (!comment) return { status: "comment_not_found" } as const;
+    if (comment.authorId !== input.uploaderId) return { status: "comment_forbidden" } as const;
+  }
+
   const id = randomUUID();
   const storageKey = await storage.saveFile(id, input.buffer);
 
@@ -194,18 +296,16 @@ export async function uploadAttachment(input: {
     mimeType: input.mimeType,
     sizeBytes: input.buffer.length,
     storageKey,
+    commentId: input.commentId ?? null,
   });
 
   broadcastNotifications(notifiedUserIds);
-  return attachment;
+  // A comment's file arrives after the comment itself: tell open pages to
+  // refetch so it shows up without a reload.
+  if (input.commentId) broadcastIssueCommented(input.issueId);
+  return { status: "uploaded", attachment } as const;
 }
 
-/**
- * Deletes the DB row first, then the physical file — if the file
- * delete fails (logged, not thrown, see lib/storage.ts), the DB row is
- * still correctly gone, which is what the user actually asked for. The
- * reverse order would risk a row surviving with no file behind it.
- */
 export async function deleteAttachment(input: {
   organizationId: string;
   issueId: string;

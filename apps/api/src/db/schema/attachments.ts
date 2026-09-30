@@ -1,4 +1,5 @@
 import { pgTable, uuid, varchar, integer, timestamp, index } from "drizzle-orm/pg-core";
+import { comments } from "./comments.js";
 import { issues } from "./issues.js";
 import { users } from "./users.js";
 
@@ -24,7 +25,16 @@ export const attachments = pgTable(
     mimeType: varchar("mime_type", { length: 255 }).notNull(),
     sizeBytes: integer("size_bytes").notNull(),
     storageKey: varchar("storage_key", { length: 255 }).notNull(),
+    // Set when the file was attached to a comment. SET NULL, not CASCADE:
+    // deleting a comment must never destroy its files (owner decision), so
+    // they fall back to being ordinary issue attachments. Still an issue
+    // attachment either way: the issue's Attachments list shows comment files
+    // too, never the other way round (a direct upload has no comment).
+    commentId: uuid("comment_id").references(() => comments.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("attachments_issue_id_idx").on(table.issueId)],
+  (table) => [
+    index("attachments_issue_id_idx").on(table.issueId),
+    index("attachments_comment_id_idx").on(table.commentId),
+  ],
 );

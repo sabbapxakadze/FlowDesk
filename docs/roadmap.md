@@ -1494,6 +1494,97 @@ Slice 4 (breakdowns) shipped:
     offered choice.
   - Real-mouse hover is now verified (it was keyboard-only in slices 1-4).
 
+## Phase 8.5 — Collaboration polish (proposed 2026-09-30, before Phase 9)
+
+Why: after Phase 8 and the design rollout, the owner asked what the product still
+lacks. This phase is the answer, kept small on purpose: things a real team would
+hit in the first day. Everything below was checked against the code; "confirmed"
+means the schema or routes were read, not assumed. Each slice follows the working
+agreement (plan first, tests with the slice, ADR if a decision changes).
+
+**Confirmed gaps** (from the code, 2026-09-30):
+- Comments can be posted and listed, but not edited or deleted (no route; the
+  `comments` table already has `updated_at`).
+- Attachments belong to an issue only (`issue_id`, no comment link).
+- Issues have no assignee, priority or due date; issues, projects and labels
+  cannot be renamed or deleted after creation (projects and labels only have
+  create and list routes).
+- No way to add teammates (no invite flow), so an organization is one person.
+- The activity timeline has no times, although every event has `created_at`.
+- Ctrl+K works but nothing in the UI mentions it; a wrong issue link shows a
+  skeleton for about 7 seconds (failed request retried) before "not found".
+
+### Slice 1 — Comments: edit, delete, files — DONE 2026-09-30 (ADR 0019)
+
+**Built as decided with the owner:** files stay when a comment is deleted; post the
+comment, then upload its files; edits and deletes notify nobody; the author edits,
+the author or an owner/admin deletes. History stays append-only (new
+`issue.comment_edited` / `issue.comment_deleted` events; the API folds them into the
+comment). New migration 0015 (`attachments.comment_id`, `ON DELETE SET NULL`).
+**Verified:** typecheck, lint and the full suite pass (215 tests, 10 new in
+`comments.http.test.ts`). Mutation checks: dropping the edit author check, the
+`notify: false` option, the joined-row fold, or the admin-delete rule each fails a
+named test. **Live (Chrome, real clicks, QA account plus a second member driven
+through authenticated requests):** a comment with two files showed them inside the
+comment and in Attachments marked "from a comment"; edit showed "(edited)"; the
+second member's comment, edit and the owner's delete all appeared without a reload
+in the open tab; 403 for editing or deleting someone else's comment as a plain
+member; deleting left both files in Attachments as plain files; a server-rejected
+file (type swapped in the browser) left the comment posted with a message naming
+the file; the bell did not change on edit; relative times ("1 minute ago"); dark
+and light; 390px width. **Not verified:** a direct upload never appearing inside a
+comment was checked by the API test only, not in the browser; a real native file
+chooser (files were set through `DataTransfer`); the second member's own browser
+view (only API calls); the tooltip with exact date on hover. **Noted, not
+investigated:** a full page reload in the Playwright browser returned 401 from
+`/auth/refresh` and sent the session to the login page; this slice does not touch
+auth, cause unknown.
+
+The original plan for this slice, kept for the record:
+
+- **Edit and delete comments.** Activity history is append-only, so no row is
+  changed: an edit writes an `issue.comment_edited` event and the UI shows the
+  newest text with "(edited)"; a delete writes `issue.comment_deleted` and the UI
+  hides the text while the history keeps the fact. Author edits; author or an
+  admin deletes. Optimistic concurrency and tenant scoping as everywhere else.
+- **Files in comments, one direction only.** Add a nullable `comment_id` to
+  `attachments`. A comment's files also appear in the issue's Attachments list
+  (marked "from a comment"); a file uploaded straight to the issue has no
+  `comment_id` and never appears in any comment. Existing limits apply (allowed
+  types, 10 MB, signed download URLs).
+- **Times on the timeline and comments** ("2h ago", full date on hover), tiny
+  and needed by "(edited)".
+- **Decisions to confirm before building:**
+  - When a comment is deleted, its files STAY in Attachments (recommended: a
+    delete should not silently destroy uploads) or go with it?
+  - Post the comment first, then upload the files, with a clear message if an
+    upload fails (recommended) or one combined multipart request?
+  - Do notifications fire for edits (recommended: no, only for new comments)?
+
+### Later slices (order is a recommendation, not a commitment)
+
+1. **Assignee and priority** on issues (cards, filters, "assigned to me"); also a
+   better notification target than "everyone who took part". Probably the change
+   that most alters how the product feels.
+2. **Rename and delete** for issues, projects, labels and sprints, with
+   confirmation and audit events.
+3. **Invite teammates** by email with roles (the roles enum already exists).
+4. **Due dates** with an overdue marker.
+5. **Small UI wins:** `C` to create an issue, a visible Ctrl+K button in the
+   sidebar, filter the issue list by label (click a label), a proper "not found"
+   for bad links without the 7-second skeleton.
+6. **Markdown and @mentions** in descriptions and comments.
+7. **A "my work" home** (assigned to me, recent activity, unread notifications)
+   instead of `/` redirecting to the project list.
+8. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
+   from the stored events, sprint dates and progress on the sprint card, saved
+   filters and views.
+
+**Done when** (for the phase) a two-person team can invite each other, assign and
+prioritise work, discuss it with edits and files, and see when things happened.
+
+---
+
 ## Phase 9 — Production
 
 - [ ] Docker + docker-compose (api, web, postgres, redis)

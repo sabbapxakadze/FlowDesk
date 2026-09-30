@@ -19,6 +19,8 @@ import {
   moveIssueRequestSchema,
   searchIssuesQuerySchema,
   searchIssuesResponseSchema,
+  updateCommentRequestSchema,
+  updateCommentResponseSchema,
   updateIssueRequestSchema,
   updateIssueResponseSchema,
 } from "@flowdesk/contracts";
@@ -247,9 +249,67 @@ export async function listIssueEvents(req: Request, res: Response) {
     throw new Error("listIssueEvents requires requireIssue to have run first");
   }
 
-  const rows = await issuesService.listIssueEvents(req.ctx.organizationId, req.ctx.issueId);
+  const rows = await issuesService.listIssueEvents(req.ctx.organizationId, req.ctx.issueId, {
+    userId: req.ctx.userId,
+    role: req.ctx.role,
+  });
   const body = listIssueEventsResponseSchema.parse({ data: rows.map(eventToWireFormat) });
   res.json(body);
+}
+
+function parseCommentId(req: Request): string {
+  const parsed = z.uuid().safeParse(req.params.commentId);
+  if (!parsed.success) {
+    throw new AppError("invalid_comment_id", 400, "commentId must be a UUID.");
+  }
+  return parsed.data;
+}
+
+export async function updateComment(req: Request, res: Response) {
+  if (!req.ctx?.issueId) {
+    throw new Error("updateComment requires requireIssue to have run first");
+  }
+  const commentId = parseCommentId(req);
+
+  const parsed = updateCommentRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError("validation_error", 400, "Invalid comment", parsed.error.flatten().fieldErrors);
+  }
+
+  const result = await issuesService.editComment({
+    organizationId: req.ctx.organizationId,
+    issueId: req.ctx.issueId,
+    commentId,
+    actorId: req.ctx.userId,
+    body: parsed.data.body,
+  });
+  if (result.status === "not_found") throw new AppError("comment_not_found", 404, "Comment not found.");
+  if (result.status === "forbidden") {
+    throw new AppError("comment_forbidden", 403, "You can only edit your own comments.");
+  }
+
+  res.json(updateCommentResponseSchema.parse({ data: toWireFormat(result.comment) }));
+}
+
+export async function deleteComment(req: Request, res: Response) {
+  if (!req.ctx?.issueId) {
+    throw new Error("deleteComment requires requireIssue to have run first");
+  }
+  const commentId = parseCommentId(req);
+
+  const result = await issuesService.removeComment({
+    organizationId: req.ctx.organizationId,
+    issueId: req.ctx.issueId,
+    commentId,
+    actorId: req.ctx.userId,
+    actorRole: req.ctx.role,
+  });
+  if (result.status === "not_found") throw new AppError("comment_not_found", 404, "Comment not found.");
+  if (result.status === "forbidden") {
+    throw new AppError("comment_forbidden", 403, "You can only delete your own comments.");
+  }
+
+  res.status(204).end();
 }
 
 export async function getBoard(req: Request, res: Response) {
@@ -422,15 +482,33 @@ export async function uploadAttachment(req: Request, res: Response) {
     throw new AppError("validation_error", 400, "No file was uploaded.");
   }
 
-  const attachment = await issuesService.uploadAttachment({
+  // An optional multipart text field: attach the file to one of the uploader's
+  // own comments. An empty value means "not a comment file".
+  const rawCommentId = typeof req.body?.commentId === "string" ? req.body.commentId : "";
+  let commentId: string | undefined;
+  if (rawCommentId !== "") {
+    const parsedCommentId = z.uuid().safeParse(rawCommentId);
+    if (!parsedCommentId.success) {
+      throw new AppError("invalid_comment_id", 400, "commentId must be a UUID.");
+    }
+    commentId = parsedCommentId.data;
+  }
+
+  const result = await issuesService.uploadAttachment({
+    organizationId: req.ctx.organizationId,
     issueId: req.ctx.issueId,
     uploaderId: req.ctx.userId,
     filename: req.file.originalname,
     mimeType: req.file.mimetype,
     buffer: req.file.buffer,
+    commentId,
   });
+  if (result.status === "comment_not_found") throw new AppError("comment_not_found", 404, "Comment not found.");
+  if (result.status === "comment_forbidden") {
+    throw new AppError("comment_forbidden", 403, "You can only attach files to your own comments.");
+  }
 
-  const body = attachmentResponseSchema.parse({ data: toAttachmentWireFormat(attachment) });
+  const body = attachmentResponseSchema.parse({ data: toAttachmentWireFormat(result.attachment) });
   res.status(201).json(body);
 }
 

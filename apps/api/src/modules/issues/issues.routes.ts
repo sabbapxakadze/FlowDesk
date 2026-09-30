@@ -195,6 +195,29 @@ issuesRouter.post(
   issuesController.createComment,
 );
 
+// Edit: the author only. Delete: the author, or an owner/admin. The permission
+// middleware here is only the floor (manage_issue); who owns the comment is a
+// decision the service makes against the real row.
+issuesRouter.patch(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId/comments/:commentId",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("manage_issue"),
+  issuesController.updateComment,
+);
+
+issuesRouter.delete(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId/comments/:commentId",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("manage_issue"),
+  issuesController.deleteComment,
+);
+
 issuesRouter.get(
   "/organizations/:organizationId/projects/:projectId/issues/:issueId/events",
   requireAuth,

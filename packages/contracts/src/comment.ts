@@ -22,3 +22,12 @@ export const createCommentResponseSchema = z.object({
 });
 
 export type CreateCommentResponse = z.infer<typeof createCommentResponseSchema>;
+
+/** Editing uses the same rules as posting: the new body replaces the old one. */
+export const updateCommentRequestSchema = createCommentRequestSchema;
+
+export type UpdateCommentRequest = z.infer<typeof updateCommentRequestSchema>;
+
+export const updateCommentResponseSchema = createCommentResponseSchema;
+
+export type UpdateCommentResponse = z.infer<typeof updateCommentResponseSchema>;

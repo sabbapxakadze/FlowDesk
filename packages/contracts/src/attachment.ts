@@ -35,6 +35,12 @@ export const attachmentSchema = z.object({
   mimeType: z.string(),
   sizeBytes: z.number(),
   createdAt: z.iso.datetime(),
+  /**
+   * Set when the file was attached to a comment. Comment files are also listed
+   * with the issue's attachments; a file uploaded straight to the issue has no
+   * comment (null) and never appears inside one.
+   */
+  commentId: z.uuid().nullable(),
   downloadUrl: z.string(),
 });
 
