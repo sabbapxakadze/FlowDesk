@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router";
-import { HomePage } from "../pages/home/HomePage";
+import { HomeRedirect } from "../pages/home/HomeRedirect";
 import { ProjectsPage } from "../pages/projects/ProjectsPage";
 import { ProjectDetailPage } from "../pages/project-detail/ProjectDetailPage";
 import { ProjectBoardPage } from "../pages/project-board/ProjectBoardPage";
@@ -15,6 +15,7 @@ import { ResetPasswordPage } from "../pages/reset-password/ResetPasswordPage";
 import { DesignSystemPage } from "../pages/design-system/DesignSystemPage";
 import { RequireAuth } from "../shared/auth/RequireAuth";
 import { AppShell } from "./AppShell";
+import { AuthLayout } from "./AuthLayout";
 import { ErrorBoundary } from "../shared/error-boundary/ErrorBoundary";
 import { CommandPalette } from "../widgets/command-palette";
 
@@ -24,7 +25,7 @@ export function App() {
       <CommandPalette />
       <ErrorBoundary>
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<HomeRedirect />} />
           <Route
             element={
               <RequireAuth>
@@ -40,11 +41,13 @@ export function App() {
             <Route path="/projects/:projectId/issues/:issueId" element={<IssueDetailPage />} />
             <Route path="/search" element={<SearchPage />} />
           </Route>
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route element={<AuthLayout />}>
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+          </Route>
           <Route path="/design-system" element={<DesignSystemPage />} />
         </Routes>
       </ErrorBoundary>

@@ -347,8 +347,32 @@ Slice 1 (visual foundations, kept minimal) shipped:
       checked by focusing programmatically), browsers other than Chrome.
       Not done, on purpose: the per-page links remain; no Ctrl+K button, no
       theme toggle.
-- [ ] Slice 2c+ — Roll out the refreshed look screen by screen (component
-      visuals, `border-input` decision, remaining pages).
+- [x] Slice 2c — **Public screens and form controls (2026-09-30).** Auth
+      layout route (`app/AuthLayout.tsx`): login, register, verify, forgot and
+      reset are a centered card with the brand, plus cross-links (Create an
+      account / Log in / Back to log in). `/` is now a redirect and the Phase 0
+      health page is deleted (its job, proving one Zod schema on both sides,
+      is done). Control borders fixed to 3:1 with one new primitive
+      (`stone-450`) in light mode and `stone-500` in dark; error text
+      `red-600` to `red-700` (4.37:1 on the page before). Inputs/selects/
+      textareas got a surface background, padding and invalid state; auth forms
+      got `autoComplete`. See ADR 0015. Checked live: contrast measured in
+      both modes, wrong password keeps the fields and shows the error, valid
+      login lands on `/projects`, `/` redirects both ways, register validation
+      shows red borders and messages, Projects and the issue list still fine
+      with the new controls. Screenshots seen: login (light, 1440px), register
+      (dark, 1440px, and dark with validation errors at 420px). Forgot, reset
+      and verify were only checked by DOM (one main, no sidebar, no sideways
+      scroll, right text), not by eye. Not verified: Tab-key order, verify-email with a
+      real token, reset with a real emailed token, browsers other than Chrome.
+- [ ] Slice 2d — Page structure for logged-in pages: shared `PageHeader`,
+      content width, and remove the duplicated in-page links ("Board →",
+      "Sprints →", "Analytics →"); the issue page keeps its back link.
+- [ ] Slice 2e — Data screens (cards, lists, board, sprints, issue detail,
+      search, empty states).
+- [ ] Slice 2f — Overlays (command palette, notification panel) and the
+      `/design-system` page documenting shell, tokens, display font,
+      components.
 
 **Revisit point (flagged, not scheduled)**: once Phases 4-8 have built out
 the full feature surface — real screens for filtering/pagination, the

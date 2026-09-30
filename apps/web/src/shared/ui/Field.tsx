@@ -19,10 +19,10 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <label className={cn("flex flex-col gap-1 text-sm", className)}>
+    <label className={cn("flex flex-col gap-1.5 text-sm font-medium", className)}>
       {label}
       {children}
-      {error && <span className="text-[var(--color-text-danger)]">{error}</span>}
+      {error && <span className="font-normal text-[var(--color-text-danger)]">{error}</span>}
     </label>
   );
 }

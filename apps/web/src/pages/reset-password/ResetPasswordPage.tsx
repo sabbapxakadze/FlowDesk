@@ -6,8 +6,8 @@ export function ResetPasswordPage() {
   const token = searchParams.get("token");
 
   return (
-    <main className="p-8">
-      <h1 className="mb-4 font-display text-3xl font-normal">Reset your password</h1>
+    <main>
+      <h1 className="mb-6 font-display text-3xl font-normal">Reset your password</h1>
       {token ? (
         <ResetPasswordForm token={token} />
       ) : (

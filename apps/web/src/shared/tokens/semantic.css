@@ -18,7 +18,7 @@
 
   --color-text-default: var(--color-stone-950);
   --color-text-muted: var(--color-stone-600);
-  --color-text-danger: var(--color-red-600);
+  --color-text-danger: var(--color-red-700);
   --color-text-warning: var(--color-amber-700);
   --color-text-link: var(--color-accent-700);
 
@@ -26,7 +26,7 @@
   --color-text-on-action: var(--color-white);
 
   --color-border-default: var(--color-stone-200);
-  --color-border-input: var(--color-stone-300);
+  --color-border-input: var(--color-stone-450);
   /* Focus rings, not a border — nothing had any focus-visible treatment
      before Phase 3.6. A real accessibility gap, not just a style one. */
   --color-border-focus: var(--color-accent-600);
@@ -81,7 +81,7 @@
     --color-text-on-action: var(--color-stone-950);
 
     --color-border-default: var(--color-stone-800);
-    --color-border-input: var(--color-stone-700);
+    --color-border-input: var(--color-stone-500);
     --color-border-focus: var(--color-accent-400);
 
     --color-status-todo: var(--color-stone-400);
@@ -114,7 +114,7 @@
   --color-text-on-action: var(--color-stone-950);
 
   --color-border-default: var(--color-stone-800);
-  --color-border-input: var(--color-stone-700);
+  --color-border-input: var(--color-stone-500);
   --color-border-focus: var(--color-accent-400);
 
   --color-status-todo: var(--color-stone-400);

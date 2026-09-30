@@ -32,8 +32,8 @@ export function VerifyEmailPage() {
   }, [token]);
 
   return (
-    <main className="p-8">
-      <h1 className="mb-4 font-display text-3xl font-normal">Verify your email</h1>
+    <main>
+      <h1 className="mb-6 font-display text-3xl font-normal">Verify your email</h1>
       {status === "pending" && <p className="text-[var(--color-text-muted)]">Verifying…</p>}
       {status === "success" && (
         <p className="text-sm">

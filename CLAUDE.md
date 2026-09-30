@@ -335,8 +335,12 @@ numbers only (ADR 0013). Only tokens and type changed; the palette is now a
 value change in `semantic.css`/`primitives.css`. Contrast was measured on the
 real tokens; `border-input` (~1.5:1) is a known, unfixed gap. Slice 2b
 (persistent navigation shell) is done: a layout route with a sidebar widget
-(ADR 0014), the bell moved into it, and a mobile drawer. Next: the
-screen-by-screen rollout (component visuals, the `border-input` decision). What follows
+(ADR 0014), the bell moved into it, and a mobile drawer. Slice 2c
+(public screens and form controls) is done: an auth layout route, `/` now
+redirects, control borders fixed to 3:1 (`stone-450`, ADR 0015), error text
+darkened. Owner-chosen rollout order: 2d page structure and removing the
+duplicated in-page links, 2e data screens, 2f overlays and the design-system
+page. What follows
 is the history of the earlier, paused slice 1: it was **paused after a
 deliberately minimal slice 1**: real structural improvements (hover/focus states, shadow-based
 card elevation, softer radii, a `StatusBadge` status-color system) are in,

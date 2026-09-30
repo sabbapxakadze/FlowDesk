@@ -20,8 +20,10 @@ const buttonVariants = cva(
         sm: "px-3 py-1",
         md: "px-4 py-2",
       },
+      // Full-width buttons for the centered auth forms.
+      fullWidth: { true: "w-full", false: "" },
     },
-    defaultVariants: { variant: "primary", size: "md" },
+    defaultVariants: { variant: "primary", size: "md", fullWidth: false },
   },
 );
 
@@ -29,6 +31,6 @@ export interface ButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {}
 
-export function Button({ className, variant, size, ...props }: ButtonProps) {
-  return <button className={cn(buttonVariants({ variant, size }), className)} {...props} />;
+export function Button({ className, variant, size, fullWidth, ...props }: ButtonProps) {
+  return <button className={cn(buttonVariants({ variant, size, fullWidth }), className)} {...props} />;
 }

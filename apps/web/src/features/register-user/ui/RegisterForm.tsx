@@ -56,27 +56,27 @@ export function RegisterForm() {
   return (
     <form
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
-      className="flex max-w-sm flex-col gap-4"
+      className="flex flex-col gap-4"
     >
       <Field label="Name" error={errors.name?.message}>
-        <Input {...register("name")} className="w-full" />
+        <Input {...register("name")} autoComplete="name" aria-invalid={errors.name ? true : undefined} className="w-full" />
       </Field>
 
       <Field label="Email" error={errors.email?.message}>
-        <Input type="email" {...register("email")} className="w-full" />
+        <Input type="email" {...register("email")} autoComplete="email" aria-invalid={errors.email ? true : undefined} className="w-full" />
       </Field>
 
       <Field label="Password" error={errors.password?.message}>
-        <Input type="password" {...register("password")} className="w-full" />
+        <Input type="password" {...register("password")} autoComplete="new-password" aria-invalid={errors.password ? true : undefined} className="w-full" />
       </Field>
 
       <Field label="Organization name" error={errors.organizationName?.message}>
-        <Input {...register("organizationName")} className="w-full" />
+        <Input {...register("organizationName")} autoComplete="organization" aria-invalid={errors.organizationName ? true : undefined} className="w-full" />
       </Field>
 
       {showGeneralError && <ErrorText>{mutation.error?.message}</ErrorText>}
 
-      <Button type="submit" disabled={mutation.isPending}>
+      <Button type="submit" fullWidth disabled={mutation.isPending}>
         {mutation.isPending ? "Creating account…" : "Create account"}
       </Button>
     </form>

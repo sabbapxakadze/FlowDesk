@@ -30,19 +30,19 @@ export function LoginForm() {
   return (
     <form
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
-      className="flex max-w-sm flex-col gap-4"
+      className="flex flex-col gap-4"
     >
       <Field label="Email" error={errors.email?.message}>
-        <Input type="email" {...register("email")} className="w-full" />
+        <Input type="email" {...register("email")} autoComplete="username" aria-invalid={errors.email ? true : undefined} className="w-full" />
       </Field>
 
       <Field label="Password" error={errors.password?.message}>
-        <Input type="password" {...register("password")} className="w-full" />
+        <Input type="password" {...register("password")} autoComplete="current-password" aria-invalid={errors.password ? true : undefined} className="w-full" />
       </Field>
 
       {mutation.isError && <ErrorText>{mutation.error.message}</ErrorText>}
 
-      <Button type="submit" disabled={mutation.isPending}>
+      <Button type="submit" fullWidth disabled={mutation.isPending}>
         {mutation.isPending ? "Logging in…" : "Log in"}
       </Button>
 

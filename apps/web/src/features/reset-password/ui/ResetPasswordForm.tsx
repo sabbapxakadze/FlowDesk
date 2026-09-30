@@ -34,17 +34,17 @@ export function ResetPasswordForm({ token }: { token: string }) {
   return (
     <form
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
-      className="flex max-w-sm flex-col gap-4"
+      className="flex flex-col gap-4"
     >
       <input type="hidden" {...register("token")} />
 
       <Field label="New password" error={errors.newPassword?.message}>
-        <Input type="password" {...register("newPassword")} className="w-full" />
+        <Input type="password" {...register("newPassword")} autoComplete="new-password" aria-invalid={errors.newPassword ? true : undefined} className="w-full" />
       </Field>
 
       {mutation.isError && <ErrorText>{mutation.error.message}</ErrorText>}
 
-      <Button type="submit" disabled={mutation.isPending}>
+      <Button type="submit" fullWidth disabled={mutation.isPending}>
         {mutation.isPending ? "Resetting…" : "Reset password"}
       </Button>
     </form>
