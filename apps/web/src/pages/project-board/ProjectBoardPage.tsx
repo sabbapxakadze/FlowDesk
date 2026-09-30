@@ -15,10 +15,10 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Issue, IssueStatus } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
-import { BoardCard, useBoard, useLiveIssueUpdates } from "../../entities/issue";
+import { BoardCard, IssueSummary, useBoard, useLiveIssueUpdates } from "../../entities/issue";
 import { useMoveIssue } from "../../features/move-issue";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, EmptyState, ErrorText, Page, PageHeader, Skeleton, STATUS_LABELS } from "../../shared/ui";
+import { Card, ColumnHeader, EmptyState, ErrorText, Page, PageHeader, Skeleton } from "../../shared/ui";
 
 const COLUMNS: IssueStatus[] = ["todo", "in_progress", "done"];
 
@@ -148,9 +148,7 @@ export function ProjectBoardPage() {
               const columnIssues = issues?.filter((issue) => issue.status === status) ?? [];
               return (
                 <div key={status}>
-                  <h2 className="mb-2 text-sm font-semibold text-[var(--color-text-muted)]">
-                    {STATUS_LABELS[status]}
-                  </h2>
+                  <ColumnHeader status={status} count={issuesPending ? undefined : columnIssues.length} />
                   <BoardColumn status={status} itemIds={columnIssues.map((i) => i.id)}>
                     {issuesPending ? (
                       <ColumnSkeleton />
@@ -161,7 +159,7 @@ export function ProjectBoardPage() {
                         ))}
                       </ul>
                     ) : (
-                      <EmptyState>No issues.</EmptyState>
+                      <EmptyState block>No issues</EmptyState>
                     )}
                   </BoardColumn>
                 </div>
@@ -171,11 +169,8 @@ export function ProjectBoardPage() {
 
           <DragOverlay>
             {activeIssue && (
-              <Card className="shadow-md">
-                <p className="text-sm text-[var(--color-text-muted)]">
-                  {project.key}-{activeIssue.number}
-                </p>
-                <p className="font-medium">{activeIssue.title}</p>
+              <Card className="flex shadow-md">
+                <IssueSummary issue={activeIssue} projectKey={project.key} />
               </Card>
             )}
           </DragOverlay>

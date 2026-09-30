@@ -66,13 +66,13 @@ export function SearchPage() {
       />
 
       {trimmed === "" ? (
-        <EmptyState>Type a search term to find issues across every project.</EmptyState>
+        <EmptyState block>Type a search term to find issues across every project.</EmptyState>
       ) : isPending ? (
         <SearchResultsSkeleton />
       ) : isError ? (
         <ErrorText>Search failed: {error.message}</ErrorText>
       ) : results.length === 0 ? (
-        <EmptyState>No issues match "{trimmed}".</EmptyState>
+        <EmptyState block>No issues match "{trimmed}".</EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">
           {results.map((issue) => {

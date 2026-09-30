@@ -13,6 +13,7 @@ export { useDeleteAttachment } from "./api/useDeleteAttachment";
 export { describeEvent } from "./lib/describeEvent";
 export { issueKeys } from "./api/queryKeys";
 export { IssueCard } from "./ui/IssueCard";
+export { IssueSummary } from "./ui/IssueSummary";
 export { BoardCard } from "./ui/BoardCard";
 export { SprintIssueCard } from "./ui/SprintIssueCard";
 export { AttachmentList } from "./ui/AttachmentList";

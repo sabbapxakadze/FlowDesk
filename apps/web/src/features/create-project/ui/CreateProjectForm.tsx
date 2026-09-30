@@ -36,7 +36,7 @@ export function CreateProjectForm({ organizationId }: { organizationId: string }
   return (
     <form
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
-      className="mb-6 flex flex-wrap items-end gap-2"
+      className="mb-6 flex flex-wrap items-end gap-3 rounded-[var(--radius-card)] bg-[var(--color-bg-surface)] p-4 shadow-sm"
     >
       <Field label="Name" error={errors.name?.message}>
         <Input {...register("name")} placeholder="Website" />

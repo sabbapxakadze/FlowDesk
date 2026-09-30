@@ -51,18 +51,29 @@ function describeViewers(names: string[]): string {
   return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]} are also viewing`;
 }
 
+/** The dot that sits on the timeline's left rail, centered on its line. */
+function TimelineDot() {
+  return (
+    <span className="absolute top-1.5 -left-5 h-2 w-2 -translate-x-1/2 rounded-full bg-[var(--color-border-input)]" />
+  );
+}
+
 function TimelineEntry({ event }: { event: IssueEvent }) {
   if (event.type === "issue.commented") {
     return (
-      <Card as="li" className="rounded-[var(--radius-control)] px-3 py-2">
-        <p className="text-xs text-[var(--color-text-muted)]">{event.actorName} commented</p>
-        <p className="text-sm">{String(event.payload.body)}</p>
-      </Card>
+      <li className="relative">
+        <TimelineDot />
+        <Card className="rounded-[var(--radius-control)] px-3 py-2">
+          <p className="text-xs text-[var(--color-text-muted)]">{event.actorName} commented</p>
+          <p className="text-sm">{String(event.payload.body)}</p>
+        </Card>
+      </li>
     );
   }
 
   return (
-    <li className="text-sm text-[var(--color-text-muted)]">
+    <li className="relative text-sm text-[var(--color-text-muted)]">
+      <TimelineDot />
       {event.actorName} {describeEvent(event)}
     </li>
   );
@@ -165,7 +176,7 @@ export function IssueDetailPage() {
       {eventsPending ? (
         <TimelineSkeleton />
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-3 border-l border-[var(--color-border-input)] pl-5">
           {events?.map((event) => (
             <TimelineEntry key={event.id} event={event} />
           ))}

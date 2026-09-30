@@ -39,7 +39,7 @@ export function ProjectsPage() {
       ) : isError ? (
         <ErrorText>Failed to load projects: {error.message}</ErrorText>
       ) : projects.length === 0 ? (
-        <EmptyState>No projects yet.</EmptyState>
+        <EmptyState block>No projects yet.</EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">
           {projects.map((project) => (

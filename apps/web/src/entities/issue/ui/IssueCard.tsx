@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { Card, StatusBadge } from "../../../shared/ui";
 import type { Issue } from "../model";
+import { IssueSummary } from "./IssueSummary";
 
 /**
  * projectKey is passed in rather than looked up here — the issue itself
@@ -24,15 +25,15 @@ export function IssueCard({
 }) {
   return (
     <Card as="li" hoverable className="flex items-start justify-between gap-2">
-      <Link to={`/projects/${issue.projectId}/issues/${issue.id}`}>
-        <p className="text-sm text-[var(--color-text-muted)]">
-          {projectKey}-{issue.number}
-        </p>
-        <p className="font-medium">{issue.title}</p>
-        <StatusBadge status={issue.status} />
+      <Link to={`/projects/${issue.projectId}/issues/${issue.id}`} className="block min-w-0 flex-1">
+        <IssueSummary issue={issue} projectKey={projectKey}>
+          <div className="mt-1.5">
+            <StatusBadge status={issue.status} />
+          </div>
+        </IssueSummary>
       </Link>
       {onEdit && (
-        <button onClick={onEdit} className="text-sm text-[var(--color-text-link)] underline">
+        <button onClick={onEdit} className="shrink-0 text-sm text-[var(--color-text-link)] underline">
           Edit
         </button>
       )}

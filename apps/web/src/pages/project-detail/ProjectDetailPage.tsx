@@ -149,7 +149,7 @@ export function ProjectDetailPage() {
       ) : isError ? (
         <ErrorText>Failed to load issues: {error.message}</ErrorText>
       ) : issues.length === 0 ? (
-        <EmptyState>
+        <EmptyState block>
           {status ? `No ${STATUS_LABELS[status].toLowerCase()} issues.` : "No issues yet."}
         </EmptyState>
       ) : (

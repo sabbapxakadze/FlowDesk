@@ -1,17 +1,5 @@
 import type { IssueStatus } from "@flowdesk/contracts";
-import { STATUS_LABELS } from "./statusLabels";
-
-/**
- * Complete literal class strings in a lookup table, not a template
- * literal built from the status value — same reason DesignSystemPage's
- * TokenSwatch does this: Tailwind's JIT scanner reads literal source
- * text, so a dynamically-assembled class name is invisible to it.
- */
-const STATUS_DOT_CLASSES: Record<IssueStatus, string> = {
-  todo: "bg-[var(--color-status-todo)]",
-  in_progress: "bg-[var(--color-status-in-progress)]",
-  done: "bg-[var(--color-status-done)]",
-};
+import { STATUS_DOT_CLASSES, STATUS_LABELS } from "./statusLabels";
 
 /** A colored dot + label, not a filled pill — status is a fixed 3-value
  * enum (see semantic.css's --color-status-* tokens), and a small dot

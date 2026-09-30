@@ -12,12 +12,12 @@ import {
 } from "@dnd-kit/core";
 import { useProjects } from "../../entities/project";
 import { SprintIssueCard, useBacklog } from "../../entities/issue";
-import { useSprints } from "../../entities/sprint";
+import { SprintStatusBadge, useSprints } from "../../entities/sprint";
 import { CreateSprintForm } from "../../features/create-sprint";
 import { useStartSprint, useCompleteSprint } from "../../features/manage-sprint";
 import { useAssignIssueSprint } from "../../features/assign-issue-sprint";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Button, Card, EmptyState, ErrorText, Page, PageHeader, Skeleton } from "../../shared/ui";
+import { Button, Card, ColumnHeader, EmptyState, ErrorText, Page, PageHeader, Skeleton } from "../../shared/ui";
 
 function ListSkeleton() {
   return (
@@ -117,20 +117,18 @@ export function ProjectSprintsPage() {
       <CreateSprintForm organizationId={organization!.id} projectId={project.id} />
 
       <section className="mb-6">
-        <h2 className="mb-2 text-sm font-semibold text-[var(--color-text-muted)]">Sprints</h2>
+        <ColumnHeader label="Sprints" count={sprintsPending ? undefined : sprints?.length} />
         {sprintsPending ? (
           <ListSkeleton />
         ) : !sprints || sprints.length === 0 ? (
-          <EmptyState>No sprints yet.</EmptyState>
+          <EmptyState block>No sprints yet.</EmptyState>
         ) : (
           <ul className="flex flex-col gap-2">
             {sprints.map((sprint) => (
               <Card key={sprint.id} as="li" className="flex items-center justify-between gap-2">
                 <div>
                   <p className="font-medium">{sprint.name}</p>
-                  <p className="text-xs text-[var(--color-text-muted)] capitalize">
-                    {sprint.status.replace("_", " ")}
-                  </p>
+                  <SprintStatusBadge status={sprint.status} />
                 </div>
                 {sprint.status === "planned" && (
                   <Button
@@ -166,7 +164,7 @@ export function ProjectSprintsPage() {
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <h2 className="mb-2 text-sm font-semibold text-[var(--color-text-muted)]">Backlog</h2>
+              <ColumnHeader label="Backlog" count={backlogPending ? undefined : backlog.length} />
               <DropZone id="backlog">
                 {backlogPending ? (
                   <ListSkeleton />
@@ -177,19 +175,21 @@ export function ProjectSprintsPage() {
                     ))}
                   </ul>
                 ) : (
-                  <EmptyState>Backlog is empty.</EmptyState>
+                  <EmptyState block>Backlog is empty.</EmptyState>
                 )}
               </DropZone>
             </div>
             <div>
-              <h2 className="mb-2 text-sm font-semibold text-[var(--color-text-muted)]">
-                {activeSprint ? `Active: ${activeSprint.name}` : "No active sprint"}
-              </h2>
+              <ColumnHeader
+                status={activeSprint ? "in_progress" : undefined}
+                label={activeSprint ? `Active: ${activeSprint.name}` : "No active sprint"}
+                count={backlogPending || !activeSprint ? undefined : activeSprintIssues.length}
+              />
               <DropZone id="active-sprint">
                 {backlogPending ? (
                   <ListSkeleton />
                 ) : !activeSprint ? (
-                  <EmptyState>Start a planned sprint to drag issues here.</EmptyState>
+                  <EmptyState block>Start a planned sprint to drag issues here.</EmptyState>
                 ) : activeSprintIssues.length > 0 ? (
                   <ul className="flex flex-col gap-2">
                     {activeSprintIssues.map((issue) => (
@@ -197,7 +197,7 @@ export function ProjectSprintsPage() {
                     ))}
                   </ul>
                 ) : (
-                  <EmptyState>No issues in this sprint yet.</EmptyState>
+                  <EmptyState block>No issues in this sprint yet.</EmptyState>
                 )}
               </DropZone>
             </div>

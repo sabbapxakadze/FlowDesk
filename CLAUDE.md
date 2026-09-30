@@ -340,8 +340,10 @@ real tokens; `border-input` (~1.5:1) is a known, unfixed gap. Slice 2b
 redirects, control borders fixed to 3:1 (`stone-450`, ADR 0015), error text
 darkened. Slice 2d
 (page structure) is done: `Page`/`PageHeader` in `shared/ui` frame every
-logged-in page, and the duplicated in-page links are gone. Remaining rollout
-order: 2e data screens, 2f overlays and the design-system page. What follows
+logged-in page, and the duplicated in-page links are gone. Slice 2e
+(data screens) is done: one shared issue face, column headers with counts,
+dashed empty states, sprint status badges, form surfaces, a timeline rail.
+Remaining: 2f overlays and the design-system page. What follows
 is the history of the earlier, paused slice 1: it was **paused after a
 deliberately minimal slice 1**: real structural improvements (hover/focus states, shadow-based
 card elevation, softer radii, a `StatusBadge` status-color system) are in,

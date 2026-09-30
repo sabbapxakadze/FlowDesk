@@ -63,7 +63,7 @@ export function UploadAttachmentForm({
             if (file) onFileChosen(file);
           }}
           disabled={mutation.isPending}
-          className="text-sm"
+          className="text-sm text-[var(--color-text-muted)] file:mr-3 file:cursor-pointer file:rounded-[var(--radius-control)] file:border file:border-[var(--color-border-input)] file:bg-transparent file:px-3 file:py-1 file:text-sm file:font-medium file:text-[var(--color-text-default)] hover:file:bg-[var(--color-border-default)]"
         />
         {mutation.isPending && <span className="text-xs text-[var(--color-text-muted)]">Uploading…</span>}
       </div>

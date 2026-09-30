@@ -9,3 +9,16 @@ export const STATUS_LABELS: Record<IssueStatus, string> = {
   in_progress: "In progress",
   done: "Done",
 };
+
+/**
+ * Complete literal class strings in a lookup table, not a template literal
+ * built from the status value: Tailwind's JIT scanner reads literal source
+ * text, so a dynamically-assembled class name is invisible to it. Shared by
+ * StatusBadge, ColumnHeader and SprintStatusBadge so a status is the same
+ * colour everywhere.
+ */
+export const STATUS_DOT_CLASSES: Record<IssueStatus, string> = {
+  todo: "bg-[var(--color-status-todo)]",
+  in_progress: "bg-[var(--color-status-in-progress)]",
+  done: "bg-[var(--color-status-done)]",
+};

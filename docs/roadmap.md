@@ -386,8 +386,32 @@ Slice 1 (visual foundations, kept minimal) shipped:
       screenshots of every page (light: issue detail only), dark 1440px.
       Seen, not fixed: a bogus issue URL shows the skeleton for about 7 seconds
       before "Issue not found." because the 404 is retried.
-- [ ] Slice 2e — Data screens (cards, lists, board, sprints, issue detail,
-      search, empty states).
+- [x] Slice 2e — **Data screens (2026-09-30).** One `IssueSummary` face shared
+      by the issue list card, board card, sprint card and the drag overlay
+      (it was hand-written four times); a `DragHandle` SVG grip instead of a
+      text glyph (same button, aria-label and dnd-kit props; adds `touch-none`);
+      `ColumnHeader` (status dot, name, count) for board columns and sprint
+      zones; `EmptyState block` (dashed box, also a clearer drop target) on
+      data screens; `SprintStatusBadge` (dot + label, reuses the three status
+      colours, no new tokens); the project, issue and sprint create forms sit
+      on a card surface; project keys are pills; the timeline has a left rail
+      with dots (rail uses `border-input` so it is actually visible, the first
+      attempt with `border-default` was ~1.1:1 and invisible); the attachment
+      file picker is styled with `file:` utilities. `STATUS_DOT_CLASSES`
+      moved into `statusLabels.ts` so StatusBadge, ColumnHeader and
+      SprintStatusBadge share one colour table. Checked live: a real pointer
+      drag on the board and one on the sprint page (after creating and
+      starting a sprint), a keyboard drag on the board (one move request, no
+      strays), creating an issue, opening edit-in-place; screenshots seen:
+      board, sprints, issue detail (light and dark), issue list (dark).
+      Not verified: saving an edit-in-place, creating a project or sprint
+      beyond the one I made, uploading a file, narrow-width screenshots,
+      Search results, light-mode Issues list, and contrast numbers for the new
+      pieces (the dashed border and timeline dots use `border-input`, already
+      measured at 3:1 in slice 2c; nothing else new carries text). Note: while
+      testing, the API log showed several board moves I did not make, most
+      likely someone else using the QA account at the same time; a single
+      keyboard drag on its own produced exactly one move.
 - [ ] Slice 2f — Overlays (command palette, notification panel) and the
       `/design-system` page documenting shell, tokens, display font,
       components.

@@ -36,7 +36,7 @@ export function CreateSprintForm({ organizationId, projectId }: { organizationId
   return (
     <form
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
-      className="mb-6 flex flex-wrap items-end gap-2"
+      className="mb-6 flex flex-wrap items-end gap-3 rounded-[var(--radius-card)] bg-[var(--color-bg-surface)] p-4 shadow-sm"
     >
       <Field label="Sprint name" error={errors.name?.message} className="flex-1">
         <Input {...register("name")} placeholder="Sprint 1" />
