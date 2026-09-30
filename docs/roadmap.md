@@ -1576,6 +1576,32 @@ The original plan for this slice, kept for the record:
 6. **Markdown and @mentions** in descriptions and comments.
 7. **A "my work" home** (assigned to me, recent activity, unread notifications)
    instead of `/` redirecting to the project list.
+   **Added 2026-09-30 (owner idea): search as a popup, not a separate page.**
+   Today the sidebar "Search" link goes to a `/search` page, while Ctrl+K already
+   opens a search popup (the command palette). Proposal: the sidebar Search entry
+   opens that same popup. **Decided by the owner:** `/search` stays, but is only
+   reached from a "Show all results" row in the popup (so bookmarkable `?q=` links
+   and the existing ranking and tenant tests are kept). Still to check when the
+   slice starts: how many results the popup shows today, and whether "Show all"
+   should appear always or only when there are more results than fit.
+   **Built 2026-09-30.** The open/closed state moved into a small shared context
+   (`shared/search-palette`) because a widget may not import another widget; the
+   sidebar Search entry is now a button with a `Ctrl K` hint and the palette has a
+   "Show all results" row (keyboard and mouse) going to `/search?q=`. The row shows
+   whenever there is at least one result. Checked live in Chrome with real
+   mouse and keys, including the no-reload-login path: sidebar click, Ctrl+K,
+   Esc, reopen after Esc, arrow to the row and Enter, mouse click on the row, and
+   `/search?q=` still loading. **Not verified:** how many results the popup
+   returns at most; a really long result list. **Testing note:** a backgrounded
+   Chrome tab (`visibilityState: hidden`) stalls Playwright clicks and stopped
+   the dialog's `close` event firing, which looked like a bug; it was not. Check
+   `document.visibilityState` first. **Found and fixed the same day:**
+   clicking the dimmed backdrop did not close the popup (no handler; a native
+   `<dialog>` only closes on Esc; it predated this slice). Now a click whose
+   target is the dialog itself closes it. Checked live: backdrop click closes;
+   clicks on the input and on the footer text keep it open; Esc and reopen reset
+   the query.
+   **Owner also said they forgot one more idea; ask them to add it here.**
 8. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

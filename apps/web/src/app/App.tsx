@@ -18,39 +18,51 @@ import { AppShell } from "./AppShell";
 import { AuthLayout } from "./AuthLayout";
 import { ErrorBoundary } from "../shared/error-boundary/ErrorBoundary";
 import { CommandPalette } from "../widgets/command-palette";
+import { SearchPaletteProvider } from "../shared/search-palette/SearchPaletteProvider";
 
 export function App() {
   return (
     <BrowserRouter>
-      <CommandPalette />
-      <ErrorBoundary>
-        <Routes>
-          <Route path="/" element={<HomeRedirect />} />
-          <Route
-            element={
-              <RequireAuth>
-                <AppShell />
-              </RequireAuth>
-            }
-          >
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-            <Route path="/projects/:projectId/board" element={<ProjectBoardPage />} />
-            <Route path="/projects/:projectId/sprints" element={<ProjectSprintsPage />} />
-            <Route path="/projects/:projectId/analytics" element={<ProjectAnalyticsPage />} />
-            <Route path="/projects/:projectId/issues/:issueId" element={<IssueDetailPage />} />
-            <Route path="/search" element={<SearchPage />} />
-          </Route>
-          <Route element={<AuthLayout />}>
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/verify-email" element={<VerifyEmailPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-          </Route>
-          <Route path="/design-system" element={<DesignSystemPage />} />
-        </Routes>
-      </ErrorBoundary>
+      <SearchPaletteProvider>
+        <CommandPalette />
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<HomeRedirect />} />
+            <Route
+              element={
+                <RequireAuth>
+                  <AppShell />
+                </RequireAuth>
+              }
+            >
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+              <Route path="/projects/:projectId/board" element={<ProjectBoardPage />} />
+              <Route
+                path="/projects/:projectId/sprints"
+                element={<ProjectSprintsPage />}
+              />
+              <Route
+                path="/projects/:projectId/analytics"
+                element={<ProjectAnalyticsPage />}
+              />
+              <Route
+                path="/projects/:projectId/issues/:issueId"
+                element={<IssueDetailPage />}
+              />
+              <Route path="/search" element={<SearchPage />} />
+            </Route>
+            <Route element={<AuthLayout />}>
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+            </Route>
+            <Route path="/design-system" element={<DesignSystemPage />} />
+          </Routes>
+        </ErrorBoundary>
+      </SearchPaletteProvider>
     </BrowserRouter>
   );
 }

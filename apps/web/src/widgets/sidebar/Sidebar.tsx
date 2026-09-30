@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import { Search } from "lucide-react";
 import { Link, NavLink, useMatch } from "react-router";
 import { useProjects } from "../../entities/project";
 import { useAuth } from "../../shared/auth/useAuth";
+import { useSearchPalette } from "../../shared/search-palette/useSearchPalette";
 import { cn, Skeleton, ThemeSwitch } from "../../shared/ui";
 
 const LINK =
@@ -64,6 +66,7 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
   });
   const currentProject = useMatch("/projects/:projectId/*")?.params.projectId;
   const onIssuePage = useMatch("/projects/:projectId/issues/*") !== null;
+  const { setOpen: setSearchOpen } = useSearchPalette();
   const onProjectList = useMatch({ path: "/projects/:projectId", end: true }) !== null;
 
   return (
@@ -82,7 +85,17 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
         <SideLink to="/projects" end>
           Projects
         </SideLink>
-        <SideLink to="/search">Search</SideLink>
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          className={cn(LINK, "w-full justify-between text-left")}
+        >
+          <span className="flex items-center gap-2">
+            <Search aria-hidden className="h-4 w-4" />
+            Search
+          </span>
+          <kbd className="text-xs opacity-70">Ctrl K</kbd>
+        </button>
 
         <SectionLabel>Your projects</SectionLabel>
         {isPending ? (

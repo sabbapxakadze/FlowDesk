@@ -4,6 +4,7 @@ import { useProjects } from "../../entities/project";
 import { IssueSummary, useSearch, type Issue } from "../../entities/issue";
 import { Input, StatusBadge } from "../../shared/ui";
 import { useAuth } from "../../shared/auth/useAuth";
+import { useSearchPalette } from "../../shared/search-palette/useSearchPalette";
 import { useDebouncedValue } from "./useDebouncedValue";
 
 /**
@@ -68,7 +69,7 @@ export function CommandPalette() {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, setOpen: setIsOpen } = useSearchPalette();
   const [query, setQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
@@ -87,6 +88,12 @@ export function CommandPalette() {
   function select(issue: Issue) {
     close();
     navigate(`/projects/${issue.projectId}/issues/${issue.id}`);
+  }
+
+  function showAll() {
+    const q = query.trim();
+    close();
+    navigate(`/search?q=${encodeURIComponent(q)}`);
   }
 
   // Keep the <dialog> element's own open/closed state (and its native
@@ -120,7 +127,7 @@ export function CommandPalette() {
     // once at mount, found no dialog, and never attached after a login
     // without a reload, so Esc closed the dialog but left isOpen true and the
     // next Ctrl+K only toggled it back to false.
-  }, [organization]);
+  }, [organization, setIsOpen]);
 
   useEffect(() => {
     if (!organization) return;
@@ -132,24 +139,33 @@ export function CommandPalette() {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [organization]);
+  }, [organization, setIsOpen]);
 
   if (!organization) return null;
 
   // Rows can shrink out from under a stale index (new results arriving
   // after the debounce, or typing further narrowing the match set) —
   // clamped at render time instead of a setState-in-effect reset.
-  const highlightedRow = Math.min(highlightedIndex, Math.max(rows.length - 1, 0));
+  // The "Show all results" row is one extra keyboard stop after the issues,
+  // present only when there are results to show.
+  const hasShowAll = query.trim() !== "" && rows.length > 0;
+  const lastIndex = rows.length - 1 + (hasShowAll ? 1 : 0);
+  const highlightedRow = Math.min(highlightedIndex, Math.max(lastIndex, 0));
+  const showAllHighlighted = hasShowAll && highlightedRow === rows.length;
 
   function onInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlightedIndex((i) => Math.min(i + 1, rows.length - 1));
+      setHighlightedIndex((i) => Math.min(i + 1, lastIndex));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlightedIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
+      if (showAllHighlighted) {
+        showAll();
+        return;
+      }
       const issue = rows[highlightedRow];
       if (issue) select(issue);
     }
@@ -163,6 +179,12 @@ export function CommandPalette() {
       ref={dialogRef}
       className="mx-auto mt-24 mb-auto w-full max-w-lg rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-0 text-[var(--color-text-default)] shadow-lg backdrop:bg-black/40"
       aria-label="Command palette"
+      // The dimmed backdrop belongs to the <dialog> itself, so a click on it has
+      // the dialog as its target; clicks on the content inside have a child as
+      // target. A native <dialog> only closes on Esc, so this adds the backdrop.
+      onClick={(e) => {
+        if (e.target === e.currentTarget) close();
+      }}
     >
       <div className="flex flex-col gap-2 p-3">
         <Input
@@ -206,6 +228,23 @@ export function CommandPalette() {
                   </li>
                 );
               })
+            )}
+            {hasShowAll && (
+              <li role="presentation">
+                <button
+                  id={`${listId}-option-${rows.length}`}
+                  type="button"
+                  role="option"
+                  aria-selected={showAllHighlighted}
+                  tabIndex={-1}
+                  onClick={showAll}
+                  className={`w-full rounded-[var(--radius-control)] px-3 py-2 text-left text-sm text-[var(--color-text-link)] hover:bg-[var(--color-border-default)] ${
+                    showAllHighlighted ? "bg-[var(--color-border-default)]" : ""
+                  }`}
+                >
+                  Show all results for "{trimmed}"
+                </button>
+              </li>
             )}
           </ul>
         )}
