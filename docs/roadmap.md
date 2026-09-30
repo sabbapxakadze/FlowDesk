@@ -1317,12 +1317,30 @@ Slice 4 (breakdowns) shipped:
     charts; 1400px light shows throughput full width with cycle time and
     velocity side by side; a fresh 420px dark render is one column with no
     horizontal scroll (all charts 309px wide).
-  - Found, not fixed (scope): at 420px the cycle-time bucket labels and
-    velocity sprint labels overlap; and shrinking the window live (without
-    reload) left the charts at their old wide width and the page scrolled
-    sideways, while a fresh load at the same width was fine.
-  - NOT verified: the tooltip under a real mouse hover (owner deferred it
-    to a follow-up).
+  - Found and fixed afterward: at 420px the cycle-time bucket labels and
+    velocity sprint labels overlapped. New `WrappingTick` in `shared/ui`
+    splits a label at its last space when a category gets under 80px (so
+    "1-3 days" becomes "1-3" over "days"); wide charts keep one line. The
+    two axes are 40px tall to fit two lines. Checked at 420px: no overlap.
+  - Retracted: "charts don't shrink on a live window resize" was a test
+    artifact. The automated browser tab reports `document.hidden: true`, so
+    it paints no frames and Recharts' ResizeObserver never fires until a
+    screenshot forces one; after that the charts resized correctly both
+    ways. Not an app bug.
+  - Follow-up after the owner's real-mouse test: the first fix pinned every
+    tooltip to one corner, which was not what the owner meant. Tooltips are
+    now anchored per bar: above the hovered column (centered, above the plot
+    so it never covers a bar) and, for the label chart, at the right edge of
+    the hovered row. `AnchoredTooltip` + `anchoredTooltipProps` in
+    `shared/ui`; animation off (Recharts eased it over 400 ms, the "slow
+    follow"). Checked with real mouse moves on all five charts: the tooltip
+    centre matched the hovered column/row within 1 px. It can overlap the
+    stat row above a chart while hovering; accepted as transient.
+  - Sprint selector now offers only choices that change something: with 6
+    completed sprints it shows 4 and 8 (12 is hidden), and is hidden
+    entirely with 4 or fewer. A stale `?sprints=` snaps to the nearest
+    offered choice.
+  - Real-mouse hover is now verified (it was keyboard-only in slices 1-4).
 
 ## Phase 9 — Production
 

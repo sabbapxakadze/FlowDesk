@@ -1,4 +1,5 @@
 import { Link, useParams, useSearchParams } from "react-router";
+import { useVelocity } from "../../entities/analytics";
 import { useProjects } from "../../entities/project";
 import { useAuth } from "../../shared/auth/useAuth";
 import { Card, Select, Skeleton } from "../../shared/ui";
@@ -17,6 +18,14 @@ const DEFAULT_WEEKS = 12;
 const SPRINT_CHOICES = [4, 8, 12] as const;
 const DEFAULT_SPRINTS = 8;
 
+// Offering "Last 12 sprints" when only 6 exist looks broken: it changes
+// nothing. A choice is shown only while the next smaller one hasn't already
+// covered every completed sprint, so with 6 sprints the list is 4 and 8.
+function visibleSprintChoices(completedSprints: number | undefined): readonly number[] {
+  if (completedSprints === undefined) return SPRINT_CHOICES;
+  return SPRINT_CHOICES.filter((_, i) => i === 0 || SPRINT_CHOICES[i - 1]! < completedSprints);
+}
+
 function parseChoice(raw: string | null, allowed: readonly number[], fallback: number): number {
   const value = Number(raw);
   return allowed.includes(value) ? value : fallback;
@@ -30,7 +39,19 @@ export function ProjectAnalyticsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const weeks = parseChoice(searchParams.get("weeks"), WEEKS_CHOICES, DEFAULT_WEEKS);
-  const sprints = parseChoice(searchParams.get("sprints"), SPRINT_CHOICES, DEFAULT_SPRINTS);
+  const requestedSprints = parseChoice(searchParams.get("sprints"), SPRINT_CHOICES, DEFAULT_SPRINTS);
+
+  // Asks for the largest window once just to learn how many completed sprints
+  // exist; the velocity widget then fetches its own (smaller) window.
+  const { data: allVelocity } = useVelocity(
+    organization!.id,
+    projectId!,
+    SPRINT_CHOICES[SPRINT_CHOICES.length - 1]!,
+  );
+  const sprintChoices = visibleSprintChoices(allVelocity?.data.length);
+  // A hand-edited or stale ?sprints= that is no longer offered snaps to the
+  // nearest offered choice that still covers it.
+  const sprints = sprintChoices.find((c) => c >= requestedSprints) ?? sprintChoices[sprintChoices.length - 1]!;
 
   // Choosing the default removes the param, so the plain URL stays clean.
   function setRange(name: "weeks" | "sprints", value: number, defaultValue: number) {
@@ -80,21 +101,23 @@ export function ProjectAnalyticsPage() {
             ))}
           </Select>
         </label>
-        <label className="flex items-center gap-2">
-          <span className="text-[var(--color-text-muted)]">Velocity</span>
-          <Select
-            value={sprints}
-            onChange={(e) => setRange("sprints", Number(e.target.value), DEFAULT_SPRINTS)}
-            className="w-auto"
-            aria-label="Number of sprints for velocity"
-          >
-            {SPRINT_CHOICES.map((choice) => (
-              <option key={choice} value={choice}>
-                Last {choice} sprints
-              </option>
-            ))}
-          </Select>
-        </label>
+        {sprintChoices.length > 1 && (
+          <label className="flex items-center gap-2">
+            <span className="text-[var(--color-text-muted)]">Velocity</span>
+            <Select
+              value={sprints}
+              onChange={(e) => setRange("sprints", Number(e.target.value), DEFAULT_SPRINTS)}
+              className="w-auto"
+              aria-label="Number of sprints for velocity"
+            >
+              {sprintChoices.map((choice) => (
+                <option key={choice} value={choice}>
+                  Last {choice} sprints
+                </option>
+              ))}
+            </Select>
+          </label>
+        )}
       </div>
 
       <div className="flex flex-col gap-4">

@@ -59,9 +59,10 @@ the ranges (defaults out of the URL, bad values fall back). Measured at
 20,000 issues: velocity was 3.9 s because Postgres materialized a CTE that a
 correlated subquery rescanned per row; `NOT MATERIALIZED` plus dropping an
 unused CTE brought it to ~19 ms, and merging cycle time's two replays into
-one halved it to ~75 ms. No index or schema change. Not yet verified live:
-reload persistence, dark mode and layout of the assembled page, and the
-tooltip under a real mouse hover (owner deferred it).
+one halved it to ~75 ms. No index or schema change. Chart tooltips are
+anchored to the hovered column/row (checked with a real mouse), and the
+sprint selector hides choices that would change nothing. Narrow (~420px)
+x-axis labels wrap onto two lines instead of overlapping.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,
 time-limited download tokens, chosen with the owner because S3 and

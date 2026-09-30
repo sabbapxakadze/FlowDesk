@@ -10,4 +10,6 @@ export { EmptyState } from "./EmptyState";
 export { StatusBadge } from "./StatusBadge";
 export { STATUS_LABELS } from "./statusLabels";
 export { cn } from "./lib/cn";
-export { fixedTooltipProps } from "./chartTooltip";
+export { AnchoredTooltip } from "./chartTooltip";
+export { anchoredTooltipProps } from "./anchoredTooltipProps";
+export { WrappingTick } from "./WrappingTick";

@@ -1,27 +1,31 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useBreakdown } from "../../entities/analytics";
-import { EmptyState, ErrorText, fixedTooltipProps, Skeleton, STATUS_LABELS } from "../../shared/ui";
+import { AnchoredTooltip, EmptyState, ErrorText, anchoredTooltipProps, Skeleton, STATUS_LABELS } from "../../shared/ui";
 
 type Row = { name: string; count: number };
 
 type TooltipProps = {
+  orientation: "column" | "row";
   active?: boolean;
+  coordinate?: { x: number; y: number };
   payload?: ReadonlyArray<{ payload?: Row }>;
 };
 
 // Hand-built from semantic tokens, same reason as the other charts: the
 // library default is a hardcoded white box that ignores dark mode.
-function ChartTooltip({ active, payload }: TooltipProps) {
+function ChartTooltip({ active, coordinate, orientation, payload }: TooltipProps) {
   const row = payload?.[0]?.payload;
   if (!active || !row) return null;
   return (
-    <div className="rounded-[var(--radius-control)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm shadow-sm">
-      <p className="text-xs text-[var(--color-text-muted)]">{row.name}</p>
-      <p className="font-medium">
-        {row.count} {row.count === 1 ? "issue" : "issues"}
-      </p>
-    </div>
+    <AnchoredTooltip coordinate={coordinate} orientation={orientation}>
+        <div className="rounded-[var(--radius-control)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm shadow-sm">
+        <p className="text-xs text-[var(--color-text-muted)]">{row.name}</p>
+        <p className="font-medium">
+          {row.count} {row.count === 1 ? "issue" : "issues"}
+        </p>
+      </div>
+    </AnchoredTooltip>
   );
 }
 
@@ -60,7 +64,7 @@ function BarSection({
               <CartesianGrid vertical={false} stroke="var(--color-chart-grid)" />
               <XAxis dataKey="name" tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: "var(--color-chart-grid)" }} interval={0} />
               <YAxis allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...fixedTooltipProps()} />
+              <Tooltip content={<ChartTooltip orientation="column" />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...anchoredTooltipProps} />
               <Bar dataKey="count" fill="var(--color-chart-primary)" radius={[4, 4, 0, 0]} maxBarSize={48} isAnimationActive={false} />
             </BarChart>
           ) : (
@@ -68,7 +72,7 @@ function BarSection({
               <CartesianGrid horizontal={false} stroke="var(--color-chart-grid)" />
               <XAxis type="number" allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: "var(--color-chart-grid)" }} />
               <YAxis type="category" dataKey="name" width={96} tick={AXIS_TICK} tickLine={false} axisLine={false} interval={0} />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...fixedTooltipProps("bottom-right")} />
+              <Tooltip content={<ChartTooltip orientation="row" />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...anchoredTooltipProps} />
               <Bar dataKey="count" fill="var(--color-chart-primary)" radius={[0, 4, 4, 0]} maxBarSize={24} isAnimationActive={false} />
             </BarChart>
           )}

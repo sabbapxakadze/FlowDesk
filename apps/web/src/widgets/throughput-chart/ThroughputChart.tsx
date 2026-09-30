@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useThroughput, type ThroughputPoint } from "../../entities/analytics";
-import { EmptyState, ErrorText, fixedTooltipProps, Skeleton } from "../../shared/ui";
+import { AnchoredTooltip, EmptyState, ErrorText, anchoredTooltipProps, Skeleton } from "../../shared/ui";
 
 // weekStart is a plain UTC date (Monday). Formatted in UTC on purpose: a
 // local-timezone format would show "Sep 27" for Monday Sep 28 west of UTC.
@@ -15,21 +15,24 @@ function formatWeek(weekStart: string): string {
 
 type TooltipProps = {
   active?: boolean;
+  coordinate?: { x: number; y: number };
   payload?: ReadonlyArray<{ payload?: ThroughputPoint }>;
 };
 
 // A hand-built tooltip (semantic tokens only) instead of recharts' default,
 // which ships its own hardcoded white box and would ignore dark mode.
-function ChartTooltip({ active, payload }: TooltipProps) {
+function ChartTooltip({ active, coordinate, payload }: TooltipProps) {
   const point = payload?.[0]?.payload;
   if (!active || !point) return null;
   return (
-    <div className="rounded-[var(--radius-control)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm shadow-sm">
-      <p className="text-xs text-[var(--color-text-muted)]">Week of {formatWeek(point.weekStart)}</p>
-      <p className="font-medium">
-        {point.completed} {point.completed === 1 ? "issue" : "issues"} completed
-      </p>
-    </div>
+    <AnchoredTooltip coordinate={coordinate} orientation="column">
+        <div className="rounded-[var(--radius-control)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm shadow-sm">
+        <p className="text-xs text-[var(--color-text-muted)]">Week of {formatWeek(point.weekStart)}</p>
+        <p className="font-medium">
+          {point.completed} {point.completed === 1 ? "issue" : "issues"} completed
+        </p>
+      </div>
+    </AnchoredTooltip>
   );
 }
 
@@ -102,7 +105,7 @@ export function ThroughputChart({
               tickLine={false}
               axisLine={false}
             />
-            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...fixedTooltipProps()} />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...anchoredTooltipProps} />
             <Bar
               dataKey="completed"
               fill="var(--color-chart-primary)"

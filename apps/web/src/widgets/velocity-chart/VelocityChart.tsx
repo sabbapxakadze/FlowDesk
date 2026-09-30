@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useVelocity, type VelocitySprint } from "../../entities/analytics";
-import { EmptyState, ErrorText, fixedTooltipProps, Skeleton } from "../../shared/ui";
+import { AnchoredTooltip, EmptyState, ErrorText, anchoredTooltipProps, Skeleton, WrappingTick } from "../../shared/ui";
 
 function Stat({ label, value, lead = false }: { label: string; value: string; lead?: boolean }) {
   return (
@@ -14,23 +14,26 @@ function Stat({ label, value, lead = false }: { label: string; value: string; le
 
 type TooltipProps = {
   active?: boolean;
+  coordinate?: { x: number; y: number };
   payload?: ReadonlyArray<{ payload?: VelocitySprint }>;
 };
 
 // Hand-built from semantic tokens, same reason as the other charts: the
 // library default is a hardcoded white box that ignores dark mode.
-function ChartTooltip({ active, payload }: TooltipProps) {
+function ChartTooltip({ active, coordinate, payload }: TooltipProps) {
   const sprint = payload?.[0]?.payload;
   if (!active || !sprint) return null;
   const carriedOver = sprint.committed - sprint.completed;
   return (
-    <div className="rounded-[var(--radius-control)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm shadow-sm">
-      <p className="text-xs text-[var(--color-text-muted)]">{sprint.name}</p>
-      <p className="font-medium">
-        {sprint.completed} of {sprint.committed} completed
-      </p>
-      {carriedOver > 0 && <p className="text-xs text-[var(--color-text-muted)]">{carriedOver} carried over</p>}
-    </div>
+    <AnchoredTooltip coordinate={coordinate} orientation="column">
+        <div className="rounded-[var(--radius-control)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm shadow-sm">
+        <p className="text-xs text-[var(--color-text-muted)]">{sprint.name}</p>
+        <p className="font-medium">
+          {sprint.completed} of {sprint.committed} completed
+        </p>
+        {carriedOver > 0 && <p className="text-xs text-[var(--color-text-muted)]">{carriedOver} carried over</p>}
+      </div>
+    </AnchoredTooltip>
   );
 }
 
@@ -78,7 +81,8 @@ export function VelocityChart({
             <CartesianGrid vertical={false} stroke="var(--color-chart-grid)" />
             <XAxis
               dataKey="name"
-              tick={{ fill: "var(--color-chart-axis)", fontSize: 12 }}
+              tick={<WrappingTick count={rows.length} />}
+              height={40}
               tickLine={false}
               axisLine={{ stroke: "var(--color-chart-grid)" }}
               interval={0}
@@ -89,7 +93,7 @@ export function VelocityChart({
               tickLine={false}
               axisLine={false}
             />
-            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...fixedTooltipProps()} />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...anchoredTooltipProps} />
             <Bar
               dataKey="completed"
               fill="var(--color-chart-primary)"

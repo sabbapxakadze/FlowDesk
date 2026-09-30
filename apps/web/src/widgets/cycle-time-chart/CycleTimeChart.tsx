@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useCycleTime } from "../../entities/analytics";
-import { EmptyState, ErrorText, fixedTooltipProps, Skeleton } from "../../shared/ui";
+import { AnchoredTooltip, EmptyState, ErrorText, anchoredTooltipProps, Skeleton, WrappingTick } from "../../shared/ui";
 
 type Bucket = { label: string; count: number };
 
@@ -21,21 +21,24 @@ function Stat({ label, value, lead = false }: { label: string; value: string; le
 
 type TooltipProps = {
   active?: boolean;
+  coordinate?: { x: number; y: number };
   payload?: ReadonlyArray<{ payload?: Bucket }>;
 };
 
 // Hand-built from semantic tokens, same reason as ThroughputChart's: the
 // library default is a hardcoded white box that ignores dark mode.
-function ChartTooltip({ active, payload }: TooltipProps) {
+function ChartTooltip({ active, coordinate, payload }: TooltipProps) {
   const bucket = payload?.[0]?.payload;
   if (!active || !bucket) return null;
   return (
-    <div className="rounded-[var(--radius-control)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm shadow-sm">
-      <p className="text-xs text-[var(--color-text-muted)]">{bucket.label}</p>
-      <p className="font-medium">
-        {bucket.count} {bucket.count === 1 ? "issue" : "issues"}
-      </p>
-    </div>
+    <AnchoredTooltip coordinate={coordinate} orientation="column">
+        <div className="rounded-[var(--radius-control)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm shadow-sm">
+        <p className="text-xs text-[var(--color-text-muted)]">{bucket.label}</p>
+        <p className="font-medium">
+          {bucket.count} {bucket.count === 1 ? "issue" : "issues"}
+        </p>
+      </div>
+    </AnchoredTooltip>
   );
 }
 
@@ -95,7 +98,8 @@ export function CycleTimeChart({
             <CartesianGrid vertical={false} stroke="var(--color-chart-grid)" />
             <XAxis
               dataKey="label"
-              tick={{ fill: "var(--color-chart-axis)", fontSize: 12 }}
+              tick={<WrappingTick count={distribution.length} />}
+              height={40}
               tickLine={false}
               axisLine={{ stroke: "var(--color-chart-grid)" }}
               interval={0}
@@ -106,7 +110,7 @@ export function CycleTimeChart({
               tickLine={false}
               axisLine={false}
             />
-            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...fixedTooltipProps()} />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-chart-grid)", opacity: 0.5 }} {...anchoredTooltipProps} />
             <Bar
               dataKey="count"
               fill="var(--color-chart-primary)"
