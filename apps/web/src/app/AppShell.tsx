@@ -1,4 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { Menu, X } from "lucide-react";
 import { Outlet } from "react-router";
 import { NotificationBell } from "../widgets/notification-bell";
 import { Sidebar } from "../widgets/sidebar";
@@ -61,9 +62,9 @@ export function AppShell() {
           onClick={() => setDrawerOpen(true)}
           aria-label="Open menu"
           aria-expanded={open}
-          className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-xl text-[var(--color-text-sidebar-active)] hover:bg-[var(--color-bg-sidebar-active)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text-sidebar-active)]"
+          className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-text-sidebar-active)] hover:bg-[var(--color-bg-sidebar-active)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text-sidebar-active)]"
         >
-          ☰
+          <Menu size={20} aria-hidden="true" />
         </button>
         <span className="font-display text-xl text-[var(--color-text-sidebar-active)]">FlowDesk</span>
         <div className="ml-auto">
@@ -91,9 +92,9 @@ export function AppShell() {
                   onClick={() => setDrawerOpen(false)}
                   aria-label="Close menu"
                   autoFocus
-                  className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-lg text-[var(--color-text-sidebar-active)] hover:bg-[var(--color-bg-sidebar-active)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text-sidebar-active)]"
+                  className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-text-sidebar-active)] hover:bg-[var(--color-bg-sidebar-active)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text-sidebar-active)]"
                 >
-                  ✕
+                  <X size={18} aria-hidden="true" />
                 </button>
               }
             />

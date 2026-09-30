@@ -1,6 +1,6 @@
 # 0013 — Visual direction: warm neutrals, slate-teal accent, serif for titles
 
-Status: Accepted — 2026-09-30
+Status: Accepted — 2026-09-30. The neutral scale (`stone`) is superseded by ADR 0016 (`neutral`); the accent, type pair and the swap-point decision stand.
 
 ## Context
 

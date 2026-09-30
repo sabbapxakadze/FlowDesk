@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router";
 import { cn } from "./lib/cn";
 
@@ -51,9 +52,10 @@ export function PageHeader({
       {back && (
         <Link
           to={back.to}
-          className="mb-2 inline-block text-sm text-[var(--color-text-link)] underline"
+          className="mb-2 inline-flex items-center gap-1 text-sm text-[var(--color-text-link)] underline"
         >
-          ← {back.label}
+          <ArrowLeft size={14} aria-hidden="true" />
+          {back.label}
         </Link>
       )}
       {eyebrow && <p className="text-sm text-[var(--color-text-muted)]">{eyebrow}</p>}

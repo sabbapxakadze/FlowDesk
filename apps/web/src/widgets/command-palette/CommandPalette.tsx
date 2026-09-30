@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useProjects } from "../../entities/project";
-import { useSearch, type Issue } from "../../entities/issue";
+import { IssueSummary, useSearch, type Issue } from "../../entities/issue";
 import { Input, StatusBadge } from "../../shared/ui";
 import { useAuth } from "../../shared/auth/useAuth";
 import { useDebouncedValue } from "./useDebouncedValue";
@@ -14,11 +14,13 @@ import { useDebouncedValue } from "./useDebouncedValue";
  * same onSelect.
  */
 function ResultRow({
+  id,
   issue,
   projectKey,
   highlighted,
   onSelect,
 }: {
+  id: string;
   issue: Issue;
   projectKey: string;
   highlighted: boolean;
@@ -35,17 +37,21 @@ function ResultRow({
   return (
     <button
       ref={ref}
+      id={id}
       type="button"
+      role="option"
+      aria-selected={highlighted}
+      tabIndex={-1}
       onClick={onSelect}
-      className={`flex w-full flex-col items-start gap-0.5 rounded-[var(--radius-control)] px-3 py-2 text-left ${
-        highlighted ? "bg-[var(--color-bg-page)]" : ""
+      className={`flex w-full items-start rounded-[var(--radius-control)] px-3 py-2 text-left hover:bg-[var(--color-border-default)] ${
+        highlighted ? "bg-[var(--color-border-default)]" : ""
       }`}
     >
-      <p className="text-sm text-[var(--color-text-muted)]">
-        {projectKey}-{issue.number}
-      </p>
-      <p className="font-medium">{issue.title}</p>
-      <StatusBadge status={issue.status} />
+      <IssueSummary issue={issue} projectKey={projectKey}>
+        <div className="mt-1.5">
+          <StatusBadge status={issue.status} />
+        </div>
+      </IssueSummary>
     </button>
   );
 }
@@ -58,6 +64,7 @@ function ResultRow({
 export function CommandPalette() {
   const { organization } = useAuth();
   const navigate = useNavigate();
+  const listId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -108,7 +115,12 @@ export function CommandPalette() {
     };
     dialog.addEventListener("close", onClose);
     return () => dialog.removeEventListener("close", onClose);
-  }, []);
+    // Depends on `organization` because the <dialog> is not rendered while
+    // logged out (see the early return below): with no dependency this ran
+    // once at mount, found no dialog, and never attached after a login
+    // without a reload, so Esc closed the dialog but left isOpen true and the
+    // next Ctrl+K only toggled it back to false.
+  }, [organization]);
 
   useEffect(() => {
     if (!organization) return;
@@ -144,11 +156,12 @@ export function CommandPalette() {
   }
 
   const trimmed = query.trim();
+  const showList = trimmed !== "" && rows.length > 0;
 
   return (
     <dialog
       ref={dialogRef}
-      className="w-full max-w-lg rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-0 text-[var(--color-text-default)] backdrop:bg-black/40"
+      className="mx-auto mt-24 mb-auto w-full max-w-lg rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-0 text-[var(--color-text-default)] shadow-lg backdrop:bg-black/40"
       aria-label="Command palette"
     >
       <div className="flex flex-col gap-2 p-3">
@@ -162,18 +175,29 @@ export function CommandPalette() {
           onKeyDown={onInputKeyDown}
           placeholder="Search issues by title or description…"
           aria-label="Search issues"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={showList}
+          aria-controls={listId}
+          aria-activedescendant={showList ? `${listId}-option-${highlightedRow}` : undefined}
         />
 
         {trimmed !== "" && (
-          <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+          <ul
+            id={listId}
+            role="listbox"
+            aria-label="Search results"
+            className="flex max-h-80 flex-col gap-1 overflow-y-auto"
+          >
             {rows.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-[var(--color-text-muted)]">No issues match "{trimmed}".</p>
+              <li className="px-3 py-2 text-sm text-[var(--color-text-muted)]">No issues match "{trimmed}".</li>
             ) : (
               rows.map((issue, i) => {
                 const projectKey = projects?.find((p) => p.id === issue.projectId)?.key ?? "?";
                 return (
-                  <li key={issue.id}>
+                  <li key={issue.id} role="presentation">
                     <ResultRow
+                      id={`${listId}-option-${i}`}
                       issue={issue}
                       projectKey={projectKey}
                       highlighted={i === highlightedRow}
@@ -186,6 +210,9 @@ export function CommandPalette() {
           </ul>
         )}
       </div>
+      <p className="border-t border-[var(--color-border-default)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
+        Up and Down to move, Enter to open, Esc to close
+      </p>
     </dialog>
   );
 }

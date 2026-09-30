@@ -333,7 +333,7 @@ foundation) is done. The owner chose palette A: warm `stone` neutrals, a
 slate-teal accent, Inter for text and Newsreader for page titles and big
 numbers only (ADR 0013). Only tokens and type changed; the palette is now a
 value change in `semantic.css`/`primitives.css`. Contrast was measured on the
-real tokens; `border-input` (~1.5:1) is a known, unfixed gap. Slice 2b
+real tokens (the `border-input` gap it found was fixed in 2c). Slice 2b
 (persistent navigation shell) is done: a layout route with a sidebar widget
 (ADR 0014), the bell moved into it, and a mobile drawer. Slice 2c
 (public screens and form controls) is done: an auth layout route, `/` now
@@ -343,7 +343,11 @@ darkened. Slice 2d
 logged-in page, and the duplicated in-page links are gone. Slice 2e
 (data screens) is done: one shared issue face, column headers with counts,
 dashed empty states, sprint status badges, form surfaces, a timeline rail.
-Remaining: 2f overlays and the design-system page. What follows
+Slice 2f
+(overlays and the design-system page) is done, so **Phase 3.6 is complete**:
+the palette-A look (neutral gray after the owner found warm stone brownish, ADR 0016; icons from Lucide) is on every screen and overlay, `/design-system` documents it
+with a theme switch, and a pre-existing command-palette bug (Esc after a
+no-reload login left it stuck) was found and fixed. What follows
 is the history of the earlier, paused slice 1: it was **paused after a
 deliberately minimal slice 1**: real structural improvements (hover/focus states, shadow-based
 card elevation, softer radii, a `StatusBadge` status-color system) are in,

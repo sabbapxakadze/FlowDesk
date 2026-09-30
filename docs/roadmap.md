@@ -269,7 +269,7 @@ Slice 4 (`/design-system` route) shipped:
 uses only semantic tokens. *(True as of slice 2 — confirmed by the grep in
 slice 2's verification, not just assumed from the diff.)*
 
-## Phase 3.6 — Visual identity (paused after slice 1, minimal)
+## Phase 3.6 — Visual identity ✅ complete (2026-09-30)
 
 Goal: Phase 3.5 built the *infrastructure* for consistent design (tokens,
 dark mode, a shared component library) — it deliberately didn't touch the
@@ -412,9 +412,39 @@ Slice 1 (visual foundations, kept minimal) shipped:
       testing, the API log showed several board moves I did not make, most
       likely someone else using the QA account at the same time; a single
       keyboard drag on its own produced exactly one move.
-- [ ] Slice 2f — Overlays (command palette, notification panel) and the
-      `/design-system` page documenting shell, tokens, display font,
-      components.
+- [x] Slice 2f — **Overlays and the design-system page (2026-09-30).**
+      Command palette: top-anchored and centered (`mx-auto mt-24`; without an
+      explicit horizontal margin it sat at the far left, because Tailwind's
+      preflight zeroes the dialog's default margin), rows use `IssueSummary`
+      (the fifth copy of the face is gone), a clearer highlight, an Esc/Enter
+      hint, and real combobox/listbox/option semantics with
+      `aria-activedescendant` and `aria-selected` that follow the arrow keys.
+      Bell: the emoji became an SVG in the sidebar colours, unread rows are
+      default-colour and medium weight while read rows are muted, the unread dot
+      is larger. `/design-system` rewritten: a System/Light/Dark switch (sets
+      `data-theme`, restored on leaving), token groups for surfaces and text,
+      borders, status, charts and the shell, the stone scale with `stone-450`
+      marked, the accent ramp, a typography section, and the newer components
+      (Button full width, invalid controls, ColumnHeader, EmptyState inline and
+      block, Skeleton, shell preview); swatches use inline `var(--token)` so the
+      class lookup tables for tokens are gone. **A pre-existing bug found and
+      fixed while verifying the palette:** its `close`-event listener attached
+      only at mount, but the dialog is not rendered while logged out, so after
+      a login without a reload Esc closed the dialog while `isOpen` stayed true
+      and the next Ctrl+K silently did nothing (`useEffect` now depends on
+      `organization`). Reproduced first, then re-checked in the exact scenario
+      (fresh logged-out load, log in, Esc then Ctrl+K three times).
+      Checked live with real keys: open, type, arrows (one option selected at a
+      time, `aria-activedescendant` matches), Enter navigates and closes, a
+      reopened palette starts empty, no-match message, Esc closes; bell with a
+      real unread notification, Mark all read; the design-system toggle in all
+      three modes, and that leaving the page removes `data-theme`. Contrast
+      measured for the palette highlight (15.7:1 default text, 6.1:1 muted, dark
+      13.9 and 5.9) and the unread dot (3.3:1 on the dark surface, a
+      non-text mark that needs 3:1). Not verified: the palette and bell in dark
+      mode by eye, narrow width, a screen reader (only the ARIA attributes were
+      checked), bell click-through on a real unread row, browsers other than
+      Chrome.
 
 **Revisit point (flagged, not scheduled)**: once Phases 4-8 have built out
 the full feature surface — real screens for filtering/pagination, the
@@ -426,8 +456,18 @@ real screens in hand, add a persistent nav shell). Raise this explicitly
 with the owner when the roadmap reaches that point, rather than waiting to
 be asked.
 
-**Done when** (deferred) every existing screen reflects a deliberate visual
-direction, not just the ones touched directly in this minimal slice 1.
+**Follow-up (2026-09-30, after the rollout):** the owner found the warm `stone`
+neutrals brownish, so the neutrals became pure `neutral` gray (page, sidebar and
+dark mode now gray/near-black), and all icons moved to Lucide (bell, drag grip,
+menu, close, label remove, back arrow). See ADR 0016. Re-measured 22 contrast
+pairs in both modes, all pass; checked live: board in light and dark, a keyboard
+drag after the icon swap (one move), and that the bell and grip icons render as
+Lucide. Not re-checked by eye after the change: every other page.
+
+**Done when** every existing screen reflects a deliberate visual direction,
+not just the ones touched directly in the minimal slice 1. Met by slices 2a-2f:
+one palette and type pair through the tokens, a shell, and every screen and
+overlay on it. What was and was not checked is recorded per slice above.
 
 ## Phase 4 — React depth ✅ complete
 

@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import type { Label } from "../model";
 
 /**
@@ -20,7 +21,7 @@ export function LabelBadge({
       {label.name}
       {onRemove && (
         <button onClick={onRemove} aria-label={`Remove ${label.name}`} className="leading-none">
-          ×
+          <X size={12} aria-hidden="true" />
         </button>
       )}
     </span>

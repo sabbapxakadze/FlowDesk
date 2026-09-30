@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Bell } from "lucide-react";
 import { useNavigate } from "react-router";
 import type { Notification } from "../../entities/notification";
 import {
@@ -13,6 +14,7 @@ import { useAuth } from "../../shared/auth/useAuth";
 import { EmptyState, Skeleton } from "../../shared/ui";
 
 function NotificationRow({ notification, onSelect }: { notification: Notification; onSelect: () => void }) {
+  const unread = notification.readAt === null;
   return (
     <li>
       <button
@@ -23,10 +25,14 @@ function NotificationRow({ notification, onSelect }: { notification: Notificatio
         <p className="text-xs text-[var(--color-text-muted)]">
           {notification.projectKey}-{notification.issueNumber}
           {notification.readAt === null && (
-            <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-accent-500)]" />
+            <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-[var(--color-accent-600)]" />
           )}
         </p>
-        <p className="text-sm">
+        <p
+          className={`text-sm ${
+            unread ? "font-medium text-[var(--color-text-default)]" : "text-[var(--color-text-muted)]"
+          }`}
+        >
           <span className="font-medium">{notification.event.actorName}</span>{" "}
           {describeEvent(notification.event)}
           {" — "}
@@ -100,7 +106,7 @@ export function NotificationBell({ panelAlign = "left" }: { panelAlign?: "left" 
         aria-label="Notifications"
         className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-sidebar)] bg-[var(--color-bg-sidebar-active)] text-[var(--color-text-sidebar-active)] hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-border-focus)]"
       >
-        🔔
+        <Bell size={16} aria-hidden="true" />
         {count > 0 && (
           <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-accent-600)] px-1 text-xs font-medium text-white">
             {count > 99 ? "99+" : count}

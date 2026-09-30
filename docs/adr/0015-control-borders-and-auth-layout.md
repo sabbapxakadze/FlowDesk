@@ -1,6 +1,6 @@
 # 0015 — Control borders at 3:1, and a layout route for the auth pages
 
-Status: Accepted — 2026-09-30
+Status: Accepted — 2026-09-30. The `stone-450` stop is now `neutral-450` (ADR 0016); the 3:1 decision and the auth layout stand.
 
 ## Context
 
