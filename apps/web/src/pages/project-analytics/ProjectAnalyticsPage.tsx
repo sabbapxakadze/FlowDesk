@@ -83,7 +83,7 @@ export function ProjectAnalyticsPage() {
       <Link to={`/projects/${project.id}`} className="text-sm text-[var(--color-text-link)] underline">
         ← {project.name}
       </Link>
-      <h1 className="mt-2 mb-4 text-2xl font-semibold">Analytics</h1>
+      <h1 className="mt-2 mb-4 font-display text-3xl font-normal">Analytics</h1>
 
       <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
         <label className="flex items-center gap-2">

@@ -120,7 +120,7 @@ export function IssueDetailPage() {
           <p className="text-sm text-[var(--color-text-muted)]">
             {project.key}-{issue.number}
           </p>
-          <h1 className="text-2xl font-semibold">{issue.title}</h1>
+          <h1 className="font-display text-3xl font-normal">{issue.title}</h1>
           <div className="mt-1 flex items-center gap-3">
             <StatusBadge status={issue.status} />
             <button

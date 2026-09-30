@@ -319,9 +319,24 @@ Slice 1 (visual foundations, kept minimal) shipped:
       reading the diff, fixed with an explicit flex row.
       Proven on `ProjectsPage` and `IssueDetailPage` (its richest screen)
       in both light and dark mode.
-- [ ] Slice 2 — **Deferred.** Roll out the refreshed foundations and
-      component visuals across every remaining screen. Not started; not
-      planned until the flagged revisit point below.
+- [x] Slice 2a — **Design foundation (2026-09-30).** The revisit point was
+      reached (Phase 8 done). Owner chose palette A from
+      `docs/design/direction-prototype.html`: warm `stone` neutrals,
+      slate-teal accent ramp, Inter for text, Newsreader (serif) for page
+      titles and big numbers only. Only tokens and type changed: see
+      ADR 0013. Contrast measured in the browser on the real token pairs
+      (both modes); `text-warning` and the to-do status dot were below
+      threshold (also before this slice) and were fixed; `border-input`
+      (about 1.5:1 vs 3:1) is known and left. Found that the old font
+      stack named `"Inter"` while fontsource registers `"Inter Variable"`,
+      so Inter was probably never applied; fixed. Checked live on
+      Projects, Board, Analytics and `/design-system`; Analytics in
+      both modes. Not checked: issue detail, login and the other pages.
+- [ ] Slice 2b — **Persistent navigation shell** (dark sidebar with
+      Projects / Search / Notifications and the project list; also removes
+      the fixed bell overlapping top-right links). Adds sidebar tokens then.
+- [ ] Slice 2c+ — Roll out the refreshed look screen by screen (component
+      visuals, `border-input` decision, remaining pages).
 
 **Revisit point (flagged, not scheduled)**: once Phases 4-8 have built out
 the full feature surface — real screens for filtering/pagination, the
@@ -1347,6 +1362,12 @@ Slice 4 (breakdowns) shipped:
 - [ ] Docker + docker-compose (api, web, postgres, redis)
 - [ ] Redis: caching, rate limits, Socket.IO adapter
 - [ ] Background jobs + transactional email
+  - Note (owner deferred, 2026-09-30): API tests that register users call
+    the real Resend API with the real key from `.env` (no fake in
+    `src/lib/email.ts`); Resend rejects the `example.com` test addresses, so
+    nothing is delivered and tests still pass. Fix when this item is done:
+    fake the email sender in the test setup, so tests need no network and
+    can assert "a verification email was requested".
 - [ ] GitHub Actions: lint → typecheck → test → build
 - [ ] Playwright e2e on 3–4 critical flows
 - [ ] Error monitoring

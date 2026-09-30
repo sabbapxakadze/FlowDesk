@@ -1,48 +1,49 @@
 /**
- * The semantic tier — see docs/adr/0006. A deliberately simple palette
- * for now: the cool default `gray` scale as the neutral base, plus
- * FlowDesk's own accent (`--color-accent-*`, primitives.css — deep blue)
- * for links/focus/in-progress status, and a fixed 3-color status system.
- * A fuller visual identity pass (warmer neutrals, more considered type
- * scale, etc.) is deliberately deferred to later in the roadmap, once
- * more of the product exists to design for — see docs/roadmap.md's
- * Phase 3.6 note. This is "good enough, not fancy," on purpose.
+ * The semantic tier — see docs/adr/0006 and docs/adr/0013. This file IS
+ * the palette: every token points at a primitive scale, so changing the
+ * look means changing which scale (or shade) a token points at, never
+ * touching a component. Current direction (0013): warm `stone` neutrals,
+ * FlowDesk's slate-teal accent (`--color-accent-*`, primitives.css), and
+ * a fixed 3-colour status system. To try another palette, repoint the
+ * neutral tokens (e.g. `stone` back to `gray` or over to `slate`/`zinc`)
+ * and/or edit the accent ramp in primitives.css; then re-run the contrast
+ * check listed in 0013.
  *
  * `@theme static`, not plain `@theme` — see primitives.css's comment on
  * why (verified in Phase 3.5, still true here).
  */
 @theme static {
-  --color-bg-page: var(--color-gray-100);
+  --color-bg-page: var(--color-stone-100);
   --color-bg-surface: var(--color-white);
 
-  --color-text-default: var(--color-gray-900);
-  --color-text-muted: var(--color-gray-500);
+  --color-text-default: var(--color-stone-950);
+  --color-text-muted: var(--color-stone-600);
   --color-text-danger: var(--color-red-600);
-  --color-text-warning: var(--color-amber-600);
-  --color-text-link: var(--color-accent-600);
+  --color-text-warning: var(--color-amber-700);
+  --color-text-link: var(--color-accent-700);
 
-  --color-bg-action-primary: var(--color-gray-900);
+  --color-bg-action-primary: var(--color-stone-950);
   --color-text-on-action: var(--color-white);
 
-  --color-border-default: var(--color-gray-200);
-  --color-border-input: var(--color-gray-300);
+  --color-border-default: var(--color-stone-200);
+  --color-border-input: var(--color-stone-300);
   /* Focus rings, not a border — nothing had any focus-visible treatment
      before Phase 3.6. A real accessibility gap, not just a style one. */
-  --color-border-focus: var(--color-accent-500);
+  --color-border-focus: var(--color-accent-600);
 
   /* Status is a fixed enum (todo/in_progress/done), not user data — it
      belongs in the token layer so it can be considered per theme, unlike
      LabelBadge's arbitrary user-chosen colors which correctly stay raw. */
-  --color-status-todo: var(--color-gray-400);
-  --color-status-in-progress: var(--color-accent-500);
+  --color-status-todo: var(--color-stone-500);
+  --color-status-in-progress: var(--color-accent-700);
   --color-status-done: var(--color-emerald-600);
 
   /* Charts (Phase 8). Semantic, so a chart never hardcodes a color and
      dark mode is a redefinition here, not a flip in the component. Grid
      and axis are deliberately recessive; the mark carries the color. */
-  --color-chart-primary: var(--color-accent-600);
-  --color-chart-grid: var(--color-gray-200);
-  --color-chart-axis: var(--color-gray-500);
+  --color-chart-primary: var(--color-accent-700);
+  --color-chart-grid: var(--color-stone-200);
+  --color-chart-axis: var(--color-stone-600);
 }
 
 /**
@@ -59,54 +60,54 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg-page: var(--color-gray-950);
-    --color-bg-surface: var(--color-gray-900);
+    --color-bg-page: var(--color-stone-950);
+    --color-bg-surface: var(--color-stone-900);
 
-    --color-text-default: var(--color-gray-100);
-    --color-text-muted: var(--color-gray-400);
+    --color-text-default: var(--color-stone-100);
+    --color-text-muted: var(--color-stone-400);
     --color-text-danger: var(--color-red-400);
     --color-text-warning: var(--color-amber-400);
     --color-text-link: var(--color-accent-400);
 
-    --color-bg-action-primary: var(--color-gray-100);
-    --color-text-on-action: var(--color-gray-900);
+    --color-bg-action-primary: var(--color-stone-100);
+    --color-text-on-action: var(--color-stone-950);
 
-    --color-border-default: var(--color-gray-800);
-    --color-border-input: var(--color-gray-700);
+    --color-border-default: var(--color-stone-800);
+    --color-border-input: var(--color-stone-700);
     --color-border-focus: var(--color-accent-400);
 
-    --color-status-todo: var(--color-gray-400);
+    --color-status-todo: var(--color-stone-400);
     --color-status-in-progress: var(--color-accent-400);
     --color-status-done: var(--color-emerald-400);
 
     --color-chart-primary: var(--color-accent-400);
-    --color-chart-grid: var(--color-gray-800);
-    --color-chart-axis: var(--color-gray-400);
+    --color-chart-grid: var(--color-stone-800);
+    --color-chart-axis: var(--color-stone-400);
   }
 }
 
 :root[data-theme="dark"] {
-  --color-bg-page: var(--color-gray-950);
-  --color-bg-surface: var(--color-gray-900);
+  --color-bg-page: var(--color-stone-950);
+  --color-bg-surface: var(--color-stone-900);
 
-  --color-text-default: var(--color-gray-100);
-  --color-text-muted: var(--color-gray-400);
+  --color-text-default: var(--color-stone-100);
+  --color-text-muted: var(--color-stone-400);
   --color-text-danger: var(--color-red-400);
   --color-text-warning: var(--color-amber-400);
   --color-text-link: var(--color-accent-400);
 
-  --color-bg-action-primary: var(--color-gray-100);
-  --color-text-on-action: var(--color-gray-900);
+  --color-bg-action-primary: var(--color-stone-100);
+  --color-text-on-action: var(--color-stone-950);
 
-  --color-border-default: var(--color-gray-800);
-  --color-border-input: var(--color-gray-700);
+  --color-border-default: var(--color-stone-800);
+  --color-border-input: var(--color-stone-700);
   --color-border-focus: var(--color-accent-400);
 
-  --color-status-todo: var(--color-gray-400);
+  --color-status-todo: var(--color-stone-400);
   --color-status-in-progress: var(--color-accent-400);
   --color-status-done: var(--color-emerald-400);
 
   --color-chart-primary: var(--color-accent-400);
-  --color-chart-grid: var(--color-gray-800);
-  --color-chart-axis: var(--color-gray-400);
+  --color-chart-grid: var(--color-stone-800);
+  --color-chart-axis: var(--color-stone-400);
 }

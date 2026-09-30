@@ -130,7 +130,7 @@ export function DesignSystemPage() {
 
   return (
     <main className="mx-auto max-w-3xl p-8">
-      <h1 className="mb-1 text-2xl font-semibold">Design system</h1>
+      <h1 className="mb-1 font-display text-3xl font-normal">Design system</h1>
       <p className="mb-8 text-sm text-[var(--color-text-muted)]">
         Every semantic token and base component, live — toggle dark mode to see
         the whole system respond at once.

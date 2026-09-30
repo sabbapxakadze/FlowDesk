@@ -32,7 +32,7 @@ export function ProjectsPage() {
   return (
     <main className="p-8">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Projects</h1>
+        <h1 className="font-display text-3xl font-normal">Projects</h1>
         <Link to="/search" className="text-sm text-[var(--color-text-link)] underline">
           Search →
         </Link>

@@ -7,7 +7,7 @@ function Stat({ label, value, lead = false }: { label: string; value: string; le
   return (
     <div>
       <p className="text-xs text-[var(--color-text-muted)]">{label}</p>
-      <p className={lead ? "text-2xl font-semibold" : "text-lg"}>{value}</p>
+      <p className={lead ? "font-display text-3xl font-normal" : "text-lg"}>{value}</p>
     </div>
   );
 }

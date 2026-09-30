@@ -132,7 +132,7 @@ export function ProjectBoardPage() {
           Sprints →
         </Link>
       </div>
-      <h1 className="mt-2 mb-4 text-2xl font-semibold">{project.name} — Board</h1>
+      <h1 className="mt-2 mb-4 font-display text-3xl font-normal">{project.name} — Board</h1>
 
       {isError ? (
         <ErrorText>Failed to load the board: {error.message}</ErrorText>

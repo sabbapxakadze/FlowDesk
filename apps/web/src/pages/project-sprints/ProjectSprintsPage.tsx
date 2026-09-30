@@ -112,7 +112,7 @@ export function ProjectSprintsPage() {
           Board →
         </Link>
       </div>
-      <h1 className="mt-2 mb-4 text-2xl font-semibold">{project.name} — Sprints</h1>
+      <h1 className="mt-2 mb-4 font-display text-3xl font-normal">{project.name} — Sprints</h1>
 
       <CreateSprintForm organizationId={organization!.id} projectId={project.id} />
 

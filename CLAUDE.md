@@ -328,17 +328,22 @@ and the public `/design-system` route documenting all of it live. Full
 detail lives in `docs/roadmap.md`'s Phase 3.5 checklist; don't duplicate
 it here.
 
-Phase 3.6 (Visual identity) is **paused after a deliberately minimal
-slice 1**: real structural improvements (hover/focus states, shadow-based
+Phase 3.6 (Visual identity) **restarted 2026-09-30**: slice 2a (design
+foundation) is done. The owner chose palette A: warm `stone` neutrals, a
+slate-teal accent, Inter for text and Newsreader for page titles and big
+numbers only (ADR 0013). Only tokens and type changed; the palette is now a
+value change in `semantic.css`/`primitives.css`. Contrast was measured on the
+real tokens; `border-input` (~1.5:1) is a known, unfixed gap. Next: slice 2b,
+the persistent navigation shell, then screen-by-screen rollout. What follows
+is the history of the earlier, paused slice 1: it was **paused after a
+deliberately minimal slice 1**: real structural improvements (hover/focus states, shadow-based
 card elevation, softer radii, a `StatusBadge` status-color system) are in,
 proven on `ProjectsPage` and `IssueDetailPage`, but the color story is
 intentionally plain — a hand-crafted deep-blue accent on the stock `gray`
 neutral scale, not a fully considered palette. Slice 2 (rolling polish out
 everywhere) and any further aesthetic work are explicitly deferred by the
 owner's own call, in favor of building out the full feature set first.
-**Flagged for later**: once Phases 4-8 have shipped real screens to design
-for, raise a real design pass proactively — don't wait to be asked; see
-`docs/roadmap.md`'s Phase 3.6 "Revisit point" note for the detail.
+(The flagged design pass has now been raised and started, see above.)
 Update this line when a phase completes.
 
 ---

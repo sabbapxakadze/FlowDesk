@@ -123,7 +123,7 @@ export function ProjectDetailPage() {
           </Link>
         </div>
       </div>
-      <h1 className="mt-2 mb-4 text-2xl font-semibold">{project.name}</h1>
+      <h1 className="mt-2 mb-4 font-display text-3xl font-normal">{project.name}</h1>
 
       <CreateIssueForm organizationId={organization!.id} projectId={project.id} />
 

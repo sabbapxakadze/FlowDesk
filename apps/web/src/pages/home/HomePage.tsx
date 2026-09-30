@@ -24,7 +24,7 @@ export function HomePage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-      <h1 className="text-2xl font-semibold">FlowDesk</h1>
+      <h1 className="font-display text-3xl font-normal">FlowDesk</h1>
       <p className="text-sm text-[var(--color-text-muted)]">Phase 0 — foundations</p>
 
       {/* Just enough to see the session is real — the silent refresh on

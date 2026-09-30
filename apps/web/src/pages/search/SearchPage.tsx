@@ -57,7 +57,7 @@ export function SearchPage() {
       <Link to="/projects" className="text-sm text-[var(--color-text-link)] underline">
         ← All projects
       </Link>
-      <h1 className="mt-2 mb-4 text-2xl font-semibold">Search</h1>
+      <h1 className="mt-2 mb-4 font-display text-3xl font-normal">Search</h1>
 
       <Input
         value={q}
