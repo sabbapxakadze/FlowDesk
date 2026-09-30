@@ -333,8 +333,10 @@ foundation) is done. The owner chose palette A: warm `stone` neutrals, a
 slate-teal accent, Inter for text and Newsreader for page titles and big
 numbers only (ADR 0013). Only tokens and type changed; the palette is now a
 value change in `semantic.css`/`primitives.css`. Contrast was measured on the
-real tokens; `border-input` (~1.5:1) is a known, unfixed gap. Next: slice 2b,
-the persistent navigation shell, then screen-by-screen rollout. What follows
+real tokens; `border-input` (~1.5:1) is a known, unfixed gap. Slice 2b
+(persistent navigation shell) is done: a layout route with a sidebar widget
+(ADR 0014), the bell moved into it, and a mobile drawer. Next: the
+screen-by-screen rollout (component visuals, the `border-input` decision). What follows
 is the history of the earlier, paused slice 1: it was **paused after a
 deliberately minimal slice 1**: real structural improvements (hover/focus states, shadow-based
 card elevation, softer radii, a `StatusBadge` status-color system) are in,

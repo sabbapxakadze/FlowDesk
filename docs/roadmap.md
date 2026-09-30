@@ -332,9 +332,21 @@ Slice 1 (visual foundations, kept minimal) shipped:
       so Inter was probably never applied; fixed. Checked live on
       Projects, Board, Analytics and `/design-system`; Analytics in
       both modes. Not checked: issue detail, login and the other pages.
-- [ ] Slice 2b — **Persistent navigation shell** (dark sidebar with
-      Projects / Search / Notifications and the project list; also removes
-      the fixed bell overlapping top-right links). Adds sidebar tokens then.
+- [x] Slice 2b — **Persistent navigation shell (2026-09-30).** React Router
+      layout route (`app/AppShell.tsx`) + `widgets/sidebar`: Projects,
+      Search, the org's projects (the current one expands to Issues, Board,
+      Sprints, Analytics), Design system, user and Log out. The bell moved
+      into it (no longer fixed top-right, so it no longer overlaps links).
+      Mobile: top bar + drawer. Five new sidebar tokens; see ADR 0014.
+      Checked live: all seven protected routes have the sidebar with the
+      right current item (`aria-current`), public pages have none, logout and
+      the logged-out redirect work, a real teammate comment updated the
+      bell badge live from inside the sidebar, the drawer opens/closes by
+      button, Escape and link at 420px, contrast of the sidebar token pairs
+      measured in both modes. Not verified: Tab-key order (focus rings were
+      checked by focusing programmatically), browsers other than Chrome.
+      Not done, on purpose: the per-page links remain; no Ctrl+K button, no
+      theme toggle.
 - [ ] Slice 2c+ — Roll out the refreshed look screen by screen (component
       visuals, `border-input` decision, remaining pages).
 

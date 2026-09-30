@@ -38,13 +38,14 @@ function NotificationRow({ notification, onSelect }: { notification: Notificatio
 }
 
 /**
- * Fixed-position, globally mounted (App.tsx, alongside CommandPalette) —
- * same reasoning as the command palette: no persistent nav shell yet
- * (Phase 3.6 deferred that explicitly), so this is a minimal, honest
- * placeholder affordance, not a final nav treatment. Renders nothing
- * while logged out, same guard CommandPalette already uses.
+ * Placed by the navigation shell (app/AppShell.tsx): it used to be a
+ * fixed top-right button because there was no shell, and it overlapped page
+ * links. It is now an ordinary inline element styled for the dark shell
+ * (sidebar tokens), and the caller says which side its dropdown opens
+ * toward so it stays on screen from either the sidebar or the mobile top
+ * bar. Renders nothing while logged out.
  */
-export function NotificationBell() {
+export function NotificationBell({ panelAlign = "left" }: { panelAlign?: "left" | "right" }) {
   const { organization } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -92,23 +93,23 @@ export function NotificationBell() {
   const count = unreadCount ?? 0;
 
   return (
-    <div ref={panelRef} className="fixed top-4 right-4 z-40">
+    <div ref={panelRef} className="relative">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         aria-label="Notifications"
-        className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] shadow-sm hover:bg-[var(--color-bg-page)]"
+        className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-sidebar)] bg-[var(--color-bg-sidebar-active)] text-[var(--color-text-sidebar-active)] hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-border-focus)]"
       >
         🔔
         {count > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-accent-500)] px-1 text-xs font-medium text-white">
+          <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-accent-600)] px-1 text-xs font-medium text-white">
             {count > 99 ? "99+" : count}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute top-12 right-0 flex max-h-96 w-80 flex-col gap-2 overflow-y-auto rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-3 shadow-lg">
+        <div className={`absolute top-11 ${panelAlign === "left" ? "left-0" : "right-0"} z-50 flex max-h-96 w-80 flex-col gap-2 overflow-y-auto rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-3 text-[var(--color-text-default)] shadow-lg`}>
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">Notifications</p>
             {count > 0 && (

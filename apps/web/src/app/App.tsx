@@ -14,74 +14,32 @@ import { ForgotPasswordPage } from "../pages/forgot-password/ForgotPasswordPage"
 import { ResetPasswordPage } from "../pages/reset-password/ResetPasswordPage";
 import { DesignSystemPage } from "../pages/design-system/DesignSystemPage";
 import { RequireAuth } from "../shared/auth/RequireAuth";
+import { AppShell } from "./AppShell";
 import { ErrorBoundary } from "../shared/error-boundary/ErrorBoundary";
 import { CommandPalette } from "../widgets/command-palette";
-import { NotificationBell } from "../widgets/notification-bell";
 
 export function App() {
   return (
     <BrowserRouter>
       <CommandPalette />
-      <NotificationBell />
       <ErrorBoundary>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route
-            path="/projects"
             element={
               <RequireAuth>
-                <ProjectsPage />
+                <AppShell />
               </RequireAuth>
             }
-          />
-          <Route
-            path="/projects/:projectId"
-            element={
-              <RequireAuth>
-                <ProjectDetailPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/projects/:projectId/board"
-            element={
-              <RequireAuth>
-                <ProjectBoardPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/projects/:projectId/sprints"
-            element={
-              <RequireAuth>
-                <ProjectSprintsPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/projects/:projectId/analytics"
-            element={
-              <RequireAuth>
-                <ProjectAnalyticsPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/projects/:projectId/issues/:issueId"
-            element={
-              <RequireAuth>
-                <IssueDetailPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/search"
-            element={
-              <RequireAuth>
-                <SearchPage />
-              </RequireAuth>
-            }
-          />
+          >
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+            <Route path="/projects/:projectId/board" element={<ProjectBoardPage />} />
+            <Route path="/projects/:projectId/sprints" element={<ProjectSprintsPage />} />
+            <Route path="/projects/:projectId/analytics" element={<ProjectAnalyticsPage />} />
+            <Route path="/projects/:projectId/issues/:issueId" element={<IssueDetailPage />} />
+            <Route path="/search" element={<SearchPage />} />
+          </Route>
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />

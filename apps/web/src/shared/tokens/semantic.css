@@ -44,6 +44,14 @@
   --color-chart-primary: var(--color-accent-700);
   --color-chart-grid: var(--color-stone-200);
   --color-chart-axis: var(--color-stone-600);
+
+  /* Navigation shell (Phase 3.6 slice 2b). The sidebar is dark in light mode
+     on purpose: it frames the page instead of blending into it. */
+  --color-bg-sidebar: var(--color-stone-900);
+  --color-text-sidebar: var(--color-stone-400);
+  --color-text-sidebar-active: var(--color-stone-100);
+  --color-bg-sidebar-active: var(--color-stone-800);
+  --color-border-sidebar: var(--color-stone-800);
 }
 
 /**
@@ -83,6 +91,12 @@
     --color-chart-primary: var(--color-accent-400);
     --color-chart-grid: var(--color-stone-800);
     --color-chart-axis: var(--color-stone-400);
+
+    --color-bg-sidebar: var(--color-stone-950);
+    --color-text-sidebar: var(--color-stone-400);
+    --color-text-sidebar-active: var(--color-stone-100);
+    --color-bg-sidebar-active: var(--color-stone-800);
+    --color-border-sidebar: var(--color-stone-800);
   }
 }
 
@@ -110,4 +124,10 @@
   --color-chart-primary: var(--color-accent-400);
   --color-chart-grid: var(--color-stone-800);
   --color-chart-axis: var(--color-stone-400);
+
+  --color-bg-sidebar: var(--color-stone-950);
+  --color-text-sidebar: var(--color-stone-400);
+  --color-text-sidebar-active: var(--color-stone-100);
+  --color-bg-sidebar-active: var(--color-stone-800);
+  --color-border-sidebar: var(--color-stone-800);
 }
