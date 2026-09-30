@@ -796,6 +796,19 @@ Slice 4 (sprints) shipped:
       "dropped over droppable area active-sprint"), and completed the
       sprint, watching its issue return to the backlog and the timeline
       update correctly — all against the real API, not mocked.
+- [x] **Bug fix: drag and click feel (2026-09-30, owner report).** Whole card is
+      the drag source (grip kept for the keyboard), a click guard stops the
+      post-drag click from opening the issue, columns preview the move live
+      (cards make room, right to left, left to right, skipping a column,
+      vertically), every column is one big drop target, pointer-based collision
+      detection, hover shadow animates again, no flash between drop and the
+      optimistic update, Sprints page gets the same plus a drag overlay. See ADR
+      0018. Found by measuring: a 1 degree rotation on the drag overlay broke
+      keyboard column moves, and after crossing columns the drop could land in
+      front of the card the preview had placed the card after. Verified with real
+      mouse and keyboard input, and the server's stored order matched the screen.
+      Not verified: real touch input, other browsers; one unexplained miss in a
+      scripted batch that later runs did not reproduce.
 
 ## Phase 6 — Real-time
 

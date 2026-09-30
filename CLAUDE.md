@@ -347,7 +347,9 @@ Slice 2f
 (overlays and the design-system page) is done, so **Phase 3.6 is complete**:
 the palette-A look (neutral gray after the owner found warm stone brownish, ADR 0016; icons from Lucide) is on every screen and overlay, with a Light/Dark/System theme switch in the sidebar (ADR 0017), `/design-system` documents it
 with a theme switch, and a pre-existing command-palette bug (Esc after a
-no-reload login left it stuck) was found and fixed. What follows
+no-reload login left it stuck) was found and fixed. A later bug fix
+(ADR 0018) made board and sprint cards draggable from anywhere, with a live
+column preview and no accidental navigation after a drag. What follows
 is the history of the earlier, paused slice 1: it was **paused after a
 deliberately minimal slice 1**: real structural improvements (hover/focus states, shadow-based
 card elevation, softer radii, a `StatusBadge` status-color system) are in,

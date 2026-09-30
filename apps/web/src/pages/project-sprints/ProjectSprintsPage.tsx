@@ -1,17 +1,23 @@
-import { type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useParams } from "react-router";
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
+  pointerWithin,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
+import type { Issue } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
-import { SprintIssueCard, useBacklog } from "../../entities/issue";
+import { IssueSummary, SprintIssueCard, useBacklog } from "../../entities/issue";
 import { SprintStatusBadge, useSprints } from "../../entities/sprint";
 import { CreateSprintForm } from "../../features/create-sprint";
 import { useStartSprint, useCompleteSprint } from "../../features/manage-sprint";
@@ -34,13 +40,15 @@ function ListSkeleton() {
 
 /** Droppable on the whole zone — "backlog" or "active-sprint", meaning
  * "move the dragged issue here." No sortable insert-before semantics,
- * unlike BoardColumn — see the Phase 5 slice 4 plan's "Decisions". */
+ * unlike BoardColumn — see the Phase 5 slice 4 plan's "Decisions". The zone
+ * stretches to the height of the row (flex-1 inside a stretching column) with
+ * a generous minimum, so there is always a large target to drop on. */
 function DropZone({ id, children }: { id: "backlog" | "active-sprint"; children: ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-24 rounded-[var(--radius-card)] p-1 transition-colors ${
+      className={`min-h-64 flex-1 rounded-[var(--radius-card)] p-1 transition-colors ${
         isOver ? "bg-[var(--color-border-default)]" : ""
       }`}
     >
@@ -70,14 +78,41 @@ export function ProjectSprintsPage() {
   const activeSprint = backlogData?.activeSprint ?? null;
   const activeSprintIssues = backlogData?.activeSprintIssues ?? [];
 
+  const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
+
+  // A grabbing cursor for the whole page while a card is being dragged.
+  useEffect(() => {
+    if (!activeIssue) return;
+    document.body.style.cursor = "grabbing";
+    return () => {
+      document.body.style.cursor = "";
+    };
+  }, [activeIssue]);
+
   // No sortable coordinate getter needed (see DropZone) — the default
   // KeyboardSensor step is enough to move focus between two large zones.
+  // distance 6 keeps a plain click a click; touch needs a short press so the
+  // page still scrolls.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
     useSensor(KeyboardSensor),
   );
 
+  // The zone under the pointer wins; if the pointer is outside both (or a
+  // keyboard drag has no pointer), fall back to the nearest zone.
+  const collisionDetection = useCallback<CollisionDetection>((args) => {
+    const hits = pointerWithin(args);
+    return hits.length > 0 ? hits : closestCenter(args);
+  }, []);
+
+  function handleDragStart(event: DragStartEvent) {
+    const id = String(event.active.id);
+    setActiveIssue([...backlog, ...activeSprintIssues].find((i) => i.id === id) ?? null);
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setActiveIssue(null);
     const { active, over } = event;
     if (!over) return;
 
@@ -161,9 +196,15 @@ export function ProjectSprintsPage() {
       {isError ? (
         <ErrorText>Failed to load the backlog: {error.message}</ErrorText>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={collisionDetection}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveIssue(null)}
+        >
+          <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
+            <div className="flex flex-col">
               <ColumnHeader label="Backlog" count={backlogPending ? undefined : backlog.length} />
               <DropZone id="backlog">
                 {backlogPending ? (
@@ -179,7 +220,7 @@ export function ProjectSprintsPage() {
                 )}
               </DropZone>
             </div>
-            <div>
+            <div className="flex flex-col">
               <ColumnHeader
                 status={activeSprint ? "in_progress" : undefined}
                 label={activeSprint ? `Active: ${activeSprint.name}` : "No active sprint"}
@@ -202,6 +243,14 @@ export function ProjectSprintsPage() {
               </DropZone>
             </div>
           </div>
+
+          <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
+            {activeIssue && (
+              <Card className="flex cursor-grabbing shadow-lg">
+                <IssueSummary issue={activeIssue} projectKey={project.key} />
+              </Card>
+            )}
+          </DragOverlay>
         </DndContext>
       )}
     </Page>
