@@ -19,3 +19,4 @@ export { ThemeSwitch } from "./ThemeSwitch";
 export { Time } from "./Time";
 export { PriorityBadge } from "./PriorityBadge";
 export { PRIORITY_LABELS, PRIORITY_ORDER } from "./priorityLabels";
+export { Avatar } from "./Avatar";

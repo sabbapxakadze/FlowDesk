@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
+import { useMembers, useMemberNames } from "../../entities/member";
 import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
 import { CreateIssueForm } from "../../features/create-issue";
 import { EditIssueForm } from "../../features/edit-issue";
@@ -52,7 +53,7 @@ function IssueListSkeleton() {
  * plan's "Decisions" section.
  */
 export function ProjectDetailPage() {
-  const { organization } = useAuth();
+  const { organization, user } = useAuth();
   const { projectId } = useParams<{ projectId: string }>();
   const { data: projects, isPending: projectsPending } = useProjects(organization!.id);
   const project = projects?.find((p) => p.id === projectId);
@@ -66,6 +67,10 @@ export function ProjectDetailPage() {
   const status = isIssueStatus(statusParam) ? statusParam : undefined;
   const priorityParam = searchParams.get("priority");
   const priority = isIssuePriority(priorityParam) ? priorityParam : undefined;
+  // A user id or "unassigned". Not validated against the member list: an id that
+  // matches nobody simply returns an empty list, and the API rejects a non-uuid.
+  const assigneeParam = searchParams.get("assignee");
+  const assignee = assigneeParam && assigneeParam !== "" ? assigneeParam : undefined;
   const order = searchParams.get("order") === "asc" ? "asc" : undefined;
 
   const {
@@ -76,7 +81,9 @@ export function ProjectDetailPage() {
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useIssues(organization!.id, projectId!, { status, priority, order });
+  } = useIssues(organization!.id, projectId!, { status, priority, assignee, order });
+  const { data: members } = useMembers(organization!.id);
+  const nameOf = useMemberNames(organization!.id);
   useLiveIssueUpdates(projectId!);
   // useInfiniteQuery's data is { pages: Page[], pageParams }, not a flat
   // list — flatten once here so the rest of this page (and IssueCard)
@@ -110,6 +117,18 @@ export function ProjectDetailPage() {
         next.delete("priority");
       } else {
         next.set("priority", value);
+      }
+      return next;
+    });
+  }
+
+  function setAssigneeFilter(value: string) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value === "") {
+        next.delete("assignee");
+      } else {
+        next.set("assignee", value);
       }
       return next;
     });
@@ -176,6 +195,24 @@ export function ProjectDetailPage() {
             </option>
           ))}
         </Select>
+        <Select
+          value={assignee ?? ""}
+          onChange={(e) => setAssigneeFilter(e.target.value)}
+          className="w-auto"
+          aria-label="Filter by assignee"
+        >
+          <option value="">Anyone</option>
+          <option value="unassigned">Unassigned</option>
+          {/* "Assigned to me" is just the signed-in user's own id. */}
+          {user && <option value={user.id}>Assigned to me</option>}
+          {members
+            ?.filter((member) => member.userId !== user?.id)
+            .map((member) => (
+              <option key={member.userId} value={member.userId}>
+                {member.name}
+              </option>
+            ))}
+        </Select>
         <Button variant="secondary" size="sm" onClick={toggleOrder}>
           {order === "asc" ? "Oldest first" : "Newest first"}
         </Button>
@@ -193,7 +230,9 @@ export function ProjectDetailPage() {
         <ErrorText>Failed to load issues: {error.message}</ErrorText>
       ) : issues.length === 0 ? (
         <EmptyState block>
-          {status || priority ? "No issues match these filters." : "No issues yet."}
+          {status || priority || assignee
+            ? "No issues match these filters."
+            : "No issues yet."}
         </EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -212,6 +251,7 @@ export function ProjectDetailPage() {
                 key={issue.id}
                 issue={issue}
                 projectKey={project.key}
+                assigneeName={nameOf(issue.assigneeId)}
                 onEdit={() => {
                   setShowConflictNotice(false);
                   setEditingIssueId(issue.id);

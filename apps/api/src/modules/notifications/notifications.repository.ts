@@ -26,11 +26,21 @@ export async function createForIssueEvent(
   tx: Tx,
   input: { issueEventId: string; issueId: string; excludeActorId: string },
 ): Promise<string[]> {
+  // Recipients: everyone who has acted on the issue (participants), plus the
+  // issue's CURRENT assignee even if they never acted (ADR 0021). UNION removes
+  // duplicates; the assignee is read from the row as updated in this same
+  // transaction, so a person who has just been assigned is notified by the very
+  // event that assigned them.
   const result = await tx.execute<{ user_id: string }>(sql`
     INSERT INTO notifications (user_id, issue_event_id)
-    SELECT DISTINCT actor_id, ${input.issueEventId}::uuid
-    FROM issue_events
-    WHERE issue_id = ${input.issueId}::uuid AND actor_id != ${input.excludeActorId}::uuid
+    SELECT recipients.user_id, ${input.issueEventId}::uuid
+    FROM (
+      SELECT actor_id AS user_id FROM issue_events WHERE issue_id = ${input.issueId}::uuid
+      UNION
+      SELECT assignee_id AS user_id FROM issues
+      WHERE id = ${input.issueId}::uuid AND assignee_id IS NOT NULL
+    ) AS recipients
+    WHERE recipients.user_id != ${input.excludeActorId}::uuid
     RETURNING user_id
   `);
   return result.rows.map((row) => row.user_id);

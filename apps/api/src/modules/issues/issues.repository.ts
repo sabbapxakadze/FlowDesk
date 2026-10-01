@@ -85,6 +85,8 @@ export async function listByProject(
     cursor?: string;
     status?: IssueStatus;
     priority?: IssuePriority;
+    // A user id, or "unassigned".
+    assignee?: string;
     order: "asc" | "desc";
   },
 ): Promise<{ status: "ok"; items: IssueRow[]; nextCursor: string | null } | { status: "invalid_cursor" }> {
@@ -98,6 +100,12 @@ export async function listByProject(
   // project_id equality, no dedicated index.
   if (options.priority) {
     conditions.push(eq(issues.priority, options.priority));
+  }
+
+  if (options.assignee === "unassigned") {
+    conditions.push(isNull(issues.assigneeId));
+  } else if (options.assignee) {
+    conditions.push(eq(issues.assigneeId, options.assignee));
   }
 
   if (options.cursor) {
@@ -429,7 +437,12 @@ export async function update(input: {
     description: string | null;
     status: IssueStatus;
     priority: IssuePriority;
+    assigneeId: string | null;
   }>;
+  // Extra, human-readable facts for the event payload that are not columns,
+  // e.g. the assignee's name at the time (a name can change later; the
+  // timeline should keep saying what was true then, like label names do).
+  eventExtras?: Record<string, unknown>;
   actorId: string;
 }): Promise<
   | { status: "updated"; issue: typeof issues.$inferSelect; notifiedUserIds: string[] }
@@ -474,7 +487,7 @@ export async function update(input: {
         issueId: updated.id,
         actorId: input.actorId,
         type: "issue.updated",
-        payload: input.changes,
+        payload: { ...input.changes, ...input.eventExtras },
       });
       return { status: "updated", issue: updated, notifiedUserIds };
     }

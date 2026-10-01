@@ -65,6 +65,11 @@ export const issues = pgTable(
     description: text("description"),
     status: issueStatus("status").notNull().default("todo"),
     priority: issuePriority("priority").notNull().default("none"),
+    // Nullable = unassigned. set null (not cascade): deleting a user must not
+    // delete their issues. That the assignee belongs to THIS organization is
+    // not expressible as a foreign key (the link is through
+    // organization_members), so the service checks it on every assignment.
+    assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
     reporterId: uuid("reporter_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),

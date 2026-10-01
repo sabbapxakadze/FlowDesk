@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Issue, IssuePriority, IssueStatus } from "@flowdesk/contracts";
 import { issueKeys } from "../../../entities/issue";
+import { useMembers } from "../../../entities/member";
 import { ApiError } from "../../../shared/api/client";
 import {
   Button,
@@ -20,6 +21,8 @@ type FormValues = {
   description: string;
   status: IssueStatus;
   priority: IssuePriority;
+  // "" means unassigned (a <select> value is always a string).
+  assigneeId: string;
 };
 
 /**
@@ -54,8 +57,10 @@ export function EditIssueForm({
       description: issue.description ?? "",
       status: issue.status,
       priority: issue.priority,
+      assigneeId: issue.assigneeId ?? "",
     },
   });
+  const { data: members } = useMembers(organizationId);
 
   const mutation = useMutation({
     mutationFn: (data: FormValues) =>
@@ -68,6 +73,10 @@ export function EditIssueForm({
         // (existing behaviour), but a priority that did not change should not
         // write a "changed priority" line into the activity timeline.
         ...(data.priority !== issue.priority ? { priority: data.priority } : {}),
+        // Same rule as priority: only when it changed. "" is sent as null (unassign).
+        ...(data.assigneeId !== (issue.assigneeId ?? "")
+          ? { assigneeId: data.assigneeId === "" ? null : data.assigneeId }
+          : {}),
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: issueKeys.list(projectId) });
@@ -120,6 +129,17 @@ export function EditIssueForm({
           {PRIORITY_ORDER.map((value) => (
             <option key={value} value={value}>
               {PRIORITY_LABELS[value]}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      <Field label="Assignee">
+        <Select {...register("assigneeId")}>
+          <option value="">Unassigned</option>
+          {members?.map((member) => (
+            <option key={member.userId} value={member.userId}>
+              {member.name}
             </option>
           ))}
         </Select>

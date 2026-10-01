@@ -23,7 +23,15 @@ import { IssueSummary } from "./IssueSummary";
  *   keeps its own transition-shadow, so the hover shadow still animates
  *   (an inline `transition` on the Card itself would replace it).
  */
-export function BoardCard({ issue, projectKey }: { issue: Issue; projectKey: string }) {
+export function BoardCard({
+  issue,
+  projectKey,
+  assigneeName,
+}: {
+  issue: Issue;
+  projectKey: string;
+  assigneeName?: string | null;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: issue.id,
   });
@@ -44,7 +52,7 @@ export function BoardCard({ issue, projectKey }: { issue: Issue; projectKey: str
           onClick={guardClick}
           className="block min-w-0 flex-1"
         >
-          <IssueSummary issue={issue} projectKey={projectKey} />
+          <IssueSummary issue={issue} projectKey={projectKey} assigneeName={assigneeName} />
         </Link>
       </Card>
     </li>

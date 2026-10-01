@@ -28,6 +28,7 @@ import {
 } from "@dnd-kit/sortable";
 import type { Issue, IssueStatus } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
+import { useMemberNames } from "../../entities/member";
 import { BoardCard, IssueSummary, useBoard, useLiveIssueUpdates } from "../../entities/issue";
 import { useMoveIssue } from "../../features/move-issue";
 import { useAuth } from "../../shared/auth/useAuth";
@@ -170,6 +171,7 @@ export function ProjectBoardPage() {
   const { organization } = useAuth();
   const { projectId } = useParams<{ projectId: string }>();
   const { data: projects, isPending: projectsPending } = useProjects(organization!.id);
+  const nameOf = useMemberNames(organization!.id);
   const project = projects?.find((p) => p.id === projectId);
 
   const { data: issues, isPending: issuesPending, isError, error } = useBoard(organization!.id, projectId!);
@@ -391,7 +393,12 @@ export function ProjectBoardPage() {
                   ) : columnIssues.length > 0 ? (
                     <ul className="flex flex-col gap-2">
                       {columnIssues.map((issue) => (
-                        <BoardCard key={issue.id} issue={issue} projectKey={project.key} />
+                        <BoardCard
+                          key={issue.id}
+                          issue={issue}
+                          projectKey={project.key}
+                          assigneeName={nameOf(issue.assigneeId)}
+                        />
                       ))}
                     </ul>
                   ) : (
@@ -405,7 +412,11 @@ export function ProjectBoardPage() {
           <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
             {activeIssue && (
               <Card className="flex cursor-grabbing shadow-lg">
-                <IssueSummary issue={activeIssue} projectKey={project.key} />
+                <IssueSummary
+                  issue={activeIssue}
+                  projectKey={project.key}
+                  assigneeName={nameOf(activeIssue.assigneeId)}
+                />
               </Card>
             )}
           </DragOverlay>

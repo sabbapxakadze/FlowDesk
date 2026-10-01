@@ -148,6 +148,10 @@ export async function updateIssue(req: Request, res: Response) {
     actorId: req.ctx.userId,
   });
 
+  if (result.status === "invalid_assignee") {
+    throw new AppError("invalid_assignee", 400, "That person is not a member of this organization.");
+  }
+
   if (result.status === "conflict") {
     throw new AppError(
       "version_conflict",

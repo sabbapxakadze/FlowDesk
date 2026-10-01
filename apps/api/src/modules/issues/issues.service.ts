@@ -9,6 +9,7 @@ import {
 } from "../../realtime/socket-server.js";
 import * as storage from "../../lib/storage.js";
 import * as issuesRepository from "./issues.repository.js";
+import * as organizationsRepository from "../organizations/organizations.repository.js";
 
 function broadcastNotifications(notifiedUserIds: string[]): void {
   for (const userId of notifiedUserIds) broadcastNotificationCreated(userId);
@@ -32,6 +33,7 @@ export async function listIssues(
     cursor?: string;
     status?: IssueStatus;
     priority?: IssuePriority;
+    assignee?: string;
     order: "asc" | "desc";
   },
 ) {
@@ -64,10 +66,26 @@ export async function updateIssue(input: {
     description: string | null;
     status: IssueStatus;
     priority: IssuePriority;
+    assigneeId: string | null;
   }>;
   actorId: string;
 }) {
-  const result = await issuesRepository.update(input);
+  // An assignee must belong to THIS organization. No foreign key can say so
+  // (the link is through organization_members), and the id arrives from the
+  // client, so it is checked here on every assignment. The member's name is kept
+  // in the event payload: the timeline should say who it was then.
+  let eventExtras: Record<string, unknown> | undefined;
+  if (input.changes.assigneeId !== undefined) {
+    if (input.changes.assigneeId === null) {
+      eventExtras = { assigneeName: null };
+    } else {
+      const member = await organizationsRepository.findMember(input.organizationId, input.changes.assigneeId);
+      if (!member) return { status: "invalid_assignee" } as const;
+      eventExtras = { assigneeName: member.name };
+    }
+  }
+
+  const result = await issuesRepository.update({ ...input, eventExtras });
   if (result.status === "updated") {
     broadcastIssueChanged(input.projectId, input.issueId);
     broadcastNotifications(result.notifiedUserIds);

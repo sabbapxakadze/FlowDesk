@@ -1586,11 +1586,30 @@ The original plan for this slice, kept for the record:
      resends title, description and status on every save, so each save writes
      "changed the title / changed status / updated the description" lines even for
      fields that did not change.
-   - **B, assignee: designed, not started.** `issues.assignee_id` (FK, set null),
-     org-membership check in the service, `GET .../members`, assignee on cards by
-     id (names resolved from the members list), "assigned to me" / "unassigned"
-     filters, and notifications = past participants plus the current assignee
-     (needs ADR 0021).
+   - **B, assignee: DONE 2026-10-01 (ADR 0021).** `issues.assignee_id` (nullable
+     FK, set null; migration 0017), set through the same version-checked PATCH
+     (`assigneeId`, `null` unassigns), event carries the id plus a name snapshot.
+     The service refuses anyone who is not a member of the issue's organization
+     (`400 invalid_assignee`): no foreign key can express that. New
+     `GET /organizations/:id/members` and a real `organizations` module; new
+     `entities/member` and a `shared/ui` `Avatar` on cards (board, issues list,
+     sprints, drag overlays, detail page), a select in the edit form, an
+     assignee filter (Anyone / Unassigned / Assigned to me / each person, in the
+     URL). Notifications: past participants PLUS the current assignee, minus the
+     actor. **Verified:** 10 new API tests (members isolation both ways, assign,
+     unassign, outsider refused and nothing changed, filter by person and
+     unassigned, three notification cases); mutations: no membership check, assignee
+     not a recipient, unassigned filter dropped, each fails named tests; e2e test
+     with a second browser context (assign through the form, avatar on the card, the
+     assignee's bell goes to 1 live with no reload, both filters, one activity
+     line), 10 of 10 repeat runs, and the "assignee not a recipient" mutation fails
+     it. Light and dark screenshots of the list and board looked right.
+     **Not verified:** the board and sprint pages with assignees in the real drag
+     interaction (cards only gained a prop); a very long member list in the select;
+     mobile width for the new filter row. **Known gaps (in the ADR):** the previous
+     assignee is not told they were unassigned unless they had acted; the avatar
+     circle is only faintly lighter than the card in dark mode; no way yet to remove
+     a member.
 2. **Rename and delete** for issues, projects, labels and sprints, with
    confirmation and audit events.
 3. **Invite teammates** by email with roles (the roles enum already exists).
@@ -1663,7 +1682,7 @@ prioritise work, discuss it with edits and files, and see when things happened.
     edit fails the live test. **Noted:** the reload test passes here, so the earlier
     manual 401 on reload was not reproduced; its cause is still unknown. The e2e API
     runs with `NODE_ENV=test` (first tried `development`; the register limit of 5
-    per hour gave a 429 on the fifth test). **Update 2026-10-01:** now 8 tests (added board drag, two-user live comments,
+    per hour gave a 429 on the fifth test). **Update 2026-10-01:** now 9 tests (added assignee, board drag, two-user live comments,
     priority, and a "several page loads in a row" guard). **Real bug found by the
     suite and fixed:** on every full page load the app sent two `/auth/refresh`
     requests with the same cookie (React StrictMode runs the mount effect twice in

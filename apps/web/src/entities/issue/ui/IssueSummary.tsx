@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { PriorityBadge } from "../../../shared/ui";
+import { Avatar, PriorityBadge } from "../../../shared/ui";
 import type { Issue } from "../model";
 
 /**
@@ -10,10 +10,13 @@ import type { Issue } from "../model";
 export function IssueSummary({
   issue,
   projectKey,
+  assigneeName,
   children,
 }: {
   issue: Pick<Issue, "number" | "title" | "priority">;
   projectKey: string;
+  /** Resolved by the page (issues carry only an assignee id); null/absent = unassigned. */
+  assigneeName?: string | null;
   children?: ReactNode;
 }) {
   return (
@@ -21,6 +24,11 @@ export function IssueSummary({
       <p className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
         {projectKey}-{issue.number}
         <PriorityBadge priority={issue.priority} />
+        {assigneeName && (
+          <span className="ml-auto">
+            <Avatar name={assigneeName} label={`Assigned to ${assigneeName}`} />
+          </span>
+        )}
       </p>
       <p className="font-medium">{issue.title}</p>
       {children}

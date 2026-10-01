@@ -4,6 +4,8 @@ import { projectKeys } from "../../project";
 export type IssueListFilters = {
   status?: IssueStatus;
   priority?: IssuePriority;
+  // A user id or "unassigned".
+  assignee?: string;
   order?: "asc" | "desc";
 };
 

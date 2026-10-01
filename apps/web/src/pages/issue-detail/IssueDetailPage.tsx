@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams } from "react-router";
 import type { Attachment, IssueEvent } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
+import { useMemberNames } from "../../entities/member";
 import {
   AttachmentList,
   describeEvent,
@@ -14,7 +15,7 @@ import { EditIssueForm } from "../../features/edit-issue";
 import { CommentCard, CommentForm } from "../../features/post-comment";
 import { UploadAttachmentForm } from "../../features/upload-attachment";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Page, PageHeader, PriorityBadge, Skeleton, StatusBadge, Time } from "../../shared/ui";
+import { Avatar, Page, PageHeader, PriorityBadge, Skeleton, StatusBadge, Time } from "../../shared/ui";
 
 function IssueDetailSkeleton() {
   return (
@@ -100,6 +101,7 @@ export function IssueDetailPage() {
   const { projectId, issueId } = useParams<{ projectId: string; issueId: string }>();
   const { data: projects, isPending: projectsPending } = useProjects(organization!.id);
   const project = projects?.find((p) => p.id === projectId);
+  const nameOf = useMemberNames(organization!.id);
 
   const { data: issue, isPending: issuePending } = useIssue(organization!.id, projectId!, issueId!);
 
@@ -159,6 +161,12 @@ export function IssueDetailPage() {
             <div className="flex items-center gap-3">
               <StatusBadge status={issue.status} />
               <PriorityBadge priority={issue.priority} />
+              {nameOf(issue.assigneeId) && (
+                <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+                  <Avatar name={nameOf(issue.assigneeId)!} />
+                  {nameOf(issue.assigneeId)}
+                </span>
+              )}
               <button
                 onClick={() => {
                   setShowConflictNotice(false);

@@ -17,16 +17,18 @@ import { IssueSummary } from "./IssueSummary";
 export function IssueCard({
   issue,
   projectKey,
+  assigneeName,
   onEdit,
 }: {
   issue: Issue;
   projectKey: string;
+  assigneeName?: string | null;
   onEdit?: () => void;
 }) {
   return (
     <Card as="li" hoverable className="flex items-start justify-between gap-2">
       <Link to={`/projects/${issue.projectId}/issues/${issue.id}`} className="block min-w-0 flex-1">
-        <IssueSummary issue={issue} projectKey={projectKey}>
+        <IssueSummary issue={issue} projectKey={projectKey} assigneeName={assigneeName}>
           <div className="mt-1.5">
             <StatusBadge status={issue.status} />
           </div>

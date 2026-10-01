@@ -1,6 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { organizationMembers, organizations } from "../../db/schema/index.js";
+import { organizationMembers, organizations, users } from "../../db/schema/index.js";
 
 /**
  * The extraction point Slice 1's decisions flagged: "if organizations ever
@@ -37,6 +37,35 @@ export async function findPrimaryOrganizationForUser(userId: string) {
     .from(organizationMembers)
     .innerJoin(organizations, eq(organizationMembers.organizationId, organizations.id))
     .where(eq(organizationMembers.userId, userId))
+    .limit(1);
+  return row;
+}
+
+/** Everyone in the organization, for the assignee picker. Scoped by organizationId. */
+export async function listMembers(organizationId: string) {
+  return db
+    .select({
+      userId: users.id,
+      name: users.name,
+      email: users.email,
+      role: organizationMembers.role,
+    })
+    .from(organizationMembers)
+    .innerJoin(users, eq(organizationMembers.userId, users.id))
+    .where(eq(organizationMembers.organizationId, organizationId))
+    .orderBy(asc(users.name), asc(users.id));
+}
+
+/**
+ * One member of THIS organization, or undefined (not a member, or a member of
+ * a different organization). The assignment check relies on that distinction.
+ */
+export async function findMember(organizationId: string, userId: string) {
+  const [row] = await db
+    .select({ userId: users.id, name: users.name })
+    .from(organizationMembers)
+    .innerJoin(users, eq(organizationMembers.userId, users.id))
+    .where(and(eq(organizationMembers.organizationId, organizationId), eq(organizationMembers.userId, userId)))
     .limit(1);
   return row;
 }

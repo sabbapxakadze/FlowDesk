@@ -72,7 +72,10 @@ in the stored event, hidden not erased). Author edits, author or owner/admin
 deletes, neither notifies, a deleted comment's files stay as plain attachments.
 Phase 8.5 slice 2A (issue priority) is done too: a `priority` enum on issues
 (default `none`), set via the version-checked PATCH, filterable with `?priority=`,
-shown on cards and in the activity. Assignee (2B) is designed but not started.
+shown on cards and in the activity. Slice 2B (assignee) is done too (ADR 0021): a
+nullable `assignee_id`, checked against organization membership in the service,
+a new `GET .../members`, and notification recipients are now past participants
+plus the current assignee.
 The e2e suite (ADR 0020, `pnpm test:e2e`) found and we fixed a real auth bug: two
 simultaneous `/auth/refresh` calls on page load (StrictMode) made the server's
 token-reuse detection revoke the session, so the next load logged the user out;

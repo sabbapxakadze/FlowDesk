@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/core";
 import type { Issue } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
+import { useMemberNames } from "../../entities/member";
 import { IssueSummary, SprintIssueCard, useBacklog } from "../../entities/issue";
 import { SprintStatusBadge, useSprints } from "../../entities/sprint";
 import { CreateSprintForm } from "../../features/create-sprint";
@@ -66,6 +67,7 @@ export function ProjectSprintsPage() {
   const { organization } = useAuth();
   const { projectId } = useParams<{ projectId: string }>();
   const { data: projects, isPending: projectsPending } = useProjects(organization!.id);
+  const nameOf = useMemberNames(organization!.id);
   const project = projects?.find((p) => p.id === projectId);
 
   const { data: sprints, isPending: sprintsPending } = useSprints(organization!.id, projectId!);
@@ -212,7 +214,12 @@ export function ProjectSprintsPage() {
                 ) : backlog.length > 0 ? (
                   <ul className="flex flex-col gap-2">
                     {backlog.map((issue) => (
-                      <SprintIssueCard key={issue.id} issue={issue} projectKey={project.key} />
+                      <SprintIssueCard
+                        key={issue.id}
+                        issue={issue}
+                        projectKey={project.key}
+                        assigneeName={nameOf(issue.assigneeId)}
+                      />
                     ))}
                   </ul>
                 ) : (
@@ -234,7 +241,12 @@ export function ProjectSprintsPage() {
                 ) : activeSprintIssues.length > 0 ? (
                   <ul className="flex flex-col gap-2">
                     {activeSprintIssues.map((issue) => (
-                      <SprintIssueCard key={issue.id} issue={issue} projectKey={project.key} />
+                      <SprintIssueCard
+                        key={issue.id}
+                        issue={issue}
+                        projectKey={project.key}
+                        assigneeName={nameOf(issue.assigneeId)}
+                      />
                     ))}
                   </ul>
                 ) : (
@@ -247,7 +259,11 @@ export function ProjectSprintsPage() {
           <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
             {activeIssue && (
               <Card className="flex cursor-grabbing shadow-lg">
-                <IssueSummary issue={activeIssue} projectKey={project.key} />
+                <IssueSummary
+                  issue={activeIssue}
+                  projectKey={project.key}
+                  assigneeName={nameOf(activeIssue.assigneeId)}
+                />
               </Card>
             )}
           </DragOverlay>

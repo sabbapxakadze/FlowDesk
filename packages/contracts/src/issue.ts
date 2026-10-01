@@ -17,6 +17,9 @@ export const issueSchema = z.object({
   description: z.string().nullable(),
   status: issueStatusSchema,
   priority: issuePrioritySchema,
+  // Null = unassigned. The id only, not a name: lists stay free of a user join
+  // and the web app resolves names from the organization's member list.
+  assigneeId: z.uuid().nullable(),
   reporterId: z.uuid(),
   version: z.number().int(),
   sprintId: z.uuid().nullable(),
@@ -47,6 +50,8 @@ export const listIssuesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(25),
   status: issueStatusSchema.optional(),
   priority: issuePrioritySchema.optional(),
+  // A user id, or "unassigned". ("Assigned to me" is the client sending its own id.)
+  assignee: z.union([z.uuid(), z.literal("unassigned")]).optional(),
   order: z.enum(["asc", "desc"]).default("desc"),
 });
 
@@ -93,15 +98,18 @@ export const updateIssueRequestSchema = z
     description: z.string().max(10000, "Description is too long").nullable().optional(),
     status: issueStatusSchema.optional(),
     priority: issuePrioritySchema.optional(),
+    // null unassigns; absent leaves it alone.
+    assigneeId: z.uuid().nullable().optional(),
   })
   .refine(
     (data) =>
       data.title !== undefined ||
       data.description !== undefined ||
       data.status !== undefined ||
-      data.priority !== undefined,
+      data.priority !== undefined ||
+      data.assigneeId !== undefined,
     {
-      message: "At least one of title, description, status, or priority must be provided.",
+      message: "At least one of title, description, status, priority, or assignee must be provided.",
     },
   );
 

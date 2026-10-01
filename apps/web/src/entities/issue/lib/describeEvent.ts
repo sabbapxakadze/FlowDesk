@@ -21,6 +21,13 @@ export function describeEvent(event: IssueEvent): string {
       if ("title" in event.payload) parts.push(`changed the title to "${String(event.payload.title)}"`);
       if ("status" in event.payload) parts.push(`changed status to ${String(event.payload.status)}`);
       if ("description" in event.payload) parts.push("updated the description");
+      if ("assigneeId" in event.payload) {
+        parts.push(
+          event.payload.assigneeId
+            ? `assigned this issue to ${String(event.payload.assigneeName ?? "someone")}`
+            : "unassigned this issue",
+        );
+      }
       if ("priority" in event.payload) {
         const value = String(event.payload.priority);
         parts.push(`changed priority to ${PRIORITY_LABELS[value as keyof typeof PRIORITY_LABELS] ?? value}`);

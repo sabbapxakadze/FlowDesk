@@ -18,7 +18,15 @@ import { IssueSummary } from "./IssueSummary";
  * DragOverlay does, which also means it can never be clipped by a scroll
  * container.
  */
-export function SprintIssueCard({ issue, projectKey }: { issue: Issue; projectKey: string }) {
+export function SprintIssueCard({
+  issue,
+  projectKey,
+  assigneeName,
+}: {
+  issue: Issue;
+  projectKey: string;
+  assigneeName?: string | null;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: issue.id });
   const guardClick = useDragClickGuard(isDragging);
 
@@ -36,7 +44,7 @@ export function SprintIssueCard({ issue, projectKey }: { issue: Issue; projectKe
           onClick={guardClick}
           className="block min-w-0 flex-1"
         >
-          <IssueSummary issue={issue} projectKey={projectKey} />
+          <IssueSummary issue={issue} projectKey={projectKey} assigneeName={assigneeName} />
         </Link>
       </Card>
     </li>
