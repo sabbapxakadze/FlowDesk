@@ -41,4 +41,9 @@ test("set a priority, see it on the card, filter by it, and see it in the activi
 
   await page.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
   await expect(page.getByText("changed priority to High")).toHaveCount(1);
+  // The second save only changed the description. The form resends title and
+  // status too, but the server must log only what really changed.
+  await expect(page.getByText("updated the description")).toHaveCount(1);
+  await expect(page.getByText(/changed the title/)).toHaveCount(0);
+  await expect(page.getByText(/changed status/)).toHaveCount(0);
 });

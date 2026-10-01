@@ -1582,10 +1582,23 @@ The original plan for this slice, kept for the record:
      Full suites: 221 API tests, 8 e2e tests, lint and typecheck clean.
      **Not verified:** a long-lived board with many priorities visually (colours
      in dark mode were not looked at); sorting by priority is not built.
-     **Existing behaviour found, not changed (owner decides):** `EditIssueForm`
-     resends title, description and status on every save, so each save writes
-     "changed the title / changed status / updated the description" lines even for
-     fields that did not change.
+     **Edit-form activity noise: FIXED 2026-10-01.** `EditIssueForm` resends title,
+     description and status on every save, so each save used to bump the version and
+     write "changed the title / changed status / updated the description" for fields
+     nobody touched. `update()` in `issues.repository.ts` now keeps only fields that
+     really differ from the stored row (a `""` description equals a stored null);
+     only those are written and logged; a save that changes nothing is a no-op (same
+     version, no event, no notification) but still gets the version check, so a stale
+     one is still a 409. **Verified:** 4 new API tests (one real change among resent
+     fields; a real status change alone and still moving the card; a no-op with a
+     participant present gets no version bump, event or notification; a stale no-op
+     is a 409); four mutations (no filtering, `""` vs null, no-op still writing, no
+     version check on the no-op) each fail named tests, and the first also fails an
+     older board-rank test; the priority e2e test now also asserts no "changed the
+     title" / "changed status" lines and fails without the filter. Suites: 235 API
+     tests, 9 e2e. **Side effects to know:** older `issue.updated` events keep their
+     noisy payloads (history is never rewritten); analytics already ignored an
+     unchanged `status` in a payload (ADR 0009), so it is unaffected.
    - **B, assignee: DONE 2026-10-01 (ADR 0021).** `issues.assignee_id` (nullable
      FK, set null; migration 0017), set through the same version-checked PATCH
      (`assigneeId`, `null` unassigns), event carries the id plus a name snapshot.

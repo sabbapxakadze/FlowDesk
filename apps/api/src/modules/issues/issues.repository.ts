@@ -417,9 +417,10 @@ export async function create(input: {
  * or the row is gone (not_found, effectively unreachable today — no
  * delete exists yet — but cheap to handle correctly).
  *
- * When changes.status actually differs from the row's current status
- * (not just present in the payload — EditIssueForm always resends the
- * unchanged status alongside a title/description-only edit), board_rank
+ * Only fields that really differ from the stored row are written and logged
+ * (EditIssueForm always resends title, description and status); a request that
+ * changes nothing is a no-op: no version bump, no event, no notification.
+ * When status really changes, board_rank
  * is also appended to the end of the new column. Otherwise a status
  * edit would leave the issue's rank meaningful only in its old column,
  * confusing on the board — see ADR 0007 / the Phase 5 slice 1 plan's
@@ -450,36 +451,46 @@ export async function update(input: {
   | { status: "not_found" }
 > {
   return db.transaction(async (tx) => {
-    let boardRankChange: { boardRank: ReturnType<typeof nextRankSql> } | Record<string, never> = {};
-    if (input.changes.status) {
-      const [current] = await tx
-        .select({ status: issues.status })
-        .from(issues)
-        .where(
-          and(
-            eq(issues.id, input.issueId),
-            eq(issues.organizationId, input.organizationId),
-            eq(issues.projectId, input.projectId),
-          ),
-        );
-      if (current && current.status !== input.changes.status) {
-        boardRankChange = {
-          boardRank: nextRankSql(input.organizationId, input.projectId, input.changes.status),
-        };
-      }
+    const scope = and(
+      eq(issues.id, input.issueId),
+      eq(issues.organizationId, input.organizationId),
+      eq(issues.projectId, input.projectId),
+    );
+
+    const [before] = await tx.select().from(issues).where(scope);
+    if (!before) return { status: "not_found" };
+    if (before.version !== input.expectedVersion) return { status: "conflict", current: before };
+
+    // Keep only the fields that really differ from the stored row. The edit
+    // form resends title, description and status on every save, so without this
+    // every save would bump the version and log "changed the title, changed
+    // status, ..." for fields nobody touched. A description of "" and a stored
+    // null are the same thing (the form shows null as an empty box).
+    const changed = Object.fromEntries(
+      Object.entries(input.changes).filter(([key, value]) =>
+        key === "description"
+          ? (before.description ?? "") !== ((value as string | null) ?? "")
+          : before[key as keyof typeof before] !== value,
+      ),
+    ) as typeof input.changes;
+
+    // Nothing actually changed: not a change, so no version bump, no event, no
+    // notification. The version check above still ran, so a stale save is
+    // still told it is stale.
+    if (Object.keys(changed).length === 0) {
+      return { status: "updated", issue: before, notifiedUserIds: [] };
     }
+
+    // A status that really changes moves the issue to the end of its new
+    // column (ADR 0007 / the Phase 5 slice 1 plan's "Decisions").
+    const boardRankChange = changed.status
+      ? { boardRank: nextRankSql(input.organizationId, input.projectId, changed.status) }
+      : {};
 
     const [updated] = await tx
       .update(issues)
-      .set({ ...input.changes, ...boardRankChange, version: sql`${issues.version} + 1`, updatedAt: new Date() })
-      .where(
-        and(
-          eq(issues.id, input.issueId),
-          eq(issues.organizationId, input.organizationId),
-          eq(issues.projectId, input.projectId),
-          eq(issues.version, input.expectedVersion),
-        ),
-      )
+      .set({ ...changed, ...boardRankChange, version: sql`${issues.version} + 1`, updatedAt: new Date() })
+      .where(and(scope, eq(issues.version, input.expectedVersion)))
       .returning();
 
     if (updated) {
@@ -487,22 +498,14 @@ export async function update(input: {
         issueId: updated.id,
         actorId: input.actorId,
         type: "issue.updated",
-        payload: { ...input.changes, ...input.eventExtras },
+        // The assignee's name only travels with a real assignee change.
+        payload: { ...changed, ...("assigneeId" in changed ? input.eventExtras : {}) },
       });
       return { status: "updated", issue: updated, notifiedUserIds };
     }
 
-    const [current] = await tx
-      .select()
-      .from(issues)
-      .where(
-        and(
-          eq(issues.id, input.issueId),
-          eq(issues.organizationId, input.organizationId),
-          eq(issues.projectId, input.projectId),
-        ),
-      );
-
+    // Someone else got in between the read above and this write.
+    const [current] = await tx.select().from(issues).where(scope);
     return current ? { status: "conflict", current } : { status: "not_found" };
   });
 }
