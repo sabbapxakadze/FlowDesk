@@ -155,7 +155,7 @@ export function EditIssueForm({
       </div>
 
       <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={mutation.isPending}>
+        <Button type="submit" size="sm" disabled={mutation.isPending} variant="success">
           {mutation.isPending ? "Saving…" : "Save"}
         </Button>
         <Button type="button" variant="secondary" size="sm" onClick={onDone}>

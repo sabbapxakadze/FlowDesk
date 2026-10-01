@@ -53,7 +53,7 @@ export function RenameProjectForm({
         <Input {...register("name")} className="w-full max-w-md" />
       </Field>
       <div className="flex items-center gap-3">
-        <Button type="submit" size="sm" disabled={mutation.isPending || !isDirty}>
+        <Button type="submit" size="sm" variant="success" disabled={mutation.isPending || !isDirty}>
           {mutation.isPending ? "Saving…" : "Save"}
         </Button>
         {mutation.isSuccess && !isDirty && (

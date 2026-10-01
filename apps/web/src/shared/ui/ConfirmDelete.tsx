@@ -29,7 +29,7 @@ export function ConfirmDelete({
 
   if (!asking) {
     return (
-      <Button type="button" variant="secondary" size="sm" onClick={() => setAsking(true)}>
+      <Button type="button" variant="danger" size="sm" onClick={() => setAsking(true)}>
         {label}
       </Button>
     );
@@ -42,10 +42,9 @@ export function ConfirmDelete({
         <Button
           type="button"
           size="sm"
-          variant="secondary"
+          variant="dangerStrong"
           disabled={isPending}
           onClick={onConfirm}
-          className="text-[var(--color-text-danger)]"
         >
           {isPending ? "Deleting…" : confirmLabel}
         </Button>

@@ -94,6 +94,7 @@ export function CommentCard({
           <div className="flex gap-2">
             <Button
               size="sm"
+              variant="success"
               disabled={editMutation.isPending || !draft.trim() || draft === payload.body}
               onClick={() => editMutation.mutate()}
             >

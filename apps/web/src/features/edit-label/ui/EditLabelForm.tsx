@@ -65,7 +65,7 @@ export function EditLabelForm({
         aria-label="Label name"
         className="w-56"
       />
-      <Button type="submit" size="sm" disabled={mutation.isPending}>
+      <Button type="submit" size="sm" disabled={mutation.isPending} variant="success">
         {mutation.isPending ? "Saving…" : "Save"}
       </Button>
       <Button type="button" size="sm" variant="secondary" onClick={onDone}>

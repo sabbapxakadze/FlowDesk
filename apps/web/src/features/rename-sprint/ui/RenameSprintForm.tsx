@@ -67,7 +67,7 @@ export function RenameSprintForm({
         aria-label="Sprint name"
         className="w-56"
       />
-      <Button type="submit" size="sm" disabled={mutation.isPending}>
+      <Button type="submit" size="sm" variant="success" disabled={mutation.isPending}>
         {mutation.isPending ? "Saving…" : "Save"}
       </Button>
       <Button type="button" size="sm" variant="secondary" onClick={onDone}>

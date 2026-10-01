@@ -44,6 +44,9 @@ const TOKEN_GROUPS: TokenGroup[] = [
       { name: "bg-page", cssVar: "--color-bg-page", kind: "fill" },
       { name: "bg-surface", cssVar: "--color-bg-surface", kind: "fill" },
       { name: "bg-action-primary", cssVar: "--color-bg-action-primary", kind: "fill" },
+      { name: "bg-action-success", cssVar: "--color-bg-action-success", kind: "fill" },
+      { name: "bg-action-danger", cssVar: "--color-bg-action-danger", kind: "fill" },
+      { name: "bg-action-danger-strong", cssVar: "--color-bg-action-danger-strong", kind: "fill" },
       { name: "text-default", cssVar: "--color-text-default", kind: "text" },
       { name: "text-muted", cssVar: "--color-text-muted", kind: "text" },
       { name: "text-link", cssVar: "--color-text-link", kind: "text" },
@@ -54,6 +57,12 @@ const TOKEN_GROUPS: TokenGroup[] = [
         cssVar: "--color-text-on-action",
         kind: "text",
         on: "--color-bg-action-primary",
+      },
+      {
+        name: "text-on-action-strong",
+        cssVar: "--color-text-on-action-strong",
+        kind: "text",
+        on: "--color-bg-action-success",
       },
     ],
   },
@@ -298,6 +307,21 @@ export function DesignSystemPage() {
           </Button>
           <Button variant="primary" size="md" disabled>
             Disabled
+          </Button>
+        </div>
+        <p className="mt-4 mb-2 text-sm text-[var(--color-text-muted)]">
+          Success (Save) and danger (Delete): the red is the first click of a delete, the stronger
+          red is the final confirm.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="success" size="sm">
+            Save
+          </Button>
+          <Button variant="danger" size="sm">
+            Delete
+          </Button>
+          <Button variant="dangerStrong" size="sm">
+            Delete project
           </Button>
         </div>
         <div className="mt-3 max-w-sm">

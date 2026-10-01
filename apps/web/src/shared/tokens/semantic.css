@@ -25,6 +25,25 @@
   --color-bg-action-primary: var(--color-neutral-950);
   --color-text-on-action: var(--color-white);
 
+  /* Saving and deleting get their own colours (Phase 8.5 polish): a "go" green
+     and a "careful" red, both solid with white text. Same pair in both themes;
+     contrast measured on the real values (see docs/roadmap.md). */
+  --color-bg-action-success: var(--color-emerald-700);
+  /* Delete is two clicks. The first button is a solid red; the final confirm is a
+     STRONGER red: darker in light mode, brighter in dark mode (a darker red would
+     all but vanish on the dark page). White text on all of them. */
+  --color-bg-action-danger: var(--color-red-600);
+  --color-bg-action-danger-strong: var(--color-red-800);
+  --color-text-on-action-strong: var(--color-white);
+  /* Hover (Phase 8.5 polish): a deeper shade in both themes, because white text
+     only gets MORE readable on a darker fill (a brighter hover drops the green and
+     the strong red below 4.5:1 in dark mode). Dark mode also gets a soft light
+     ring on hover so a darker button does not sink into the dark page. */
+  --color-bg-action-success-hover: var(--color-emerald-800);
+  --color-bg-action-danger-hover: var(--color-red-700);
+  --color-bg-action-danger-strong-hover: var(--color-red-900);
+  --color-ring-action-hover: transparent;
+
   --color-border-default: var(--color-neutral-200);
   --color-border-input: var(--color-neutral-450);
   /* Focus rings, not a border — nothing had any focus-visible treatment
@@ -88,6 +107,15 @@
     --color-bg-action-primary: var(--color-neutral-100);
     --color-text-on-action: var(--color-neutral-950);
 
+    --color-bg-action-success: var(--color-emerald-700);
+    --color-bg-action-danger: var(--color-red-700);
+    --color-bg-action-danger-strong: var(--color-red-600);
+    --color-text-on-action-strong: var(--color-white);
+    --color-bg-action-success-hover: var(--color-emerald-800);
+    --color-bg-action-danger-hover: var(--color-red-800);
+    --color-bg-action-danger-strong-hover: var(--color-red-700);
+    --color-ring-action-hover: oklch(1 0 0 / 0.5);
+
     --color-border-default: var(--color-neutral-800);
     --color-border-input: var(--color-neutral-500);
     --color-border-focus: var(--color-accent-400);
@@ -122,6 +150,15 @@
 
   --color-bg-action-primary: var(--color-neutral-100);
   --color-text-on-action: var(--color-neutral-950);
+
+  --color-bg-action-success: var(--color-emerald-700);
+  --color-bg-action-danger: var(--color-red-700);
+  --color-bg-action-danger-strong: var(--color-red-600);
+  --color-text-on-action-strong: var(--color-white);
+  --color-bg-action-success-hover: var(--color-emerald-800);
+  --color-bg-action-danger-hover: var(--color-red-800);
+  --color-bg-action-danger-strong-hover: var(--color-red-700);
+  --color-ring-action-hover: oklch(1 0 0 / 0.5);
 
   --color-border-default: var(--color-neutral-800);
   --color-border-input: var(--color-neutral-500);

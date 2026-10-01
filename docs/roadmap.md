@@ -1826,6 +1826,58 @@ The original plan for this slice, kept for the record:
      way. Suites: 272 API tests, 20 e2e tests.
    - **Not done / still open:** an audit trail of who renamed or deleted what; sorting by
      priority; the dark-mode avatar contrast; the Labels page confirm layout.
+   **Button colours: DONE 2026-10-01 (owner request).** Save and Delete no longer look
+   like every other dark button. New semantic tokens in all three theme blocks
+   (`--color-bg-action-success` emerald-700, `--color-bg-action-danger` red-700,
+   `--color-text-on-action-strong` white) and three Button variants: `success` (solid
+   green, every Save: issue edit, comment edit, project/label/sprint rename), `danger`
+   (solid red, the FINAL confirm of a delete), `dangerOutline` (red text and border, the
+   FIRST click of a delete, so it reads as dangerous without shouting). Documented on the
+   design-system page. **Measured on the real computed colours (light / dark):** text on
+   the green 5.36 / 5.36, on the red 6.42 / 6.42 (AA needs 4.5); solid button against the
+   page 4.92 / 3.69 (green), 5.89 / 3.08 (red; 3:1 is the bar for UI components, so red on
+   dark is only just over); outline text and border against the surface 6.42 / 6.21.
+   **Verified:** screenshots of the three buttons in both themes; an e2e test on the
+   computed colours (Save green, Delete opener red-bordered, final confirm red), 6 of 6
+   repeat runs, and two mutations (Save back to default, confirm back to gray) fail it.
+   Other primary actions ("Add issue", "Comment", "Log in") deliberately stay dark.
+   **Not done:** the comment "Delete / Yes" text links stay link-style red text;
+   whether the dark-mode red should be lighter for more margin.
+   **Button colours: DONE 2026-10-01 (owner request).** Save and Delete no longer look
+   like every other dark button. New semantic tokens in all three theme blocks
+   (`--color-bg-action-success`, `-danger`, `-danger-strong`,
+   `--color-text-on-action-strong` white) and Button variants: `success` (solid green,
+   every Save: issue edit, comment edit, project/label/sprint rename), `danger` (solid
+   red, the FIRST click of a delete) and `dangerStrong` (a STRONGER red for the final
+   irreversible confirm: darker in light mode, brighter in dark mode, because a darker red
+   all but vanishes on the dark page). The owner first saw an outline for the first click
+   and asked why not solid red; chose solid red then a stronger red. Documented on the
+   design-system page. **Measured on the real computed colours (light / dark):** text on
+   green 5.36 / 5.36, on the first red 4.77 / 6.42, on the strong red 8.36 / 4.77 (AA needs
+   4.5); button against the page: green 4.92 / 3.69, first red 4.38 / 3.08, strong red 7.66 /
+   4.15 (3:1 is the bar for UI components; the first red on dark is only just over).
+   **Verified:** screenshots in both themes; an e2e test on the computed colours (Save
+   green, Delete red, the confirm a visibly different red), 6 of 6 repeat runs, and
+   mutations (Save back to default, confirm back to gray, confirm the same red as the first
+   click) fail it. Other primary actions ("Add issue", "Comment", "Log in") deliberately stay
+   dark. **Hover and pressed states (same day, owner asked "but on hover?"):** hover was
+   only a 10% fade. Now a DEEPER shade in both themes (new tokens `-success-hover`
+   emerald-800, `-danger-hover` red-700 / red-800 in dark, `-danger-strong-hover` red-900 /
+   red-700 in dark), a pressed state (`brightness-90`), and in dark mode a soft light ring
+   (`--color-ring-action-hover`, white at 50%) so a darker button does not sink into the dark
+   page. Why deeper and not brighter: measured, a brighter hover on dark drops white text on
+   the green to 3.65:1 and on the strong red below 4.5:1 (brightening only works for the
+   first red); a darker fill makes white text MORE readable. Hover and pressed apply to
+   enabled buttons only (a disabled button does not react). **Verified:** e2e tests read the
+   real computed styles on the design-system page in light and dark (hover is darker than
+   rest, white text on every hover colour at least 4.5:1, no ring at rest, ring on hover in
+   dark only), 5 of 5 repeat runs per theme, and two mutations (no hover fill on Save; no
+   ring in dark) fail them; screenshots looked right. **Found while testing:** my first
+   version of the ring check read the first (transparent) shadow of a stacked box-shadow
+   list and said there was no ring; the ring was there, the test was wrong.
+   **Not done:** the comment "Delete / Yes" text links stay link-style red text; the
+   dark-mode hover boundary of the green is only about 2.6:1 against the page (the ring and
+   the unchanged label carry it); touch screens have no hover.
 8. **Attachment previews and a nicer comment card (owner idea, 2026-10-01; do it
    before Phase 9).** Today an attachment is only a link, and a comment is a grey
    rail with text. Wanted:

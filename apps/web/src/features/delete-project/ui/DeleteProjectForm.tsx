@@ -38,7 +38,7 @@ export function DeleteProjectForm({
 
   if (!asking) {
     return (
-      <Button type="button" variant="secondary" size="sm" onClick={() => setAsking(true)}>
+      <Button type="button" variant="danger" size="sm" onClick={() => setAsking(true)}>
         Delete project
       </Button>
     );
@@ -70,9 +70,8 @@ export function DeleteProjectForm({
         <Button
           type="submit"
           size="sm"
-          variant="secondary"
+          variant="dangerStrong"
           disabled={typed !== project.name || mutation.isPending}
-          className="text-[var(--color-text-danger)]"
         >
           {mutation.isPending ? "Deleting…" : "Delete this project"}
         </Button>
