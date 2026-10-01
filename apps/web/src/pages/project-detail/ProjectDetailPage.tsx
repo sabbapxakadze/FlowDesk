@@ -1,17 +1,33 @@
 import { useState } from "react";
 import { useParams, useSearchParams } from "react-router";
-import type { IssueStatus } from "@flowdesk/contracts";
+import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
 import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
 import { CreateIssueForm } from "../../features/create-issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Button, Card, EmptyState, ErrorText, Page, PageHeader, Select, Skeleton, STATUS_LABELS } from "../../shared/ui";
+import {
+  Button,
+  Card,
+  EmptyState,
+  ErrorText,
+  Page,
+  PageHeader,
+  PRIORITY_LABELS,
+  PRIORITY_ORDER,
+  Select,
+  Skeleton,
+  STATUS_LABELS,
+} from "../../shared/ui";
 
 const STATUS_FILTER_VALUES: IssueStatus[] = ["todo", "in_progress", "done"];
 
 function isIssueStatus(value: string | null): value is IssueStatus {
   return value !== null && (STATUS_FILTER_VALUES as string[]).includes(value);
+}
+
+function isIssuePriority(value: string | null): value is IssuePriority {
+  return value !== null && (PRIORITY_ORDER as string[]).includes(value);
 }
 
 function IssueListSkeleton() {
@@ -48,6 +64,8 @@ export function ProjectDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const statusParam = searchParams.get("status");
   const status = isIssueStatus(statusParam) ? statusParam : undefined;
+  const priorityParam = searchParams.get("priority");
+  const priority = isIssuePriority(priorityParam) ? priorityParam : undefined;
   const order = searchParams.get("order") === "asc" ? "asc" : undefined;
 
   const {
@@ -58,7 +76,7 @@ export function ProjectDetailPage() {
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useIssues(organization!.id, projectId!, { status, order });
+  } = useIssues(organization!.id, projectId!, { status, priority, order });
   useLiveIssueUpdates(projectId!);
   // useInfiniteQuery's data is { pages: Page[], pageParams }, not a flat
   // list — flatten once here so the rest of this page (and IssueCard)
@@ -80,6 +98,18 @@ export function ProjectDetailPage() {
         next.delete("status");
       } else {
         next.set("status", value);
+      }
+      return next;
+    });
+  }
+
+  function setPriorityFilter(value: string) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value === "") {
+        next.delete("priority");
+      } else {
+        next.set("priority", value);
       }
       return next;
     });
@@ -133,6 +163,19 @@ export function ProjectDetailPage() {
             </option>
           ))}
         </Select>
+        <Select
+          value={priority ?? ""}
+          onChange={(e) => setPriorityFilter(e.target.value)}
+          className="w-auto"
+          aria-label="Filter by priority"
+        >
+          <option value="">All priorities</option>
+          {PRIORITY_ORDER.map((p) => (
+            <option key={p} value={p}>
+              {PRIORITY_LABELS[p]}
+            </option>
+          ))}
+        </Select>
         <Button variant="secondary" size="sm" onClick={toggleOrder}>
           {order === "asc" ? "Oldest first" : "Newest first"}
         </Button>
@@ -150,7 +193,7 @@ export function ProjectDetailPage() {
         <ErrorText>Failed to load issues: {error.message}</ErrorText>
       ) : issues.length === 0 ? (
         <EmptyState block>
-          {status ? `No ${STATUS_LABELS[status].toLowerCase()} issues.` : "No issues yet."}
+          {status || priority ? "No issues match these filters." : "No issues yet."}
         </EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">

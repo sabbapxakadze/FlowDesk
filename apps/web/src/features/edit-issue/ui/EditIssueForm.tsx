@@ -1,13 +1,26 @@
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Issue, IssueStatus } from "@flowdesk/contracts";
+import type { Issue, IssuePriority, IssueStatus } from "@flowdesk/contracts";
 import { issueKeys } from "../../../entities/issue";
 import { ApiError } from "../../../shared/api/client";
-import { Button, ErrorText, Field, Input, Select } from "../../../shared/ui";
+import {
+  Button,
+  ErrorText,
+  Field,
+  Input,
+  PRIORITY_LABELS,
+  PRIORITY_ORDER,
+  Select,
+} from "../../../shared/ui";
 import { LabelPicker } from "../../edit-issue-labels";
 import { updateIssue } from "../api/updateIssue";
 
-type FormValues = { title: string; description: string; status: IssueStatus };
+type FormValues = {
+  title: string;
+  description: string;
+  status: IssueStatus;
+  priority: IssuePriority;
+};
 
 /**
  * version isn't a form field — it's the version the caller already has
@@ -40,6 +53,7 @@ export function EditIssueForm({
       title: issue.title,
       description: issue.description ?? "",
       status: issue.status,
+      priority: issue.priority,
     },
   });
 
@@ -50,6 +64,10 @@ export function EditIssueForm({
         title: data.title,
         description: data.description,
         status: data.status,
+        // Only when it changed: title/description/status are always resent
+        // (existing behaviour), but a priority that did not change should not
+        // write a "changed priority" line into the activity timeline.
+        ...(data.priority !== issue.priority ? { priority: data.priority } : {}),
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: issueKeys.list(projectId) });
@@ -73,7 +91,8 @@ export function EditIssueForm({
   });
 
   const showGenericError =
-    mutation.isError && !(mutation.error instanceof ApiError && mutation.error.code === "version_conflict");
+    mutation.isError &&
+    !(mutation.error instanceof ApiError && mutation.error.code === "version_conflict");
 
   return (
     <form
@@ -96,9 +115,23 @@ export function EditIssueForm({
         </Select>
       </Field>
 
+      <Field label="Priority">
+        <Select {...register("priority")}>
+          {PRIORITY_ORDER.map((value) => (
+            <option key={value} value={value}>
+              {PRIORITY_LABELS[value]}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
       <div className="flex flex-col gap-1 text-sm">
         Labels
-        <LabelPicker organizationId={organizationId} projectId={projectId} issueId={issue.id} />
+        <LabelPicker
+          organizationId={organizationId}
+          projectId={projectId}
+          issueId={issue.id}
+        />
       </div>
 
       <div className="flex gap-2">

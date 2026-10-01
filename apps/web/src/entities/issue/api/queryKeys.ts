@@ -1,7 +1,11 @@
-import type { IssueStatus } from "@flowdesk/contracts";
+import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
 import { projectKeys } from "../../project";
 
-export type IssueListFilters = { status?: IssueStatus; order?: "asc" | "desc" };
+export type IssueListFilters = {
+  status?: IssueStatus;
+  priority?: IssuePriority;
+  order?: "asc" | "desc";
+};
 
 /**
  * Extends projectKeys.all rather than starting a fresh base array —

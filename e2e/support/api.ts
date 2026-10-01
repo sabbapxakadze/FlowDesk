@@ -1,0 +1,37 @@
+import { expect, type APIRequestContext } from "@playwright/test";
+import { TEST_USER } from "./fixtures";
+
+/**
+ * Fast setup through the real HTTP API, for data a test needs but is not
+ * itself testing (the UI forms for these are covered by their own tests).
+ */
+export async function createIssueViaApi(
+  request: APIRequestContext,
+  input: { projectName: string; projectKey: string; titles: string[] },
+) {
+  const login = await request.post("/api/v1/auth/login", {
+    data: { email: TEST_USER.email, password: TEST_USER.password },
+  });
+  expect(login.status()).toBe(200);
+  const { accessToken, organization } = await login.json();
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  const base = `/api/v1/organizations/${organization.id}`;
+
+  const project = await request.post(`${base}/projects`, {
+    headers,
+    data: { name: input.projectName, key: input.projectKey },
+  });
+  expect(project.status()).toBe(201);
+  const projectId = (await project.json()).data.id as string;
+
+  const issueIds: string[] = [];
+  for (const title of input.titles) {
+    const issue = await request.post(`${base}/projects/${projectId}/issues`, {
+      headers,
+      data: { title },
+    });
+    expect(issue.status()).toBe(201);
+    issueIds.push((await issue.json()).data.id as string);
+  }
+  return { projectId, issueIds };
+}

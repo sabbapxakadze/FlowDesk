@@ -9,11 +9,12 @@ import type { IssueListFilters } from "./queryKeys";
 export function fetchIssues(
   organizationId: string,
   projectId: string,
-  { cursor, status, order }: IssueListFilters & { cursor?: string } = {},
+  { cursor, status, priority, order }: IssueListFilters & { cursor?: string } = {},
 ) {
   const params = new URLSearchParams();
   if (cursor) params.set("cursor", cursor);
   if (status) params.set("status", status);
+  if (priority) params.set("priority", priority);
   if (order) params.set("order", order);
   const query = params.size > 0 ? `?${params.toString()}` : "";
 

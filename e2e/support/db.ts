@@ -26,6 +26,35 @@ export async function resetDatabase() {
   );
 }
 
+/**
+ * There is no invite flow yet, so a second person in an organization is
+ * inserted directly: a new user that reuses the existing user's password hash
+ * (so both log in with the same password, with no hashing library needed here)
+ * and a membership in that user's organization.
+ */
+export async function addOrgMember(
+  existingEmail: string,
+  member: { email: string; name: string },
+) {
+  const { rowCount } = await pool.query(
+    `WITH base AS (
+       SELECT u.password_hash, m.organization_id
+       FROM users u JOIN organization_members m ON m.user_id = u.id
+       WHERE u.email = $1
+       LIMIT 1
+     ), new_user AS (
+       INSERT INTO users (email, password_hash, name)
+       SELECT $2, password_hash, $3 FROM base
+       RETURNING id
+     )
+     INSERT INTO organization_members (organization_id, user_id, role)
+     SELECT base.organization_id, new_user.id, 'member' FROM base, new_user`,
+    [existingEmail, member.email, member.name],
+  );
+  if (rowCount !== 1)
+    throw new Error(`No user ${existingEmail} to copy an organization from`);
+}
+
 export async function closeDatabase() {
   await pool.end();
 }

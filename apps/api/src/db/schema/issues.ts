@@ -19,6 +19,11 @@ import { sprints } from "./sprints.js";
 
 export const issueStatus = pgEnum("issue_status", ["todo", "in_progress", "done"]);
 
+// Phase 8.5 slice 2. "none" is a real value, not NULL: one fewer case to
+// handle everywhere, and a scalar DEFAULT means adding the column needs no
+// backfill step (unlike board_rank, ADR 0007).
+export const issuePriority = pgEnum("issue_priority", ["none", "low", "medium", "high", "urgent"]);
+
 // Drizzle's pg-core has no first-class tsvector column type (confirmed
 // by checking pg-core/columns/ — there's no tsvector.ts). Same
 // "round-tripped as an opaque string, never parsed" precedent as
@@ -59,6 +64,7 @@ export const issues = pgTable(
     title: varchar("title", { length: 500 }).notNull(),
     description: text("description"),
     status: issueStatus("status").notNull().default("todo"),
+    priority: issuePriority("priority").notNull().default("none"),
     reporterId: uuid("reporter_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),

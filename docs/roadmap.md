@@ -1565,7 +1565,32 @@ The original plan for this slice, kept for the record:
 
 1. **Assignee and priority** on issues (cards, filters, "assigned to me"); also a
    better notification target than "everyone who took part". Probably the change
-   that most alters how the product feels.
+   that most alters how the product feels. **Split in two with the owner
+   (2026-10-01): A = priority, B = assignee.**
+   - **A, priority: DONE 2026-10-01.** `issues.priority` enum (`none` default,
+     `low`, `medium`, `high`, `urgent`; migration 0016, no backfill needed: all 314
+     dev issues became `none`). Set through the existing version-checked PATCH,
+     `?priority=` list filter (also in the URL on the issues page), badge on every
+     card (hidden for `none`, icon plus label, colour only for urgent and high),
+     select in the edit form, badge on the detail page, activity line "changed
+     priority to High". The edit form sends priority only when it changed.
+     **Verified:** 6 API tests (default, set + event + version bump, stale version
+     409, invalid value 400, filter incl. combination with status and bad value,
+     board carries it), mutations on the filter and the contract refine fail them;
+     e2e test (set, card, URL filter surviving a reload, one activity line), and
+     its mutation (always sending priority) fails with 2 lines instead of 1.
+     Full suites: 221 API tests, 8 e2e tests, lint and typecheck clean.
+     **Not verified:** a long-lived board with many priorities visually (colours
+     in dark mode were not looked at); sorting by priority is not built.
+     **Existing behaviour found, not changed (owner decides):** `EditIssueForm`
+     resends title, description and status on every save, so each save writes
+     "changed the title / changed status / updated the description" lines even for
+     fields that did not change.
+   - **B, assignee: designed, not started.** `issues.assignee_id` (FK, set null),
+     org-membership check in the service, `GET .../members`, assignee on cards by
+     id (names resolved from the members list), "assigned to me" / "unassigned"
+     filters, and notifications = past participants plus the current assignee
+     (needs ADR 0021).
 2. **Rename and delete** for issues, projects, labels and sprints, with
    confirmation and audit events.
 3. **Invite teammates** by email with roles (the roles enum already exists).
@@ -1625,18 +1650,32 @@ prioritise work, discuss it with edits and files, and see when things happened.
 - [ ] GitHub Actions: lint → typecheck → test → build
 - [ ] Playwright e2e on 3–4 critical flows
   - **Started 2026-10-01 (ADR 0020), pulled ahead of Phase 9 by the owner's choice:**
-    setup plus 4 tests are in `e2e/` (register through the form and log in, wrong
+    setup plus 6 tests are in `e2e/` (register through the form and log in, wrong
     password, stay logged in after a reload, create a project and issue then post,
-    edit and delete a comment). Runs in about 12 s with `pnpm test:e2e`.
+    edit and delete a comment, drag a card between board columns and see it persist
+    after a reload, and a second person seeing a comment, edit and delete live in a
+    separate browser context). Runs in about 21 s with `pnpm test:e2e`.
     **Verified:** all 4 pass; a run leaves dev data untouched (dev row counts
     identical before and after: 18 users, 314 issues, 15 comments) and writes to
-    `flowdesk_test`; two mutation checks: hiding "(edited)" fails the comment test,
-    and a wrong refresh path fails the reload test. **Noted:** the reload test
-    passes here, so the earlier manual 401 on reload was not reproduced; its cause
-    is still unknown (this run uses `NODE_ENV=development`, as `pnpm dev` does).
-    **Still to do:** board drag flow, the two-user live-comment flow (needs a
-    helper to insert a second org member), pre-push wiring, CI, and the web
-    component tests (Vitest + Testing Library).
+    `flowdesk_test`; four mutation checks: hiding "(edited)" fails the comment test,
+    a wrong refresh path fails the reload test, removing the card's pointer
+    listeners fails the drag test, and removing the server broadcast after a comment
+    edit fails the live test. **Noted:** the reload test passes here, so the earlier
+    manual 401 on reload was not reproduced; its cause is still unknown. The e2e API
+    runs with `NODE_ENV=test` (first tried `development`; the register limit of 5
+    per hour gave a 429 on the fifth test). **Update 2026-10-01:** now 8 tests (added board drag, two-user live comments,
+    priority, and a "several page loads in a row" guard). **Real bug found by the
+    suite and fixed:** on every full page load the app sent two `/auth/refresh`
+    requests with the same cookie (React StrictMode runs the mount effect twice in
+    development); in 24 recorded reloads about 40% returned `[401, 200]` because the
+    server treats the second use of a spent token as theft and revokes the whole
+    session family, so the NEXT load landed on the login page (this was the earlier
+    unexplained manual 401, and made the board test fail 3 of 15 runs). Fix in
+    `AuthContext.tsx`: one shared in-flight refresh request. Measured: the guard
+    test failed 7 of 10 runs without the fix and passed 10 of 10 with it; the board
+    test went from 12 of 15 to 15 of 15. Production has no StrictMode double run, but
+    two tabs loading at once could have hit the same race. **Still to do:**
+    pre-push wiring, CI, and the web component tests (Vitest + Testing Library).
   - Decided with the owner, 2026-09-30: **tests are code in the repo**
     (`pnpm test:e2e`), not checks driven through the MCP; the MCP stays for
     exploring new features. Playwright, not Cypress, mainly because realtime

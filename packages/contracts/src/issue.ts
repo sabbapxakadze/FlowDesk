@@ -3,6 +3,11 @@ import { z } from "zod";
 export const issueStatusSchema = z.enum(["todo", "in_progress", "done"]);
 export type IssueStatus = z.infer<typeof issueStatusSchema>;
 
+// Order matters: it is the order the UI lists them in (most urgent last in the
+// enum on purpose so "none" is the natural default and first value).
+export const issuePrioritySchema = z.enum(["none", "low", "medium", "high", "urgent"]);
+export type IssuePriority = z.infer<typeof issuePrioritySchema>;
+
 export const issueSchema = z.object({
   id: z.uuid(),
   organizationId: z.uuid(),
@@ -11,6 +16,7 @@ export const issueSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),
   status: issueStatusSchema,
+  priority: issuePrioritySchema,
   reporterId: z.uuid(),
   version: z.number().int(),
   sprintId: z.uuid().nullable(),
@@ -40,6 +46,7 @@ export const listIssuesQuerySchema = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),
   status: issueStatusSchema.optional(),
+  priority: issuePrioritySchema.optional(),
   order: z.enum(["asc", "desc"]).default("desc"),
 });
 
@@ -85,10 +92,18 @@ export const updateIssueRequestSchema = z
     title: z.string().min(1, "Title is required").max(500, "Title is too long").optional(),
     description: z.string().max(10000, "Description is too long").nullable().optional(),
     status: issueStatusSchema.optional(),
+    priority: issuePrioritySchema.optional(),
   })
-  .refine((data) => data.title !== undefined || data.description !== undefined || data.status !== undefined, {
-    message: "At least one of title, description, or status must be provided.",
-  });
+  .refine(
+    (data) =>
+      data.title !== undefined ||
+      data.description !== undefined ||
+      data.status !== undefined ||
+      data.priority !== undefined,
+    {
+      message: "At least one of title, description, status, or priority must be provided.",
+    },
+  );
 
 export type UpdateIssueRequest = z.infer<typeof updateIssueRequestSchema>;
 

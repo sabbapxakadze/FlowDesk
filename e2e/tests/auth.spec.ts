@@ -41,4 +41,18 @@ test.describe("auth", () => {
     await expect(page).toHaveURL(/\/projects$/);
     await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
   });
+  test("stays logged in across several page loads in a row", async ({
+    loggedInPage: page,
+  }) => {
+    // Why: regression guard for the double refresh. In development React runs the
+    // mount effect twice, and two refresh requests with the same cookie made the
+    // server revoke the whole session (reuse detection), so the NEXT load landed
+    // on the login page. One reload hid it (it fails on the load after); four in
+    // a row fail almost every time without the fix.
+    for (let i = 0; i < 4; i++) {
+      await page.reload();
+      await expect(page).toHaveURL(/\/projects$/);
+      await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
+    }
+  });
 });

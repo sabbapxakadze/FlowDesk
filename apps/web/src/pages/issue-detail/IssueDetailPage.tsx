@@ -14,7 +14,7 @@ import { EditIssueForm } from "../../features/edit-issue";
 import { CommentCard, CommentForm } from "../../features/post-comment";
 import { UploadAttachmentForm } from "../../features/upload-attachment";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Page, PageHeader, Skeleton, StatusBadge, Time } from "../../shared/ui";
+import { Page, PageHeader, PriorityBadge, Skeleton, StatusBadge, Time } from "../../shared/ui";
 
 function IssueDetailSkeleton() {
   return (
@@ -158,6 +158,7 @@ export function IssueDetailPage() {
           >
             <div className="flex items-center gap-3">
               <StatusBadge status={issue.status} />
+              <PriorityBadge priority={issue.priority} />
               <button
                 onClick={() => {
                   setShowConflictNotice(false);

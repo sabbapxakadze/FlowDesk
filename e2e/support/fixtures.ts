@@ -15,9 +15,9 @@ async function registerUser(page: Page) {
 }
 
 /** Logs in through the real login form, the same way a person does. */
-export async function logInThroughForm(page: Page) {
+export async function logInThroughForm(page: Page, email: string = TEST_USER.email) {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(TEST_USER.email);
+  await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(TEST_USER.password);
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/projects$/);

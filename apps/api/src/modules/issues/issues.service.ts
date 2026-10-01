@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { IssueStatus } from "@flowdesk/contracts";
+import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
 import { AppError } from "../../shared/errors.js";
 import { hasPermission, type Role } from "../../shared/permissions.js";
 import {
@@ -27,7 +27,13 @@ function broadcastNotifications(notifiedUserIds: string[]): void {
 export async function listIssues(
   organizationId: string,
   projectId: string,
-  options: { limit: number; cursor?: string; status?: IssueStatus; order: "asc" | "desc" },
+  options: {
+    limit: number;
+    cursor?: string;
+    status?: IssueStatus;
+    priority?: IssuePriority;
+    order: "asc" | "desc";
+  },
 ) {
   return issuesRepository.listByProject(organizationId, projectId, options);
 }
@@ -53,7 +59,12 @@ export async function updateIssue(input: {
   projectId: string;
   issueId: string;
   expectedVersion: number;
-  changes: Partial<{ title: string; description: string | null; status: IssueStatus }>;
+  changes: Partial<{
+    title: string;
+    description: string | null;
+    status: IssueStatus;
+    priority: IssuePriority;
+  }>;
   actorId: string;
 }) {
   const result = await issuesRepository.update(input);

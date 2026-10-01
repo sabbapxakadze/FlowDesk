@@ -32,18 +32,19 @@ the kind API tests cannot see, and nothing stops them coming back.
 - **Email.** The API is started with a dummy `RESEND_API_KEY`: registration still
   calls Resend, which rejects the key, and the API only logs that. Nothing is
   delivered and no real key is used. This does not replace the planned email fake.
-- **Mode.** The API runs with `NODE_ENV=development`, as `pnpm dev` does, so cookie
-  and rate-limit behaviour match what the owner sees. The login limit (10 per 15
-  minutes per process) resets because a fresh API starts for every run; a suite with
-  many logins will need a different answer (log in once and reuse the session, or a
-  test-only switch).
+- **Mode.** The API runs with `NODE_ENV=test`, which skips the rate limiters (the
+  same switch the API tests rely on). First tried `development`, as `pnpm dev` uses,
+  but register allows only 5 per hour per process and the fifth test got a 429.
+  Side effect: in `test` mode the refresh cookie gets the `Secure` flag (as in
+  production). Chromium accepts that on http://localhost and the reload test passes,
+  so the session survives it.
 - **Not in pre-push or `pnpm test` yet.** See Consequences.
 
 ## Consequences
 
 - Needs a one-time browser install (`pnpm exec playwright install chromium`) and
   Postgres running, same as the API tests.
-- A run takes about 12 seconds for 4 tests. Adding it to the Husky pre-push hook
+- A run takes about 21 seconds for 6 tests. Adding it to the Husky pre-push hook
   will make every push slower (browser, database, two servers). Decide later
   between everything on push, or a small smoke set on push and the full set in
   GitHub Actions.

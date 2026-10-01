@@ -5,6 +5,22 @@ import { setStoredAccessToken } from "./token-store";
 import { AuthContext, type AuthOrganization, type AuthUser } from "./auth-context";
 import { connectSocket, disconnectSocket } from "../socket/socket-client";
 
+// Shared by every caller while a refresh is in flight. React StrictMode runs
+// the mount effect twice in development, which used to send two refresh
+// requests carrying the same cookie. The server rotates the token on the first
+// and treats the second as reuse of a spent token (a theft signal), revoking
+// the whole session family, so the NEXT page load found no valid session and
+// landed on the login page (about 40% of reloads in the e2e measurements).
+// One request, shared, avoids it; the server's reuse detection is untouched.
+let refreshInFlight: Promise<AuthSession> | null = null;
+
+function refreshSession(): Promise<AuthSession> {
+  refreshInFlight ??= apiPost("/v1/auth/refresh", undefined, authSessionSchema).finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
 /**
  * The access token lives here, in memory, and nowhere else — never
  * localStorage (see ADR 0003: an XSS bug can't steal what was never
@@ -45,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    apiPost("/v1/auth/refresh", undefined, authSessionSchema)
+    refreshSession()
       .then(login)
       .catch(() => {
         // No valid cookie, or it's expired/already used — just means

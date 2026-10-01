@@ -1,0 +1,44 @@
+import { test, expect } from "../support/fixtures";
+import { createIssueViaApi } from "../support/api";
+
+test("set a priority, see it on the card, filter by it, and see it in the activity once", async ({
+  loggedInPage: page,
+}) => {
+  // Why: priority touches the edit form, the list, the URL filter and the
+  // activity timeline. The last assertion guards a specific trap: the edit form
+  // resends every field on each save, so a priority that did not change must
+  // not write a second "changed priority" line.
+  const { projectId, issueIds } = await createIssueViaApi(page.request, {
+    projectName: "Website",
+    projectKey: "WEB",
+    titles: ["Urgent thing", "Calm thing"],
+  });
+  await page.goto(`/projects/${projectId}`);
+
+  // Set High on the first issue through the edit form.
+  const card = (title: string) => page.getByRole("listitem").filter({ hasText: title });
+  await card("Urgent thing").getByRole("button", { name: "Edit" }).click();
+  await page.locator(`select[name="priority"]`).selectOption("high");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(card("Urgent thing")).toContainText("High");
+  await expect(card("Calm thing")).not.toContainText("High");
+
+  // Filter: only the high-priority issue remains, and the choice lives in the URL.
+  await page.getByLabel("Filter by priority").selectOption("high");
+  await expect(page).toHaveURL(/priority=high/);
+  await expect(card("Urgent thing")).toBeVisible();
+  await expect(card("Calm thing")).toHaveCount(0);
+  await page.reload();
+  await expect(card("Urgent thing")).toBeVisible();
+  await expect(card("Calm thing")).toHaveCount(0);
+
+  // Edit again without touching priority: the activity must still show only one priority change.
+  await card("Urgent thing").getByRole("button", { name: "Edit" }).click();
+  const editForm = page.locator("form", { has: page.locator(`select[name="priority"]`) });
+  await editForm.locator(`input[name="description"]`).fill("Now with a description");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Now with a description")).toHaveCount(0); // list cards do not show it
+
+  await page.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
+  await expect(page.getByText("changed priority to High")).toHaveCount(1);
+});

@@ -12,7 +12,7 @@ import {
   users,
 } from "../../db/schema/index.js";
 import * as notificationsRepository from "../notifications/notifications.repository.js";
-import type { IssueStatus } from "@flowdesk/contracts";
+import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
 
 type IssueRow = typeof issues.$inferSelect;
 
@@ -80,12 +80,24 @@ function decodeCursor(cursor: string): { createdAt: Date; id: string } | null {
 export async function listByProject(
   organizationId: string,
   projectId: string,
-  options: { limit: number; cursor?: string; status?: IssueStatus; order: "asc" | "desc" },
+  options: {
+    limit: number;
+    cursor?: string;
+    status?: IssueStatus;
+    priority?: IssuePriority;
+    order: "asc" | "desc";
+  },
 ): Promise<{ status: "ok"; items: IssueRow[]; nextCursor: string | null } | { status: "invalid_cursor" }> {
   const conditions = [eq(issues.organizationId, organizationId), eq(issues.projectId, projectId)];
 
   if (options.status) {
     conditions.push(eq(issues.status, options.status));
+  }
+
+  // Same reasoning as status: a 5-value filter on top of the selective
+  // project_id equality, no dedicated index.
+  if (options.priority) {
+    conditions.push(eq(issues.priority, options.priority));
   }
 
   if (options.cursor) {
@@ -412,7 +424,12 @@ export async function update(input: {
   projectId: string;
   issueId: string;
   expectedVersion: number;
-  changes: Partial<{ title: string; description: string | null; status: IssueStatus }>;
+  changes: Partial<{
+    title: string;
+    description: string | null;
+    status: IssueStatus;
+    priority: IssuePriority;
+  }>;
   actorId: string;
 }): Promise<
   | { status: "updated"; issue: typeof issues.$inferSelect; notifiedUserIds: string[] }

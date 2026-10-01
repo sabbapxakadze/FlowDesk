@@ -50,10 +50,12 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
       env: {
-        // Same mode `pnpm dev` uses, so cookies and rate limits behave as the
-        // owner sees them. The login limit is 10 per 15 minutes per process; a
-        // fresh API is started for every run, which resets it.
-        NODE_ENV: "development",
+        // "test" skips the rate limiters (register allows 5 per hour per process,
+        // which a suite exceeds quickly), the same switch the API tests rely on.
+        // Side effect: the refresh cookie is set with the Secure flag, as in
+        // production; Chromium accepts that on http://localhost, and the reload
+        // test proves the session still survives it.
+        NODE_ENV: "test",
         LOG_LEVEL: "warn",
         PORT: String(API_PORT),
         DATABASE_URL: testDatabaseUrl,

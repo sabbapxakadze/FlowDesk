@@ -17,3 +17,5 @@ export { Page, PageHeader } from "./Page";
 export { ColumnHeader } from "./ColumnHeader";
 export { ThemeSwitch } from "./ThemeSwitch";
 export { Time } from "./Time";
+export { PriorityBadge } from "./PriorityBadge";
+export { PRIORITY_LABELS, PRIORITY_ORDER } from "./priorityLabels";
