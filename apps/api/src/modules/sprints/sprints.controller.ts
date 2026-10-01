@@ -4,6 +4,7 @@ import {
   createSprintRequestSchema,
   createSprintResponseSchema,
   listSprintsResponseSchema,
+  renameSprintRequestSchema,
   sprintResponseSchema,
   startSprintRequestSchema,
 } from "@flowdesk/contracts";
@@ -116,4 +117,39 @@ export async function completeSprint(req: Request, res: Response) {
 
   const body = sprintResponseSchema.parse({ data: toWireFormat(result.sprint) });
   res.json(body);
+}
+
+export async function renameSprint(req: Request, res: Response) {
+  if (!req.ctx?.projectId || !req.ctx.sprintId) {
+    throw new Error("renameSprint requires requireSprint to have run first");
+  }
+
+  const parsed = renameSprintRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError("validation_error", 400, "Invalid sprint name", parsed.error.flatten().fieldErrors);
+  }
+
+  const result = await sprintsService.renameSprint({
+    organizationId: req.ctx.organizationId,
+    projectId: req.ctx.projectId,
+    sprintId: req.ctx.sprintId,
+    expectedVersion: parsed.data.version,
+    name: parsed.data.name,
+  });
+
+  if (result.status === "conflict") {
+    throw new AppError(
+      "version_conflict",
+      409,
+      "This sprint was changed by someone else since you loaded it.",
+      undefined,
+      { current: toWireFormat(result.current) },
+    );
+  }
+
+  if (result.status === "not_found") {
+    throw new AppError("sprint_not_found", 404, "Sprint not found.");
+  }
+
+  res.json(sprintResponseSchema.parse({ data: toWireFormat(result.sprint) }));
 }

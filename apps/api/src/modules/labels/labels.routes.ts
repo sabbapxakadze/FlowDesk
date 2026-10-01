@@ -25,3 +25,13 @@ labelsRouter.post(
   requirePermission("manage_issue"),
   labelsController.createLabel,
 );
+
+// Same permission as creating one. Deleting a label (later) is admin-level
+// because it changes every issue that uses it; renaming or recolouring does not.
+labelsRouter.patch(
+  "/organizations/:organizationId/labels/:labelId",
+  requireAuth,
+  requireOrgMembership,
+  requirePermission("manage_issue"),
+  labelsController.updateLabel,
+);

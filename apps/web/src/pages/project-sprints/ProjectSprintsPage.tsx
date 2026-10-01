@@ -22,6 +22,7 @@ import { IssueSummary, SprintIssueCard, useBacklog } from "../../entities/issue"
 import { SprintStatusBadge, useSprints } from "../../entities/sprint";
 import { CreateSprintForm } from "../../features/create-sprint";
 import { useStartSprint, useCompleteSprint } from "../../features/manage-sprint";
+import { RenameSprintForm } from "../../features/rename-sprint";
 import { useAssignIssueSprint } from "../../features/assign-issue-sprint";
 import { useAuth } from "../../shared/auth/useAuth";
 import { Button, Card, ColumnHeader, EmptyState, ErrorText, Page, PageHeader, Skeleton } from "../../shared/ui";
@@ -71,6 +72,7 @@ export function ProjectSprintsPage() {
   const project = projects?.find((p) => p.id === projectId);
 
   const { data: sprints, isPending: sprintsPending } = useSprints(organization!.id, projectId!);
+  const [renamingSprintId, setRenamingSprintId] = useState<string | null>(null);
   const { data: backlogData, isPending: backlogPending, isError, error } = useBacklog(organization!.id, projectId!);
   const startMutation = useStartSprint(organization!.id, projectId!);
   const completeMutation = useCompleteSprint(organization!.id, projectId!);
@@ -163,10 +165,29 @@ export function ProjectSprintsPage() {
           <ul className="flex flex-col gap-2">
             {sprints.map((sprint) => (
               <Card key={sprint.id} as="li" className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="font-medium">{sprint.name}</p>
-                  <SprintStatusBadge status={sprint.status} />
-                </div>
+                {renamingSprintId === sprint.id ? (
+                  <RenameSprintForm
+                    organizationId={organization!.id}
+                    projectId={project.id}
+                    sprint={sprint}
+                    onDone={() => setRenamingSprintId(null)}
+                  />
+                ) : (
+                  <div>
+                    <p className="font-medium">{sprint.name}</p>
+                    <SprintStatusBadge status={sprint.status} />
+                  </div>
+                )}
+                {renamingSprintId !== sprint.id && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    aria-label={`Rename ${sprint.name}`}
+                    onClick={() => setRenamingSprintId(sprint.id)}
+                  >
+                    Rename
+                  </Button>
+                )}
                 {sprint.status === "planned" && (
                   <Button
                     variant="secondary"

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Search } from "lucide-react";
 import { Link, NavLink, useMatch } from "react-router";
 import { useProjects } from "../../entities/project";
+import { useMyRole } from "../../entities/member";
 import { useAuth } from "../../shared/auth/useAuth";
 import { useSearchPalette } from "../../shared/search-palette/useSearchPalette";
 import { cn, Skeleton, ThemeSwitch } from "../../shared/ui";
@@ -67,6 +68,8 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
   const currentProject = useMatch("/projects/:projectId/*")?.params.projectId;
   const onIssuePage = useMatch("/projects/:projectId/issues/*") !== null;
   const { setOpen: setSearchOpen } = useSearchPalette();
+  const role = useMyRole(organization?.id ?? "");
+  const canManageProject = role === "owner" || role === "admin";
   const onProjectList = useMatch({ path: "/projects/:projectId", end: true }) !== null;
 
   return (
@@ -96,6 +99,7 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
           </span>
           <kbd className="text-xs opacity-70">Ctrl K</kbd>
         </button>
+        <SideLink to="/labels">Labels</SideLink>
 
         <SectionLabel>Your projects</SectionLabel>
         {isPending ? (
@@ -121,6 +125,9 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
                   <SideLink to={`/projects/${project.id}/board`}>Board</SideLink>
                   <SideLink to={`/projects/${project.id}/sprints`}>Sprints</SideLink>
                   <SideLink to={`/projects/${project.id}/analytics`}>Analytics</SideLink>
+                  {canManageProject && (
+                    <SideLink to={`/projects/${project.id}/settings`}>Settings</SideLink>
+                  )}
                 </div>
               )}
             </div>

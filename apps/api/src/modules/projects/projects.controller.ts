@@ -3,6 +3,8 @@ import {
   createProjectRequestSchema,
   createProjectResponseSchema,
   listProjectsResponseSchema,
+  updateProjectRequestSchema,
+  updateProjectResponseSchema,
 } from "@flowdesk/contracts";
 import { AppError } from "../../shared/errors.js";
 import * as projectsService from "./projects.service.js";
@@ -54,4 +56,31 @@ export async function createProject(req: Request, res: Response) {
 
   const body = createProjectResponseSchema.parse({ data: toWireFormat(project) });
   res.status(201).json(body);
+}
+
+export async function updateProject(req: Request, res: Response) {
+  if (!req.ctx?.projectId) {
+    throw new Error("updateProject requires requireProject to have run first");
+  }
+
+  const parsed = updateProjectRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError(
+      "validation_error",
+      400,
+      "Invalid project details",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+
+  const project = await projectsService.renameProject({
+    organizationId: req.ctx.organizationId,
+    projectId: req.ctx.projectId,
+    name: parsed.data.name,
+  });
+  if (!project) {
+    throw new AppError("project_not_found", 404, "Project not found.");
+  }
+
+  res.json(updateProjectResponseSchema.parse({ data: toWireFormat(project) }));
 }

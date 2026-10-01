@@ -45,3 +45,7 @@ export async function createProject(input: { organizationId: string; name: strin
     throw err;
   }
 }
+
+export async function renameProject(input: { organizationId: string; projectId: string; name: string }) {
+  return projectsRepository.updateName(input.organizationId, input.projectId, input.name);
+}

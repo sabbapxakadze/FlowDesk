@@ -60,6 +60,15 @@ export const completeSprintRequestSchema = z.object({
 
 export type CompleteSprintRequest = z.infer<typeof completeSprintRequestSchema>;
 
+// Rename only (dates and status have their own flows). Version-checked like
+// start/complete: a sprint already carries a version for its lifecycle.
+export const renameSprintRequestSchema = z.object({
+  version: z.number().int(),
+  name: z.string().trim().min(1, "Name is required").max(255, "Name is too long"),
+});
+
+export type RenameSprintRequest = z.infer<typeof renameSprintRequestSchema>;
+
 export const sprintResponseSchema = z.object({
   data: sprintSchema,
 });

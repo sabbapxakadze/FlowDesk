@@ -1,2 +1,2 @@
-export { useMembers, useMemberNames } from "./api/useMembers";
+export { useMembers, useMemberNames, useMyRole } from "./api/useMembers";
 export { memberKeys } from "./api/queryKeys";

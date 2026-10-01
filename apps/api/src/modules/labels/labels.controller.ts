@@ -3,7 +3,10 @@ import {
   createLabelRequestSchema,
   createLabelResponseSchema,
   listLabelsResponseSchema,
+  updateLabelRequestSchema,
+  updateLabelResponseSchema,
 } from "@flowdesk/contracts";
+import { z } from "zod";
 import { AppError } from "../../shared/errors.js";
 import * as labelsService from "./labels.service.js";
 
@@ -44,4 +47,36 @@ export async function createLabel(req: Request, res: Response) {
 
   const body = createLabelResponseSchema.parse({ data: toWireFormat(label) });
   res.status(201).json(body);
+}
+
+export async function updateLabel(req: Request, res: Response) {
+  if (!req.ctx) {
+    throw new Error("updateLabel requires requireOrgMembership to have run first");
+  }
+
+  const labelId = z.uuid().safeParse(req.params.labelId);
+  if (!labelId.success) {
+    throw new AppError("invalid_label_id", 400, "labelId must be a UUID.");
+  }
+
+  const parsed = updateLabelRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError(
+      "validation_error",
+      400,
+      "Invalid label details",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+
+  const label = await labelsService.updateLabel({
+    organizationId: req.ctx.organizationId,
+    labelId: labelId.data,
+    changes: parsed.data,
+  });
+  if (!label) {
+    throw new AppError("label_not_found", 404, "Label not found.");
+  }
+
+  res.json(updateLabelResponseSchema.parse({ data: toWireFormat(label) }));
 }

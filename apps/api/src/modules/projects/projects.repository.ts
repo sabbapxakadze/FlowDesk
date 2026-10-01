@@ -32,3 +32,13 @@ export async function findById(organizationId: string, projectId: string) {
     .where(and(eq(projects.organizationId, organizationId), eq(projects.id, projectId)));
   return project;
 }
+
+/** Name only; scoped by organization. Undefined = no such project in this organization. */
+export async function updateName(organizationId: string, projectId: string, name: string) {
+  const [project] = await db
+    .update(projects)
+    .set({ name, updatedAt: new Date() })
+    .where(and(eq(projects.organizationId, organizationId), eq(projects.id, projectId)))
+    .returning();
+  return project;
+}

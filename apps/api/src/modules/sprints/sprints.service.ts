@@ -63,3 +63,13 @@ export async function completeSprint(input: {
   }
   return result;
 }
+
+export async function renameSprint(input: {
+  organizationId: string;
+  projectId: string;
+  sprintId: string;
+  expectedVersion: number;
+  name: string;
+}) {
+  return sprintsRepository.rename(input);
+}

@@ -1,6 +1,7 @@
 import { Router, type Router as RouterType } from "express";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { requireOrgMembership } from "../../middleware/require-org-membership.js";
+import { requireProject } from "../../middleware/require-project.js";
 import { requirePermission } from "../../middleware/require-permission.js";
 import * as projectsController from "./projects.controller.js";
 
@@ -29,4 +30,15 @@ projectsRouter.post(
   requireOrgMembership,
   requirePermission("manage_project"),
   projectsController.createProject,
+);
+
+// Renaming is an admin-level action, like creating a project. The key cannot be
+// changed (see updateProjectRequestSchema).
+projectsRouter.patch(
+  "/organizations/:organizationId/projects/:projectId",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requirePermission("manage_project"),
+  projectsController.updateProject,
 );

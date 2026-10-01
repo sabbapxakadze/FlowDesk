@@ -83,6 +83,38 @@ export async function start(input: {
 }
 
 /**
+ * Rename, any status. Same conditional-UPDATE shape as start(): the version in
+ * the WHERE clause is the concurrency check; the version bumps like every other
+ * sprint change, so a client holding the old one gets a conflict, not a silent
+ * overwrite.
+ */
+export async function rename(input: {
+  organizationId: string;
+  projectId: string;
+  sprintId: string;
+  expectedVersion: number;
+  name: string;
+}): Promise<
+  { status: "renamed"; sprint: SprintRow } | { status: "conflict"; current: SprintRow } | { status: "not_found" }
+> {
+  const scope = and(
+    eq(sprints.id, input.sprintId),
+    eq(sprints.organizationId, input.organizationId),
+    eq(sprints.projectId, input.projectId),
+  );
+  const [updated] = await db
+    .update(sprints)
+    .set({ name: input.name, version: sql`${sprints.version} + 1`, updatedAt: new Date() })
+    .where(and(scope, eq(sprints.version, input.expectedVersion)))
+    .returning();
+
+  if (updated) return { status: "renamed", sprint: updated };
+
+  const [current] = await db.select().from(sprints).where(scope);
+  return current ? { status: "conflict", current } : { status: "not_found" };
+}
+
+/**
  * Same conditional-UPDATE shape as start(), guarded by status="active"
  * instead. On success, in the same transaction: every issue still in
  * this sprint is returned to the backlog (sprintId -> null) and gets an

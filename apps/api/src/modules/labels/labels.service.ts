@@ -35,3 +35,22 @@ export async function createLabel(input: { organizationId: string; name: string;
     throw err;
   }
 }
+
+export async function updateLabel(input: {
+  organizationId: string;
+  labelId: string;
+  changes: { name?: string; color?: string };
+}) {
+  try {
+    return await labelsRepository.update(input.organizationId, input.labelId, input.changes);
+  } catch (err) {
+    if (isUniqueViolation(err, "labels_organization_id_name_unique")) {
+      throw new AppError(
+        "label_name_taken",
+        409,
+        "A label with this name already exists in this organization.",
+      );
+    }
+    throw err;
+  }
+}

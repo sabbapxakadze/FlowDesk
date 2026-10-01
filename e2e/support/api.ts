@@ -35,3 +35,38 @@ export async function createIssueViaApi(
   }
   return { projectId, issueIds };
 }
+
+async function apiSession(request: APIRequestContext) {
+  const login = await request.post("/api/v1/auth/login", {
+    data: { email: TEST_USER.email, password: TEST_USER.password },
+  });
+  expect(login.status()).toBe(200);
+  const { accessToken, organization } = await login.json();
+  return {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    base: `/api/v1/organizations/${organization.id}`,
+  };
+}
+
+export async function createLabelViaApi(
+  request: APIRequestContext,
+  name: string,
+  color: string,
+) {
+  const { headers, base } = await apiSession(request);
+  const res = await request.post(`${base}/labels`, { headers, data: { name, color } });
+  expect(res.status()).toBe(201);
+}
+
+export async function createSprintViaApi(
+  request: APIRequestContext,
+  projectId: string,
+  name: string,
+) {
+  const { headers, base } = await apiSession(request);
+  const res = await request.post(`${base}/projects/${projectId}/sprints`, {
+    headers,
+    data: { name },
+  });
+  expect(res.status()).toBe(201);
+}

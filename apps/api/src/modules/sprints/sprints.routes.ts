@@ -48,3 +48,14 @@ sprintsRouter.patch(
   requirePermission("manage_issue"),
   sprintsController.completeSprint,
 );
+
+// Rename: same permission as the rest of sprint management.
+sprintsRouter.patch(
+  "/organizations/:organizationId/projects/:projectId/sprints/:sprintId",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireSprint,
+  requirePermission("manage_issue"),
+  sprintsController.renameSprint,
+);

@@ -7,6 +7,8 @@ import { ProjectSprintsPage } from "../pages/project-sprints/ProjectSprintsPage"
 import { IssueDetailPage } from "../pages/issue-detail/IssueDetailPage";
 import { ProjectAnalyticsPage } from "../pages/project-analytics/ProjectAnalyticsPage";
 import { SearchPage } from "../pages/search/SearchPage";
+import { LabelsPage } from "../pages/labels/LabelsPage";
+import { ProjectSettingsPage } from "../pages/project-settings/ProjectSettingsPage";
 import { RegisterPage } from "../pages/register/RegisterPage";
 import { LoginPage } from "../pages/login/LoginPage";
 import { VerifyEmailPage } from "../pages/verify-email/VerifyEmailPage";
@@ -51,6 +53,8 @@ export function App() {
                 element={<IssueDetailPage />}
               />
               <Route path="/search" element={<SearchPage />} />
+            <Route path="/labels" element={<LabelsPage />} />
+            <Route path="/projects/:projectId/settings" element={<ProjectSettingsPage />} />
             </Route>
             <Route element={<AuthLayout />}>
               <Route path="/register" element={<RegisterPage />} />

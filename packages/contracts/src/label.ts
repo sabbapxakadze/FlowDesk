@@ -40,3 +40,24 @@ export const attachLabelRequestSchema = z.object({
 });
 
 export type AttachLabelRequest = z.infer<typeof attachLabelRequestSchema>;
+
+// Either field may be omitted; at least one must be present. Same rules as create.
+export const updateLabelRequestSchema = z
+  .object({
+    name: z.string().min(1, "Name is required").max(50, "Name is too long").optional(),
+    color: z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a 6-digit hex code, e.g. #FF5733")
+      .optional(),
+  })
+  .refine((data) => data.name !== undefined || data.color !== undefined, {
+    message: "At least one of name or color must be provided.",
+  });
+
+export type UpdateLabelRequest = z.infer<typeof updateLabelRequestSchema>;
+
+export const updateLabelResponseSchema = z.object({
+  data: labelSchema,
+});
+
+export type UpdateLabelResponse = z.infer<typeof updateLabelResponseSchema>;

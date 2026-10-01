@@ -46,3 +46,21 @@ export const createProjectResponseSchema = z.object({
 });
 
 export type CreateProjectResponse = z.infer<typeof createProjectResponseSchema>;
+
+/**
+ * Rename only. The key is deliberately NOT editable: it is part of every issue
+ * key ("WEB-12") that people have in links, commits and heads (Phase 8.5 slice 3).
+ * No version field: a project has no version column, so concurrent renames are
+ * last write wins, like editing a comment.
+ */
+export const updateProjectRequestSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(255, "Name is too long"),
+});
+
+export type UpdateProjectRequest = z.infer<typeof updateProjectRequestSchema>;
+
+export const updateProjectResponseSchema = z.object({
+  data: projectSchema,
+});
+
+export type UpdateProjectResponse = z.infer<typeof updateProjectResponseSchema>;

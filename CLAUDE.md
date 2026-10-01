@@ -80,6 +80,10 @@ The e2e suite (ADR 0020, `pnpm test:e2e`) found and we fixed a real auth bug: tw
 simultaneous `/auth/refresh` calls on page load (StrictMode) made the server's
 token-reuse detection revoke the session, so the next load logged the user out;
 `AuthContext` now shares one in-flight refresh.
+Slice 3A (rename) is done too (ADR 0022): project name (the key is immutable),
+label name and colour, and sprint name, with a project settings page, a Labels page
+and inline sprint rename. Delete (3B issues, labels, sprints; 3C projects) is
+decided in ADR 0022 (hard delete, with files removed) and not built yet.
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,

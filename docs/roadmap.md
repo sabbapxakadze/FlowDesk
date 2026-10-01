@@ -1624,7 +1624,48 @@ The original plan for this slice, kept for the record:
      circle is only faintly lighter than the card in dark mode; no way yet to remove
      a member.
 2. **Rename and delete** for issues, projects, labels and sprints, with
-   confirmation and audit events.
+   confirmation. **Decided with the owner 2026-10-01 (ADR 0022), split in three:**
+   - **3A, rename: DONE 2026-10-01.** (An issue title was already editable.)
+     Project name (owner/admin; the KEY is immutable), label name and colour (any
+     member who can manage issues; unique name, 409 on a clash), sprint name
+     (version-checked, any status). New: `PATCH` routes and contracts, a project
+     settings page (`/projects/:id/settings`, Settings link in the sidebar for
+     owner/admin only, read-only for others), an organization-level Labels page
+     (`/labels`, inline name and colour edit), inline Rename on sprint rows, and
+     `useMyRole` (role from the members list, for showing or hiding controls only).
+     **Verified:** 13 API tests (project: trim, key untouched even if sent, admin
+     yes / member and viewer no, other org 403 and 404 with a borrowed org id, the
+     repository query itself scoped by organization, bad names; label: member can
+     rename and recolour, validation, duplicate name 409 and own name fine, viewer
+     and other org refused, other org's id is a 404, old events keep the old name;
+     sprint: planned and active, stale version 409, viewer 403, wrong project 404);
+     mutations (no `manage_project`, label update unscoped, sprint rename without the
+     version check, project update unscoped) all fail named tests, and the last one
+     only after I added the direct repository test (the route middleware was hiding
+     it); 3 e2e tests (project rename through the settings page and sidebar, key
+     stays, a plain member has no Settings link and a read-only page; label rename
+     and recolour with the real colour input, persisted, duplicate refused; sprint
+     rename), 8 repeat runs each, 24 of 24; the "Settings link always shown"
+     mutation fails the e2e test. Light/dark: dark screenshots of the labels page and
+     settings page looked right. Suites: 235 + 13 API tests, 12 e2e tests.
+     **Unexplained, seen once:** the older two-person live-comments e2e test failed
+     once in a full run right after the API suite (11 of 12 passed); it then passed
+     12 of 12 on its own and in two more full runs (12 of 12 each). The error text
+     was not captured, so the cause is unknown. If it recurs, run the full suite
+     with `--repeat-each` and read the first failure.
+     **Found by the e2e test and fixed:** the settings page remounted its form when
+     the project list refetched, so "Saved" appeared only sometimes (failed 4 of 6
+     runs). **Also found:** an absence assertion (`toHaveCount(0)`) passes instantly
+     on a page that has not rendered yet, so the member check first waits for the
+     members request and the project links. **Not verified:** light mode and mobile
+     width of the new pages; renames do not update other people's open tabs until
+     they refetch; no event records who renamed what (no audit trail for renames).
+   - **3B, delete issue, label, sprint** (not started): hard delete; issue by the
+     reporter or an owner/admin; label by owner/admin; sprint by any member but not
+     while active; confirmations; files on disk removed; live redirect for anyone
+     viewing a deleted issue.
+   - **3C, delete project** (not started): owner/admin, type the project name to
+     confirm, large cascade, files removed, e2e test.
 3. **Invite teammates** by email with roles (the roles enum already exists).
 4. **Due dates** with an overdue marker.
 5. **Small UI wins:** `C` to create an issue, a visible Ctrl+K button in the
