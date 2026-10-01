@@ -1624,6 +1624,19 @@ prioritise work, discuss it with edits and files, and see when things happened.
     can assert "a verification email was requested".
 - [ ] GitHub Actions: lint → typecheck → test → build
 - [ ] Playwright e2e on 3–4 critical flows
+  - **Started 2026-10-01 (ADR 0020), pulled ahead of Phase 9 by the owner's choice:**
+    setup plus 4 tests are in `e2e/` (register through the form and log in, wrong
+    password, stay logged in after a reload, create a project and issue then post,
+    edit and delete a comment). Runs in about 12 s with `pnpm test:e2e`.
+    **Verified:** all 4 pass; a run leaves dev data untouched (dev row counts
+    identical before and after: 18 users, 314 issues, 15 comments) and writes to
+    `flowdesk_test`; two mutation checks: hiding "(edited)" fails the comment test,
+    and a wrong refresh path fails the reload test. **Noted:** the reload test
+    passes here, so the earlier manual 401 on reload was not reproduced; its cause
+    is still unknown (this run uses `NODE_ENV=development`, as `pnpm dev` does).
+    **Still to do:** board drag flow, the two-user live-comment flow (needs a
+    helper to insert a second org member), pre-push wiring, CI, and the web
+    component tests (Vitest + Testing Library).
   - Decided with the owner, 2026-09-30: **tests are code in the repo**
     (`pnpm test:e2e`), not checks driven through the MCP; the MCP stays for
     exploring new features. Playwright, not Cypress, mainly because realtime

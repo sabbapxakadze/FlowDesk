@@ -22,3 +22,9 @@ coverage/
 # later phase; these are real uploaded files, never committed.
 apps/api/uploads/
 apps/api/uploads-test/
+
+# Playwright e2e output (ADR 0020)
+playwright-report/
+test-results/
+apps/api/uploads-e2e/
+e2e/.tsbuild/

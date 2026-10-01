@@ -1,0 +1,77 @@
+import { defineConfig, devices } from "@playwright/test";
+import { fileURLToPath } from "node:url";
+
+/**
+ * End-to-end tests (ADR 0020). Everything here runs against its OWN api (port
+ * 4100) and web server (port 5273), pointed at the flowdesk_test database and
+ * a separate uploads folder, so a run can never touch dev data or collide with
+ * `pnpm dev` on 4000 / 5173.
+ *
+ * TEST_DATABASE_URL comes from apps/api/.env, the same place the API's own
+ * test setup reads it.
+ */
+try {
+  process.loadEnvFile(fileURLToPath(new URL("../apps/api/.env", import.meta.url)));
+} catch {
+  // no .env file: fine if the variables are already in the environment
+}
+
+const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+if (!testDatabaseUrl) {
+  throw new Error(
+    "TEST_DATABASE_URL must be set to run e2e tests (see apps/api/.env.example)",
+  );
+}
+
+const API_PORT = 4100;
+const WEB_PORT = 5273;
+
+export default defineConfig({
+  testDir: "./tests",
+  // One shared database that is reset before every test: tests cannot run in
+  // parallel without racing each other, same reasoning as the API's vitest config.
+  workers: 1,
+  fullyParallel: false,
+  retries: 0,
+  reporter: [["list"], ["html", { open: "never", outputFolder: "../playwright-report" }]],
+  outputDir: "../test-results",
+  use: {
+    baseURL: `http://localhost:${WEB_PORT}`,
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+  },
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  webServer: [
+    {
+      name: "api",
+      command: "pnpm exec tsx --env-file-if-exists=.env src/index.ts",
+      cwd: "../apps/api",
+      url: `http://localhost:${API_PORT}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      env: {
+        // Same mode `pnpm dev` uses, so cookies and rate limits behave as the
+        // owner sees them. The login limit is 10 per 15 minutes per process; a
+        // fresh API is started for every run, which resets it.
+        NODE_ENV: "development",
+        LOG_LEVEL: "warn",
+        PORT: String(API_PORT),
+        DATABASE_URL: testDatabaseUrl,
+        UPLOADS_DIR: "./uploads-e2e",
+        APP_URL: `http://localhost:${WEB_PORT}`,
+        // A dummy key: registration still calls Resend, which rejects it, and
+        // the API only logs that. Nothing is ever delivered from a test.
+        RESEND_API_KEY: "e2e-dummy-key",
+      },
+    },
+    {
+      name: "web",
+      command: `pnpm exec vite --port ${WEB_PORT} --strictPort`,
+      cwd: "../apps/web",
+      url: `http://localhost:${WEB_PORT}`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      env: { API_PROXY_TARGET: `http://localhost:${API_PORT}` },
+    },
+  ],
+});

@@ -490,7 +490,12 @@ pnpm test           # vitest — apps/api's suite needs Postgres, see below
 pnpm db:generate    # drizzle migration from a schema change (apps/api)
 pnpm db:migrate     # apply migrations to $DATABASE_URL
 pnpm db:seed        # idempotent local demo data
+pnpm test:e2e       # Playwright e2e on its own servers + flowdesk_test (ADR 0020)
 ```
+
+One-time for e2e: `pnpm exec playwright install chromium`. The e2e run starts
+its own API (4100) and web server (5273), so it can run while `pnpm dev` is up.
+It is not part of `pnpm test` or the pre-push hook yet.
 
 A Husky `pre-push` hook (`.husky/pre-push`) runs `pnpm typecheck && pnpm lint
 && pnpm test` before every `git push`, so Postgres must be running. It is
