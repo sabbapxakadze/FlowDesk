@@ -1624,6 +1624,26 @@ prioritise work, discuss it with edits and files, and see when things happened.
     can assert "a verification email was requested".
 - [ ] GitHub Actions: lint → typecheck → test → build
 - [ ] Playwright e2e on 3–4 critical flows
+  - Decided with the owner, 2026-09-30: **tests are code in the repo**
+    (`pnpm test:e2e`), not checks driven through the MCP; the MCP stays for
+    exploring new features. Playwright, not Cypress, mainly because realtime
+    features need two logged-in users in one test (two browser contexts) and the
+    tool matches the owner's day job (my comparison is from general knowledge, not
+    checked against current docs).
+  - First flows: login; create and comment on an issue; board drag; two users
+    seeing each other's comment live.
+  - Setup work (most of the first slice): run against `flowdesk_test`, never dev
+    data; a seed step for a known user and org; a reset between tests like the API
+    tests' `resetDatabase`.
+  - Plus Vitest + Testing Library component tests for small logic (the palette's
+    keyboard handling, `formatRelativeTime`); the web app has no test runner yet
+    (`vitest.config.ts` at the root lists only `apps/api`).
+  - Owner wants e2e in the Husky pre-push hook too. Named cost: it will make every
+    push slower (needs browsers, a database and both servers running). Decide then
+    whether to run all flows or only a small smoke set on push and the full set in
+    GitHub Actions.
+  - Option raised: pull the e2e setup earlier, before Phase 8.5's assignee and
+    priority slice, so new features ship with tests. Not decided.
 - [ ] Error monitoring
 - [ ] **Seeded demo org + "Log in as demo"** — required, not optional
 - [ ] OpenAPI generated from contracts, served at `/docs`
