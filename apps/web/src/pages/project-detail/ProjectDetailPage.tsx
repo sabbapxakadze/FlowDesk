@@ -168,7 +168,7 @@ export function ProjectDetailPage() {
 
       <CreateIssueForm organizationId={organization!.id} projectId={project.id} />
 
-      <div className="mt-4 mb-3 flex items-center gap-2">
+      <div className="mt-4 mb-3 flex flex-wrap items-center gap-2">
         <Select
           value={status ?? ""}
           onChange={(e) => setStatusFilter(e.target.value)}

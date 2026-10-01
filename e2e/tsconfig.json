@@ -6,6 +6,7 @@
     "emitDeclarationOnly": true,
     "outDir": "./.tsbuild",
     "rootDir": ".",
+    "lib": ["ES2023", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "types": ["node"]

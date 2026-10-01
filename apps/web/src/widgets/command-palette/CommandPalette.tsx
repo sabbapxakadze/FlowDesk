@@ -230,8 +230,14 @@ export function CommandPalette() {
               })
             )}
             {hasShowAll && (
-              <li role="presentation">
+              // Pinned to the bottom of the scrolling list so it is always on screen,
+              // however many results there are (up to 25).
+              <li role="presentation" className="sticky bottom-0 bg-[var(--color-bg-surface)] pt-1">
                 <button
+                  ref={(el) => {
+                    // Same job the result rows do for themselves: keep the highlighted row visible.
+                    if (el && showAllHighlighted) el.scrollIntoView({ block: "nearest" });
+                  }}
                   id={`${listId}-option-${rows.length}`}
                   type="button"
                   role="option"

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { existsSync } from "node:fs";
+import { unlink } from "node:fs/promises";
 import path from "node:path";
 import { eq, sql } from "drizzle-orm";
 import { app } from "../../app.js";
@@ -173,6 +174,32 @@ describe("delete issue (HTTP)", () => {
     expect(existsSync(filePath(survivorFile!.storageKey))).toBe(true);
     expect(await db.select().from(labels)).toHaveLength(1);
     await request(app).get(`${projectBase}/issues/${doomed}`).set(auth).expect(404);
+  });
+
+  it("a file already missing from disk does not block the delete", async () => {
+    // Catches: a delete that fails (or half-completes) because removing the file
+    // from disk threw. The database is what the person asked about; the missing
+    // file is logged, not fatal. Simulated by removing the file out from under it.
+    const { auth, projectBase, createIssue, owner } = await setup();
+    const issueId = await createIssue(owner.token, "File vanished");
+    const upload = await request(app)
+      .post(`${projectBase}/issues/${issueId}/attachments`)
+      .set(auth)
+      .attach("file", Buffer.from("bytes"), {
+        filename: "gone.txt",
+        contentType: "text/plain",
+      })
+      .expect(201);
+    const [file] = await db
+      .select()
+      .from(attachments)
+      .where(eq(attachments.id, upload.body.data.id));
+    await unlink(filePath(file!.storageKey));
+    expect(existsSync(filePath(file!.storageKey))).toBe(false);
+
+    await request(app).delete(`${projectBase}/issues/${issueId}`).set(auth).expect(204);
+    expect(await db.select().from(issues).where(eq(issues.id, issueId))).toHaveLength(0);
+    expect(await db.select().from(attachments)).toHaveLength(0);
   });
 
   it("the reporter and an admin or owner may delete; another member and a viewer may not", async () => {

@@ -1753,7 +1753,78 @@ The original plan for this slice, kept for the record:
    clicks on the input and on the footer text keep it open; Esc and reopen reset
    the query.
    **Owner also said they forgot one more idea; ask them to add it here.**
-8. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
+   **Verification pass in a real browser, 2026-10-01** (the "not verified" items of
+   slices 1 to 3, checked with the Playwright MCP against the dev servers; throwaway
+   data only, all removed afterwards):
+   - **Found and fixed (two real bugs of mine):** (1) the issues list filter row
+     (status, priority, assignee, sort) did not wrap, so on a narrow screen the sort
+     button was cut off and the page scrolled sideways (531 px of content in a 469 px
+     window): `flex-wrap`; (2) in the search popup the "Show all results" row sat at
+     the bottom of a 2,286 px scrolling list and was not scrolled into view when
+     highlighted by keyboard: now pinned to the bottom and scrolled into view. Both
+     have e2e regression tests that fail without the fix (measured width; row inside
+     the list box).
+   - **Verified OK:** mobile width (about 470 to 490 px, the smallest this browser
+     window goes) of the Labels page (edit and delete confirm), project settings
+     (including the delete form), sprint rows (rename, delete confirm), the issue
+     Danger zone, light mode; assignees in a REAL mouse drag on the board and the
+     sprints page (avatar on the card, in the drag overlay, after the drop and after a
+     reload); sprint delete in the browser (complete, then delete, the issue returns to
+     the backlog); a 64-person member list (64 options, type-ahead selects by name, a
+     person deep in the list can be assigned and filtered on; deleting those users
+     later cleared the assignee and kept the issue); the search popup returns at most
+     25 results plus the "Show all" row; a direct upload appears in zero comment cards
+     (one activity line, listed in Attachments without "from a comment"); the comment
+     time carries the exact date (`title`, e.g. 9/30/2026, 11:15:26 PM); renames in one
+     tab reach another tab only when that tab is focused (it stays stale while
+     unfocused, updates on focus).
+   - **Project delete at volume, over the real UI:** a throwaway project with 20,000
+     issues, 20,000 events, 5,000 comments, 1,500 attachment rows and 1,500 real files:
+     click to redirect in 1.24 s; afterwards zero rows of any kind left, all 1,500 files
+     gone from disk (7 older files remained), other projects intact, no "failed to
+     delete" warnings. (Seeding that data took over 20 minutes on this machine, cause
+     not investigated.)
+   - **Added automated:** a file already missing from disk does not block a delete (the
+     failure is logged, not fatal); fails if `deleteFile` rethrows.
+   - **Still NOT verified:** a native file chooser supplying a file (the Attach files
+     button does open a real chooser, but Chrome refuses to let the tool fill it, "Not
+     allowed"; files were injected with `DataTransfer` instead); a screen narrower than
+     about 470 px (the browser window cannot go lower); the second person's own browser
+     view of a comment (covered by the two-context e2e tests, not by the MCP, which has
+     one profile); the native `title` tooltip itself (only its text was read).
+   - **Small things noticed, not fixed:** initials for a name that ends in a number
+     come out as "P5" (fine for real names); the dark-mode avatar circle is only
+     faintly lighter than the card.
+8. **Attachment previews and a nicer comment card (owner idea, 2026-10-01; do it
+   before Phase 9).** Today an attachment is only a link, and a comment is a grey
+   rail with text. Wanted:
+   - **Preview popup:** clicking an attachment that is an image or a video opens a
+     preview in a popup (a native `<dialog>`, like the search popup) instead of
+     navigating or downloading; below it a **Download** button and **zoom** (and
+     close with Esc or a click outside). Other types (PDF, text, CSV) keep the
+     current open/download behaviour, or get a preview later.
+   - **Small previews in comments:** an image or video uploaded with a comment shows
+     as a small thumbnail inside that comment; clicking it opens the same popup.
+   - **Better comment cards:** replace the "grey line and nothing else" look with a
+     real card: avatar (initials, as on issue cards), name, relative time with exact
+     date on hover, "(edited)", the Edit/Delete actions tucked in, files shown as
+     thumbnails or file chips. Needs a design pass first (a screenshot comparison of
+     two or three options for the owner to pick), like the Phase 3.6 work.
+   - **Things to settle when this starts (found by reading the code, not guessed):**
+     video is **not allowed today** (`ALLOWED_ATTACHMENT_MIME_TYPES` has png, jpeg,
+     gif, webp, pdf, txt, csv; max 10 MB), so allowing video is a decision about types
+     and size (and the API only trusts the client-sent MIME type, no byte sniffing);
+     downloads go through a **signed URL that lives 5 minutes** and is minted when the
+     attachment list is fetched, so a thumbnail left on screen could stop loading
+     after 5 minutes unless it is refetched or the URL is minted at view time; the
+     download route currently answers `Content-Disposition: inline` (so the browser
+     decides between showing and saving); a video needs range requests for seeking,
+     which the current file route does not do; decide thumbnail size and whether to
+     generate real thumbnails or just let the browser scale the original.
+   - **Tests when built:** e2e (open the popup, Esc closes it, Download link has the
+     right target, a comment with an image shows a thumbnail that opens the popup),
+     keyboard and focus handling of the dialog, and the narrow-width check.
+9. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.
 
