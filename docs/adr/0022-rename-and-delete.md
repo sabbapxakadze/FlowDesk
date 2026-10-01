@@ -1,8 +1,8 @@
 # 0022 — Rename and delete for projects, labels, sprints and issues
 
-Status: Accepted — 2026-10-01. Rename (slice 3A) and delete for issues, labels and
-sprints (slice 3B) are built. Delete for projects (slice 3C) is decided here and not
-built yet; this ADR is amended with what each build teaches.
+Status: Accepted — 2026-10-01. Rename (3A) and delete for issues, labels, sprints
+(3B) and projects (3C) are all built; this ADR was amended with what each build
+taught.
 
 ## Context
 
@@ -77,6 +77,34 @@ its issues and sprints. Analytics are computed on read from `issue_events`
   viewer may delete, Delete on label rows for owners/admins, Delete on non-active
   sprint rows.
 
+**Delete project, as built in 3C**
+- `DELETE /organizations/:id/projects/:projectId`, owner/admin (`manage_project`).
+  The body must carry `{ confirmName }`, the project's exact name (case and spaces
+  matter), or the answer is `400 confirmation_mismatch` and nothing is deleted. The
+  UI asks the person to type the name too, but the API check is the real guard: a
+  stray request or script cannot wipe a project by accident.
+- One transaction in the repository (scoped by organization in the query itself):
+  collect the storage keys of every file under the project and everyone who had
+  notifications for its issues, then delete the project; issues, sprints and, through
+  the issues, events, comments, attachment rows, issue-labels and notifications go by
+  cascade. After the commit the service removes the files from disk (best effort,
+  logged), broadcasts `project:deleted` to the whole organization room and tells
+  the affected people's bells to refetch.
+- **Why the whole organization room:** people who are not looking at the project
+  (the sidebar, the projects list) must drop it too. The app shell listens once; a
+  person on any page of the deleted project is sent to the projects list.
+- **Measured at volume (test database, 20,000 issues, 30,000 events, 5,000 comments,
+  9,062 notifications):** the delete took 8.96 s, and one cascade trigger, the one
+  that finds notifications by `issue_event_id`, took 8.48 s of it, because that
+  foreign key had no index (every one of 30,000 lookups scanned the notifications
+  table). Migration 0018 adds `notifications_issue_event_id_idx`: 0.58 s for the same
+  delete (15 times faster, that trigger 124 ms), and 0.60 s through the real
+  repository function. The same index speeds up deleting a single issue on a big
+  database. A test checks the index exists.
+- **UI:** a "Danger zone" on the project settings page for owners and admins: a
+  button, then a warning and a box that must contain the exact name before the
+  confirm button enables.
+
 ## Consequences
 
 - No audit row can record "issue deleted": its events cascade with it. A separate
@@ -84,7 +112,9 @@ its issues and sprints. Analytics are computed on read from `issue_events`
 - Renames of projects, labels and sprints write no event either (events belong to
   issues), so there is no trail of who renamed what.
 - Other people's open pages show the old project or label name until their next
-  refetch; renames do not broadcast.
+  refetch; renames do not broadcast. (Deleting a project does broadcast.)
+- A person redirected because their project was deleted is not told why; they land
+  on the projects list. A short notice would help; not built.
 - Label colour is validated as `#rrggbb`; the native colour picker produces
   lower-case, the API accepts both.
 

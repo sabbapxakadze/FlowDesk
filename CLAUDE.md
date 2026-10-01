@@ -84,7 +84,10 @@ Slice 3A (rename) is done too (ADR 0022): project name (the key is immutable),
 label name and colour, and sprint name, with a project settings page, a Labels page
 and inline sprint rename. Slice 3B (delete issue, label, sprint) is done too: hard delete, issue by the
 reporter or an owner/admin, files removed from disk, live redirect for viewers, inline
-confirmation. Delete project (3C) is decided in ADR 0022 and not built yet.
+confirmation. Slice 3C (delete project) is done: the exact name is required by the UI and by the
+API, everything cascades, files are removed, the organization is told live. Measuring
+it at 20,000 issues found a missing index (`notifications.issue_event_id`, 8.5 s of a
+9.0 s delete); migration 0018 fixed it (0.6 s). **Phase 8.5 slice 3 is complete.**
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,

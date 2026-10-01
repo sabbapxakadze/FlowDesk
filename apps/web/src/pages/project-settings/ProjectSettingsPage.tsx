@@ -1,6 +1,7 @@
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { useProjects } from "../../entities/project";
 import { useMyRole } from "../../entities/member";
+import { DeleteProjectForm } from "../../features/delete-project";
 import { RenameProjectForm } from "../../features/rename-project";
 import { useAuth } from "../../shared/auth/useAuth";
 import { Page, PageHeader, Skeleton } from "../../shared/ui";
@@ -16,6 +17,7 @@ export function ProjectSettingsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { data: projects, isPending } = useProjects(organization!.id);
   const role = useMyRole(organization!.id);
+  const navigate = useNavigate();
   const project = projects?.find((p) => p.id === projectId);
 
   if (isPending) {
@@ -66,6 +68,17 @@ export function ProjectSettingsPage() {
           -12.
         </p>
       </section>
+
+      {canManage && (
+        <section className="mt-10 max-w-xl border-t border-[var(--color-border-default)] pt-4">
+          <h2 className="mb-2 text-sm font-semibold">Danger zone</h2>
+          <DeleteProjectForm
+            organizationId={organization!.id}
+            project={project}
+            onDeleted={() => navigate("/projects", { replace: true })}
+          />
+        </section>
+      )}
     </Page>
   );
 }

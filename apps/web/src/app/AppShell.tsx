@@ -1,8 +1,10 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Menu, X } from "lucide-react";
 import { Outlet } from "react-router";
+import { useAuth } from "../shared/auth/useAuth";
 import { NotificationBell } from "../widgets/notification-bell";
 import { Sidebar } from "../widgets/sidebar";
+import { useLiveProjectDeletion } from "./useLiveProjectDeletion";
 
 const DESKTOP_QUERY = "(min-width: 768px)";
 
@@ -28,6 +30,8 @@ function useIsDesktop(): boolean {
  * slim top bar whose menu button opens the same sidebar as a drawer.
  */
 export function AppShell() {
+  const { organization } = useAuth();
+  useLiveProjectDeletion(organization?.id ?? "");
   const isDesktop = useIsDesktop();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const open = drawerOpen && !isDesktop;

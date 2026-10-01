@@ -42,3 +42,14 @@ projectsRouter.patch(
   requirePermission("manage_project"),
   projectsController.updateProject,
 );
+
+// The most destructive action in the app: owner/admin only, and the body must
+// carry the project's exact name (see deleteProjectRequestSchema).
+projectsRouter.delete(
+  "/organizations/:organizationId/projects/:projectId",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requirePermission("manage_project"),
+  projectsController.deleteProject,
+);

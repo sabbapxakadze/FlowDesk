@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { app } from "../../app.js";
 import { env } from "../../config/env.js";
 import { db } from "../../db/client.js";
@@ -16,11 +16,13 @@ import {
   labels,
   notifications,
   organizationMembers,
+  projects,
   sprints,
   users,
 } from "../../db/schema/index.js";
 import { signAccessToken } from "../auth/tokens.js";
 import * as issuesRepository from "./issues.repository.js";
+import * as projectsRepository from "../projects/projects.repository.js";
 
 /**
  * Hard delete for issues, labels and sprints (Phase 8.5 slice 3B, ADR 0022).
@@ -400,5 +402,202 @@ describe("delete sprint (HTTP)", () => {
       .set(asUser(member.token))
       .expect(204);
     expect((await db.select().from(sprints)).map((s) => s.id)).toEqual([second.id]);
+  });
+});
+
+describe("delete project (HTTP)", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+    await clearTestUploads();
+  });
+
+  it("removes the project and everything under it, files included, and nothing else", async () => {
+    // Catches: a delete that leaves issues, sprints, comments, events or
+    // notifications behind, orphans uploaded files, or reaches into a
+    // neighbouring project.
+    const { owner, auth, orgBase, projectBase, createIssue } = await setup();
+    const worker = await addMember(owner.organizationId, "Worker One", "member");
+    const issueId = await createIssue(owner.token, "Under the project");
+    const label = await request(app)
+      .post(`${orgBase}/labels`)
+      .set(auth)
+      .send({ name: "bug", color: "#112233" })
+      .expect(201);
+    await request(app)
+      .post(`${projectBase}/issues/${issueId}/labels`)
+      .set(auth)
+      .send({ labelId: label.body.data.id })
+      .expect(201);
+    await request(app)
+      .post(`${projectBase}/issues/${issueId}/comments`)
+      .set(asUser(worker.token))
+      .send({ body: "hi" })
+      .expect(201);
+    await request(app)
+      .post(`${projectBase}/sprints`)
+      .set(auth)
+      .send({ name: "Sprint 1" })
+      .expect(201);
+    const upload = await request(app)
+      .post(`${projectBase}/issues/${issueId}/attachments`)
+      .set(auth)
+      .attach("file", Buffer.from("bytes"), {
+        filename: "a.txt",
+        contentType: "text/plain",
+      })
+      .expect(201);
+    const [doomedFile] = await db
+      .select()
+      .from(attachments)
+      .where(eq(attachments.id, upload.body.data.id));
+    expect(existsSync(filePath(doomedFile!.storageKey))).toBe(true);
+
+    // A neighbouring project in the same organization, with its own issue and file.
+    const other = await request(app)
+      .post(`${orgBase}/projects`)
+      .set(auth)
+      .send({ name: "Other", key: "OTH" })
+      .expect(201);
+    const otherBase = `${orgBase}/projects/${other.body.data.id}`;
+    const otherIssue = await request(app)
+      .post(`${otherBase}/issues`)
+      .set(auth)
+      .send({ title: "Neighbour" })
+      .expect(201);
+    const otherUpload = await request(app)
+      .post(`${otherBase}/issues/${otherIssue.body.data.id}/attachments`)
+      .set(auth)
+      .attach("file", Buffer.from("keep"), {
+        filename: "keep.txt",
+        contentType: "text/plain",
+      })
+      .expect(201);
+    const [keptFile] = await db
+      .select()
+      .from(attachments)
+      .where(eq(attachments.id, otherUpload.body.data.id));
+
+    await request(app)
+      .delete(projectBase)
+      .set(auth)
+      .send({ confirmName: "Website" })
+      .expect(204);
+
+    const remainingProjects = await db.select().from(projects);
+    expect(remainingProjects.map((row) => row.name)).toEqual(["Other"]);
+    expect(await db.select().from(issues).where(eq(issues.id, issueId))).toHaveLength(0);
+    expect(await db.select().from(comments)).toHaveLength(0);
+    expect((await db.select().from(attachments)).map((row) => row.id)).toEqual([
+      keptFile!.id,
+    ]);
+    expect(await db.select().from(issueLabels)).toHaveLength(0);
+    expect(await db.select().from(sprints)).toHaveLength(0);
+    expect(await db.select().from(notifications)).toHaveLength(0);
+    // Events: only the neighbour's remain.
+    expect(
+      (await db.select().from(issueEvents)).every(
+        (event) => event.issueId === otherIssue.body.data.id,
+      ),
+    ).toBe(true);
+    expect(existsSync(filePath(doomedFile!.storageKey))).toBe(false);
+    expect(existsSync(filePath(keptFile!.storageKey))).toBe(true);
+    // The label is organization-wide and stays; the project is gone from the list and its URL is a 404.
+    expect(await db.select().from(labels)).toHaveLength(1);
+    const list = await request(app).get(`${orgBase}/projects`).set(auth).expect(200);
+    expect(list.body.data.map((row: { name: string }) => row.name)).toEqual(["Other"]);
+    await request(app).get(`${projectBase}/issues/${issueId}`).set(auth).expect(404);
+  });
+
+  it("needs the exact project name: nothing is deleted without it", async () => {
+    // Catches: an irreversible delete that works without the confirmation, or
+    // accepts a near miss (case, spaces, a different project's name).
+    const { auth, projectBase, projectId, createIssue, owner } = await setup();
+    await createIssue(owner.token, "Precious");
+
+    await request(app).delete(projectBase).set(auth).expect(400);
+    await request(app).delete(projectBase).set(auth).send({}).expect(400);
+    for (const attempt of ["website", "Website ", "WEB", ""]) {
+      const res = await request(app)
+        .delete(projectBase)
+        .set(auth)
+        .send({ confirmName: attempt })
+        .expect(400);
+      expect(res.body.error.code).toBe("confirmation_mismatch");
+    }
+    expect(
+      await db.select().from(projects).where(eq(projects.id, projectId)),
+    ).toHaveLength(1);
+    expect(await db.select().from(issues)).toHaveLength(1);
+  });
+
+  it("an owner or admin may; a member and a viewer may not, even with the right name", async () => {
+    // Catches: a missing manage_project guard.
+    const { owner, projectBase, projectId } = await setup();
+    const admin = await addMember(owner.organizationId, "Admin One", "admin");
+    const member = await addMember(owner.organizationId, "Member One", "member");
+    const viewer = await addMember(owner.organizationId, "Viewer One", "viewer");
+
+    await request(app)
+      .delete(projectBase)
+      .set(asUser(member.token))
+      .send({ confirmName: "Website" })
+      .expect(403);
+    await request(app)
+      .delete(projectBase)
+      .set(asUser(viewer.token))
+      .send({ confirmName: "Website" })
+      .expect(403);
+    expect(
+      await db.select().from(projects).where(eq(projects.id, projectId)),
+    ).toHaveLength(1);
+
+    await request(app)
+      .delete(projectBase)
+      .set(asUser(admin.token))
+      .send({ confirmName: "Website" })
+      .expect(204);
+    expect(await db.select().from(projects)).toHaveLength(0);
+  });
+
+  it("another organization cannot delete it, and the query is scoped by organization on its own", async () => {
+    // Catches: tenant leakage, including relying on the middleware alone (ADR 0004).
+    const { projectBase, projectId } = await setup();
+    const outsider = await registerOwner("outsider@example.com", "Org B");
+
+    await request(app)
+      .delete(projectBase)
+      .set(asUser(outsider.token))
+      .send({ confirmName: "Website" })
+      .expect(403);
+    const sneaky = await request(app)
+      .delete(`/api/v1/organizations/${outsider.organizationId}/projects/${projectId}`)
+      .set(asUser(outsider.token))
+      .send({ confirmName: "Website" })
+      .expect(404);
+    expect(sneaky.body.error.code).toBe("project_not_found");
+
+    const direct = await projectsRepository.remove({
+      organizationId: outsider.organizationId,
+      projectId,
+    });
+    expect(direct.status).toBe("not_found");
+    expect(
+      await db.select().from(projects).where(eq(projects.id, projectId)),
+    ).toHaveLength(1);
+  });
+});
+
+describe("delete performance guard", () => {
+  it("notifications has an index on issue_event_id, which the delete cascade looks up", async () => {
+    // Catches: losing the index in a future schema change. Without it, deleting an
+    // issue or a project scans the whole notifications table once per event
+    // (measured at 20,000 issues: 8.96 s, 95% of it in that one cascade trigger;
+    // with the index 0.58 s). Cheap to check, expensive to rediscover.
+    const result = await db.execute<{ indexname: string }>(
+      sql`SELECT indexname FROM pg_indexes WHERE tablename = 'notifications' AND indexdef LIKE '%(issue_event_id)%'`,
+    );
+    expect(result.rows.map((row) => row.indexname)).toContain(
+      "notifications_issue_event_id_idx",
+    );
   });
 });

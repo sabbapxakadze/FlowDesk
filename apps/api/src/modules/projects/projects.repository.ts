@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { projects } from "../../db/schema/index.js";
+import { attachments, issueEvents, issues, projects } from "../../db/schema/index.js";
 
 /**
  * Drizzle queries only — no business logic here (see CLAUDE.md's layering
@@ -41,4 +41,46 @@ export async function updateName(organizationId: string, projectId: string, name
     .where(and(eq(projects.organizationId, organizationId), eq(projects.id, projectId)))
     .returning();
   return project;
+}
+
+/**
+ * Hard-deletes a project (ADR 0022). Everything under it goes by ON DELETE
+ * CASCADE: issues and, through them, events, comments, attachment rows,
+ * issue-labels and notifications; plus the project's sprints. The cascade cannot
+ * delete the uploaded FILES, so their storage keys are returned for the service
+ * to remove after the commit, together with who had notifications for any of the
+ * project's issues (so their bells can refetch). One transaction; scoped by
+ * organization in the query itself.
+ */
+export async function remove(input: { organizationId: string; projectId: string }): Promise<
+  { status: "deleted"; storageKeys: string[]; affectedUserIds: string[] } | { status: "not_found" }
+> {
+  return db.transaction(async (tx) => {
+    const scope = and(eq(projects.organizationId, input.organizationId), eq(projects.id, input.projectId));
+    const [project] = await tx.select({ id: projects.id }).from(projects).where(scope);
+    if (!project) return { status: "not_found" };
+
+    const inProject = and(eq(issues.organizationId, input.organizationId), eq(issues.projectId, input.projectId));
+    const files = await tx
+      .select({ storageKey: attachments.storageKey })
+      .from(attachments)
+      .innerJoin(issues, eq(attachments.issueId, issues.id))
+      .where(inProject);
+    const actors = await tx
+      .selectDistinct({ userId: issueEvents.actorId })
+      .from(issueEvents)
+      .innerJoin(issues, eq(issueEvents.issueId, issues.id))
+      .where(inProject);
+    const assignees = await tx.selectDistinct({ userId: issues.assigneeId }).from(issues).where(inProject);
+
+    await tx.delete(projects).where(scope);
+
+    const affected = new Set<string>(actors.map((row) => row.userId));
+    for (const row of assignees) if (row.userId) affected.add(row.userId);
+    return {
+      status: "deleted",
+      storageKeys: files.map((file) => file.storageKey),
+      affectedUserIds: [...affected],
+    };
+  });
 }

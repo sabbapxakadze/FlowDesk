@@ -124,11 +124,13 @@ export async function apiDelete<T>(path: string, schema: z.ZodType<T>): Promise<
 }
 
 /** Same as apiDelete, for a DELETE that returns 204 No Content — first
- * use: attachment deletion (Phase 7 slice 4). */
-export async function apiDeleteVoid(path: string): Promise<void> {
+ * use: attachment deletion (Phase 7 slice 4). An optional JSON body is for the
+ * rare delete that must carry a confirmation (deleting a project, ADR 0022). */
+export async function apiDeleteVoid(path: string, body?: unknown): Promise<void> {
   const res = await fetch(`/api${path}`, {
     method: "DELETE",
-    headers: authHeaders(),
+    headers: body === undefined ? authHeaders() : { "Content-Type": "application/json", ...authHeaders() },
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
 
   if (!res.ok) {

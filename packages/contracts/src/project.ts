@@ -64,3 +64,15 @@ export const updateProjectResponseSchema = z.object({
 });
 
 export type UpdateProjectResponse = z.infer<typeof updateProjectResponseSchema>;
+
+/**
+ * Deleting a project removes every issue, comment, file, sprint and history under
+ * it, so the API asks for the project's exact name in the body as well as the
+ * UI asking the person to type it: a stray request or script cannot do this by
+ * accident (ADR 0022).
+ */
+export const deleteProjectRequestSchema = z.object({
+  confirmName: z.string(),
+});
+
+export type DeleteProjectRequest = z.infer<typeof deleteProjectRequestSchema>;

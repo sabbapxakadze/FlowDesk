@@ -131,3 +131,90 @@ test("a sprint can be deleted, but not while it is active", async ({
   await page.reload();
   await expect(row("Old sprint")).toHaveCount(0);
 });
+
+test("deleting a project needs its typed name, removes it everywhere, and sends another viewer away live", async ({
+  loggedInPage: page,
+  browser,
+}) => {
+  // Why: the most destructive action in the app. The button must stay disabled
+  // until the exact name is typed; the project must vanish from the sidebar and
+  // the projects list; and a second person who has one of its pages open must be
+  // sent to the projects list instead of being left on pages that now fail. A
+  // plain member must not be offered the control at all.
+  const { projectId } = await createIssueViaApi(page.request, {
+    projectName: "Website",
+    projectKey: "WEB",
+    titles: ["An issue", "Another issue"],
+  });
+  await createIssueViaApi(page.request, {
+    projectName: "Keep me",
+    projectKey: "KEP",
+    titles: ["Neighbour"],
+  });
+  await addOrgMember("e2e-user@example.com", {
+    email: "e2e-second@example.com",
+    name: "Second Person",
+  });
+
+  const contextB = await browser.newContext();
+  const pageB = await contextB.newPage();
+  await logInThroughForm(pageB, "e2e-second@example.com");
+  const membersLoaded = pageB.waitForResponse(
+    (res) => res.url().includes("/members") && res.ok(),
+  );
+  await pageB.goto(`/projects/${projectId}/settings`);
+  await membersLoaded;
+  await expect(
+    pageB.getByText("Only owners and admins can change project settings."),
+  ).toBeVisible();
+  await expect(pageB.getByRole("button", { name: "Delete project" })).toHaveCount(0);
+  await pageB.goto(`/projects/${projectId}`);
+  await expect(pageB.getByRole("listitem").filter({ hasText: "An issue" })).toBeVisible();
+
+  // A: ask, get the warning, and be blocked until the exact name is typed.
+  await page.goto(`/projects/${projectId}/settings`);
+  await page.getByRole("button", { name: "Delete project" }).click();
+  await expect(page.getByText("permanently deletes")).toBeVisible();
+  const confirm = page.getByRole("button", { name: "Delete this project" });
+  await expect(confirm).toBeDisabled();
+  await page.getByLabel("Confirm project name").fill("website");
+  await expect(confirm).toBeDisabled();
+  await page.getByLabel("Confirm project name").fill("Website");
+  await expect(confirm).toBeEnabled();
+
+  // Cancel backs out and resets the typed text.
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await page.getByRole("button", { name: "Delete project" }).click();
+  await expect(page.getByLabel("Confirm project name")).toHaveValue("");
+  await page.getByLabel("Confirm project name").fill("Website");
+  await page.getByRole("button", { name: "Delete this project" }).click();
+
+  // Gone for A: redirected, absent from the sidebar and the list, still gone after a reload.
+  await expect(page).toHaveURL(/\/projects$/);
+  const sidebar = page.getByRole("navigation", { name: "Main" });
+  await expect(sidebar.getByRole("link", { name: "Keep me" })).toBeVisible();
+  await expect(sidebar.getByRole("link", { name: "Website", exact: true })).toHaveCount(
+    0,
+  );
+  await page.reload();
+  await expect(
+    page.getByRole("main").getByRole("link", { name: /Keep me/ }),
+  ).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: /Website/ })).toHaveCount(
+    0,
+  );
+
+  // B, who had one of its pages open, was sent to the projects list live, and the neighbour is intact.
+  await expect(pageB).toHaveURL(/\/projects$/);
+  await expect(
+    pageB
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("link", { name: "Website", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    pageB
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("link", { name: "Keep me" }),
+  ).toBeVisible();
+  await contextB.close();
+});

@@ -1,0 +1,1 @@
+CREATE INDEX "notifications_issue_event_id_idx" ON "notifications" USING btree ("issue_event_id");

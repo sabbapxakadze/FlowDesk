@@ -1691,8 +1691,34 @@ The original plan for this slice, kept for the record:
      **Known gap:** the deleted issue's old URL shows a skeleton for about 7
      seconds before "not found" (the pre-existing item in the small-UI-wins list);
      the e2e test waits 15 s for it.
-   - **3C, delete project** (not started): owner/admin, type the project name to
-     confirm, large cascade, files removed, e2e test.
+   - **3C, delete project: DONE 2026-10-01 (ADR 0022).** Owner/admin; the project's
+     exact name must be typed in the UI AND is required by the API (`confirmName`,
+     else `400 confirmation_mismatch`); everything under the project cascades, its
+     files are removed from disk, and the whole organization is told (sidebars and
+     lists drop it, anyone on one of its pages is sent to `/projects`, affected
+     bells refetch). `apiDeleteVoid` can now carry a body.
+     **Measured at 20,000 issues (test DB; 30,000 events, 5,000 comments, 9,062
+     notifications): 8.96 s, 8.48 s of it in ONE cascade trigger** because
+     `notifications.issue_event_id` had no index. **Migration 0018** adds it: 0.58 s
+     (15x), 0.60 s through the real repository function. It also helps deleting a
+     single issue on a big database. **Verified:** 4 new API tests plus an index guard
+     (full cascade incl. sprints, comments, events, notifications, labels link, files
+     really gone from disk, neighbouring project and its file untouched, label stays;
+     wrong, missing and near-miss names refused with nothing deleted; admin yes,
+     member and viewer no; other org 403, 404 with a borrowed org id, repository
+     query scoped on its own); mutations (files not removed, name not required, name
+     matched case-insensitively, delete open to members, repository unscoped, index
+     dropped) each fail a named test; e2e test (button disabled until the exact name,
+     Cancel resets, deleted for the owner and absent after a reload, a second person
+     on a project page redirected live, a plain member never offered the control, a
+     neighbouring project intact), 6 of 6 repeat runs, and two mutations (no
+     broadcast; button enabled without the name) fail it. Dark and light screenshots
+     looked right. Suites: 261 API tests, 16 e2e tests. **Not verified:** a project
+     with a very large number of FILES (the 20,000-issue test had none); the
+     request's total time over HTTP at that size (only the database work was timed);
+     mobile width. **Known gaps:** a person redirected by a deleted project is not
+     told why; no audit trail of who deleted what. **Phase 8.5 slice 3 (rename and
+     delete) is complete.**
 3. **Invite teammates** by email with roles (the roles enum already exists).
 4. **Due dates** with an overdue marker.
 5. **Small UI wins:** `C` to create an issue, a visible Ctrl+K button in the

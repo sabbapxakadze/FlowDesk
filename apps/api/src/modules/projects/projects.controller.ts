@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import {
   createProjectRequestSchema,
   createProjectResponseSchema,
+  deleteProjectRequestSchema,
   listProjectsResponseSchema,
   updateProjectRequestSchema,
   updateProjectResponseSchema,
@@ -83,4 +84,39 @@ export async function updateProject(req: Request, res: Response) {
   }
 
   res.json(updateProjectResponseSchema.parse({ data: toWireFormat(project) }));
+}
+
+export async function deleteProject(req: Request, res: Response) {
+  if (!req.ctx?.projectId) {
+    throw new Error("deleteProject requires requireProject to have run first");
+  }
+
+  const parsed = deleteProjectRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError(
+      "validation_error",
+      400,
+      "Type the project's name to confirm.",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+
+  const result = await projectsService.deleteProject({
+    organizationId: req.ctx.organizationId,
+    projectId: req.ctx.projectId,
+    confirmName: parsed.data.confirmName,
+  });
+
+  if (result.status === "not_found") {
+    throw new AppError("project_not_found", 404, "Project not found.");
+  }
+  if (result.status === "confirmation_mismatch") {
+    throw new AppError(
+      "confirmation_mismatch",
+      400,
+      "The name you typed does not match this project's name.",
+    );
+  }
+
+  res.status(204).end();
 }

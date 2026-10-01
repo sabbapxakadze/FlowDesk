@@ -29,5 +29,10 @@ export const notifications = pgTable(
     index("notifications_user_id_created_at_idx").on(table.userId, table.createdAt),
     // The bell's read pattern: "my unread count" (WHERE read_at IS NULL).
     index("notifications_user_id_read_at_idx").on(table.userId, table.readAt),
+    // Not a read pattern of the app: it is what ON DELETE CASCADE from issue_events
+    // looks up. Without it, deleting an issue or a project scanned the whole
+    // notifications table once per event (measured: 8.5 s of a 9.0 s project delete
+    // at 20,000 issues). Phase 8.5 slice 3C.
+    index("notifications_issue_event_id_idx").on(table.issueEventId),
   ],
 );

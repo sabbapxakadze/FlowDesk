@@ -1,4 +1,6 @@
 import { AppError } from "../../shared/errors.js";
+import * as storage from "../../lib/storage.js";
+import { broadcastNotificationCreated, broadcastProjectDeleted } from "../../realtime/socket-server.js";
 import * as projectsRepository from "./projects.repository.js";
 
 /**
@@ -48,4 +50,30 @@ export async function createProject(input: { organizationId: string; name: strin
 
 export async function renameProject(input: { organizationId: string; projectId: string; name: string }) {
   return projectsRepository.updateName(input.organizationId, input.projectId, input.name);
+}
+
+/**
+ * Delete a project. The caller's role is already checked by the route
+ * (manage_project: owner/admin). Here: the typed name must match exactly, then
+ * after the database has committed the uploaded files are removed from disk
+ * (best effort, logged), the organization is told so sidebars and open pages
+ * drop the project, and everyone who had notifications for its issues refetches
+ * their bell (those notifications went with the issues).
+ */
+export async function deleteProject(input: { organizationId: string; projectId: string; confirmName: string }) {
+  const project = await projectsRepository.findById(input.organizationId, input.projectId);
+  if (!project) return { status: "not_found" } as const;
+  if (input.confirmName !== project.name) return { status: "confirmation_mismatch" } as const;
+
+  const result = await projectsRepository.remove(input);
+  if (result.status === "not_found") return result;
+
+  for (const storageKey of result.storageKeys) {
+    await storage.deleteFile(storageKey);
+  }
+  broadcastProjectDeleted(input.organizationId, input.projectId);
+  // The event name says "created" but the client's reaction is simply to refetch
+  // its notification list and unread count, which is what is needed.
+  for (const userId of result.affectedUserIds) broadcastNotificationCreated(userId);
+  return { status: "deleted" } as const;
 }

@@ -311,6 +311,15 @@ export function broadcastIssueChanged(projectId: string, issueId: string): void 
 }
 
 /**
+ * A project was hard-deleted (ADR 0022). Sent to the whole organization room, not
+ * just the project room: people who are not looking at the project (the sidebar,
+ * the projects list) need to drop it too, and people who are need to be sent away.
+ */
+export function broadcastProjectDeleted(organizationId: string, projectId: string): void {
+  ioInstance?.to(`org:${organizationId}`).emit("project:deleted", { projectId });
+}
+
+/**
  * An issue was hard-deleted (ADR 0022). Goes to the issue room (so anyone
  * looking at it can be sent back to the list instead of seeing "not found") and
  * to the project room (so boards and lists drop the card). A distinct event from
