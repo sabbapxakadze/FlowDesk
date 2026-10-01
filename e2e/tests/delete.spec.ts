@@ -54,11 +54,16 @@ test("deleting an issue asks first, removes it, and sends another viewer away li
 
   // B, who was looking at it, is sent to the project's list without a reload.
   await expect(pageB).toHaveURL(new RegExp(`/projects/${projectId}$`));
+  // ...with a notice saying why, which can be dismissed.
+  await expect(pageB.getByRole("status")).toContainText("This issue was deleted.");
+  await pageB.getByRole("button", { name: "Dismiss" }).click();
+  await expect(pageB.getByRole("status")).toHaveCount(0);
+  await expect(pageB).toHaveURL(new RegExp(`/projects/${projectId}$`));
+
+  // A deleted issue's URL no longer works, and says so promptly: a 404 is not
+  // retried, so there is no seven-second skeleton first (default timeout).
   await pageB.goto(issueUrl);
-  // A deleted issue's URL no longer works. The page shows a skeleton for about
-  // 7 seconds before "not found" (a failed request is retried; a known item in
-  // the Phase 8.5 small-UI-wins list), hence the longer timeout.
-  await expect(pageB.getByText("Issue not found")).toBeVisible({ timeout: 15_000 });
+  await expect(pageB.getByText("Issue not found")).toBeVisible();
   await contextB.close();
 });
 
@@ -206,6 +211,7 @@ test("deleting a project needs its typed name, removes it everywhere, and sends 
 
   // B, who had one of its pages open, was sent to the projects list live, and the neighbour is intact.
   await expect(pageB).toHaveURL(/\/projects$/);
+  await expect(pageB.getByRole("status")).toContainText("This project was deleted.");
   await expect(
     pageB
       .getByRole("navigation", { name: "Main" })

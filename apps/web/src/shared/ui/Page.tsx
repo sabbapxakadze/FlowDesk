@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router";
 import { cn } from "./lib/cn";
+import { NavigationNotice } from "./NavigationNotice";
 
 /**
  * The frame every logged-in page renders: the one <main> landmark, responsive
@@ -24,6 +25,7 @@ export function Page({
         width === "reading" ? "max-w-5xl" : "max-w-7xl",
       )}
     >
+      <NavigationNotice />
       {children}
     </main>
   );

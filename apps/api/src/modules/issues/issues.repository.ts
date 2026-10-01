@@ -336,7 +336,7 @@ async function computeBisectedRank(
 export async function writeIssueEvent(
   tx: Tx,
   input: { issueId: string; actorId: string; type: string; payload: Record<string, unknown> },
-  options: { notify?: boolean } = {},
+  options: { notify?: boolean; alsoNotifyUserIds?: string[] } = {},
 ): Promise<string[]> {
   const [event] = await tx.insert(issueEvents).values(input).returning({ id: issueEvents.id });
   if (!event) throw new Error("Failed to write issue event");
@@ -347,6 +347,7 @@ export async function writeIssueEvent(
     issueEventId: event.id,
     issueId: input.issueId,
     excludeActorId: input.actorId,
+    alsoNotifyUserIds: options.alsoNotifyUserIds,
   });
 }
 
@@ -494,13 +495,21 @@ export async function update(input: {
       .returning();
 
     if (updated) {
-      const notifiedUserIds = await writeIssueEvent(tx, {
-        issueId: updated.id,
-        actorId: input.actorId,
-        type: "issue.updated",
-        // The assignee's name only travels with a real assignee change.
-        payload: { ...changed, ...("assigneeId" in changed ? input.eventExtras : {}) },
-      });
+      const notifiedUserIds = await writeIssueEvent(
+        tx,
+        {
+          issueId: updated.id,
+          actorId: input.actorId,
+          type: "issue.updated",
+          // The assignee's name only travels with a real assignee change.
+          payload: { ...changed, ...("assigneeId" in changed ? input.eventExtras : {}) },
+        },
+        {
+          // Whoever held the issue until now is told it moved on (ADR 0021): they
+          // may never have acted on it, so the participant rule would miss them.
+          alsoNotifyUserIds: "assigneeId" in changed && before.assigneeId ? [before.assigneeId] : [],
+        },
+      );
       return { status: "updated", issue: updated, notifiedUserIds };
     }
 

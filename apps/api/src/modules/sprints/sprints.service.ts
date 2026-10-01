@@ -1,5 +1,5 @@
 import { AppError } from "../../shared/errors.js";
-import { broadcastNotificationCreated } from "../../realtime/socket-server.js";
+import { broadcastNotificationCreated, broadcastOrganizationChanged } from "../../realtime/socket-server.js";
 import * as sprintsRepository from "./sprints.repository.js";
 
 export async function listSprints(organizationId: string, projectId: string) {
@@ -71,9 +71,17 @@ export async function renameSprint(input: {
   expectedVersion: number;
   name: string;
 }) {
-  return sprintsRepository.rename(input);
+  const result = await sprintsRepository.rename(input);
+  if (result.status === "renamed") {
+    broadcastOrganizationChanged(input.organizationId, { kind: "sprint", projectId: input.projectId });
+  }
+  return result;
 }
 
 export async function deleteSprint(input: { organizationId: string; projectId: string; sprintId: string }) {
-  return sprintsRepository.remove(input);
+  const result = await sprintsRepository.remove(input);
+  if (result.status === "deleted") {
+    broadcastOrganizationChanged(input.organizationId, { kind: "sprint", projectId: input.projectId });
+  }
+  return result;
 }

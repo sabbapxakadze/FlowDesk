@@ -43,14 +43,25 @@ key cannot answer.
   the actor. The assignee is read from the issue row as updated in the same
   transaction, so a person who has just been assigned is notified by the very event
   that assigned them. Implemented as one `UNION` in `createForIssueEvent`.
+- **Amended 2026-10-01: the PREVIOUS assignee is told too.** When an update really
+  changes the assignee (unassigning, or handing the issue to someone else), whoever
+  held it until now is added to the recipients, even if they never commented or edited
+  anything on it. `update()` passes the previous assignee as `alsoNotifyUserIds`
+  through `writeIssueEvent` to `createForIssueEvent`, which adds one more `UNION`
+  branch only when the list is non-empty. They hear "<actor> unassigned this issue" or
+  "<actor> assigned this issue to <name>" in the usual feed. Someone who unassigns
+  themselves is not told of their own action (the actor is always excluded). Edits
+  that do not change the assignee add nobody. (A first version of the SQL passed the
+  list as a driver array; drizzle turns a JS array into a row list `($1, $2)`, which
+  is not a `uuid[]`, and the query failed for every issue event, so the fragment is
+  now built explicitly.)
 
 ## Consequences
 
 - Someone who is assigned an issue but never touches it now gets every later
   notification for it. That is the intent, and it is also noise if an issue is busy;
   muting or per-issue subscription is not built.
-- The previous assignee is NOT notified that they were unassigned unless they had
-  acted on the issue (then they are a participant). A small gap, accepted for now.
+- (Resolved by the 2026-10-01 amendment above: the previous assignee is now told.)
 - There is still no way to remove a member from an organization. When that exists,
   their issues need a decision (leave the id, or clear it); today `SET NULL` only
   covers deleting the user row.

@@ -4,7 +4,7 @@ import { Outlet } from "react-router";
 import { useAuth } from "../shared/auth/useAuth";
 import { NotificationBell } from "../widgets/notification-bell";
 import { Sidebar } from "../widgets/sidebar";
-import { useLiveProjectDeletion } from "./useLiveProjectDeletion";
+import { useLiveOrganizationUpdates } from "./useLiveOrganizationUpdates";
 
 const DESKTOP_QUERY = "(min-width: 768px)";
 
@@ -31,7 +31,7 @@ function useIsDesktop(): boolean {
  */
 export function AppShell() {
   const { organization } = useAuth();
-  useLiveProjectDeletion(organization?.id ?? "");
+  useLiveOrganizationUpdates(organization?.id ?? "");
   const isDesktop = useIsDesktop();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const open = drawerOpen && !isDesktop;

@@ -247,3 +247,81 @@ describe("notifications with an assignee (HTTP)", () => {
     expect(recipients).toEqual([owner.userId]);
   });
 });
+
+describe("the previous assignee is told when the issue moves on (HTTP)", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  async function assign(base: string, token: string, issueId: string, version: number, assigneeId: string | null) {
+    const res = await request(app)
+      .patch(`${base}/issues/${issueId}`)
+      .set(asUser(token))
+      .send({ version, assigneeId })
+      .expect(200);
+    return res.body.data.version as number;
+  }
+
+  it("unassigning notifies the person who held it, even though they never acted on it", async () => {
+    // Catches: the old gap (ADR 0021) where a person silently lost an issue and
+    // heard nothing, because only past participants and the CURRENT assignee were told.
+    const { owner, base, createIssue } = await setup();
+    const holder = await addMember(owner.organizationId, "Former Holder");
+    const issue = await createIssue("Taken away");
+    const v2 = await assign(base, owner.token, issue.id, issue.version, holder.userId);
+    await db.delete(notifications);
+
+    await assign(base, owner.token, issue.id, v2, null);
+
+    const recipients = (await db.select().from(notifications)).map((n) => n.userId);
+    expect(recipients).toEqual([holder.userId]);
+  });
+
+  it("reassigning notifies both the previous and the new assignee", async () => {
+    const { owner, base, createIssue } = await setup();
+    const first = await addMember(owner.organizationId, "First Holder");
+    const second = await addMember(owner.organizationId, "Second Holder");
+    const issue = await createIssue("Passed on");
+    const v2 = await assign(base, owner.token, issue.id, issue.version, first.userId);
+    await db.delete(notifications);
+
+    await assign(base, owner.token, issue.id, v2, second.userId);
+
+    const recipients = (await db.select().from(notifications)).map((n) => n.userId).sort();
+    expect(recipients).toEqual([first.userId, second.userId].sort());
+  });
+
+  it("someone who unassigns themselves is not notified of their own action", async () => {
+    // Catches: self-notification through the new previous-assignee path.
+    const { owner, base, createIssue } = await setup();
+    const holder = await addMember(owner.organizationId, "Self Releaser");
+    const issue = await createIssue("Mine, then not");
+    const v2 = await assign(base, owner.token, issue.id, issue.version, holder.userId);
+    await db.delete(notifications);
+
+    await assign(base, holder.token, issue.id, v2, null);
+
+    const recipients = (await db.select().from(notifications)).map((n) => n.userId);
+    expect(recipients).toEqual([owner.userId]); // the owner took part; the actor is left out
+  });
+
+  it("an edit that does not touch the assignee tells nobody extra", async () => {
+    // Catches: the previous-assignee list being filled on every update.
+    const { owner, base, createIssue } = await setup();
+    const holder = await addMember(owner.organizationId, "Steady Holder");
+    const issue = await createIssue("Steady");
+    const v2 = await assign(base, owner.token, issue.id, issue.version, holder.userId);
+    await db.delete(notifications);
+
+    // Only the title changes; the assignee stays: the holder is a CURRENT assignee
+    // (told by the existing rule), and no "previous" recipient is added on top.
+    await request(app)
+      .patch(`${base}/issues/${issue.id}`)
+      .set(asUser(owner.token))
+      .send({ version: v2, title: "Steady, renamed" })
+      .expect(200);
+
+    const recipients = (await db.select().from(notifications)).map((n) => n.userId);
+    expect(recipients).toEqual([holder.userId]);
+  });
+});

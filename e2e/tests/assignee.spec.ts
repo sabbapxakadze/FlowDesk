@@ -67,5 +67,14 @@ test("assign a teammate: card, filters, activity, and the teammate is notified l
   await pageA.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
   await expect(pageA.getByText("assigned this issue to Second Person")).toHaveCount(1);
 
+  // A takes it away again: the previous assignee is told live too (the bell goes
+  // from 1 to 2), even though B never commented or edited anything on the issue.
+  await pageA.goto(`/projects/${projectId}`);
+  await card("Pass the baton").getByRole("button", { name: "Edit" }).click();
+  await pageA.locator(`select[name="assigneeId"]`).selectOption({ label: "Unassigned" });
+  await pageA.getByRole("button", { name: "Save" }).click();
+  await expect(card("Pass the baton").getByRole("img", { name: /Assigned to/ })).toHaveCount(0);
+  await expect(pageB.getByRole("button", { name: "Notifications" })).toContainText("2");
+
   await contextB.close();
 });

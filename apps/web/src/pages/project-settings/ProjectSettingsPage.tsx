@@ -75,7 +75,7 @@ export function ProjectSettingsPage() {
           <DeleteProjectForm
             organizationId={organization!.id}
             project={project}
-            onDeleted={() => navigate("/projects", { replace: true })}
+            onDeleted={() => navigate("/projects", { replace: true, state: { notice: "This project was deleted." } })}
           />
         </section>
       )}

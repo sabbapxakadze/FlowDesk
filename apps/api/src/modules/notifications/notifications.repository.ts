@@ -24,8 +24,24 @@ const RESULT_LIMIT = 25;
  */
 export async function createForIssueEvent(
   tx: Tx,
-  input: { issueEventId: string; issueId: string; excludeActorId: string },
+  input: {
+    issueEventId: string;
+    issueId: string;
+    excludeActorId: string;
+    /** Extra people to tell regardless of history, e.g. the PREVIOUS assignee (ADR 0021). */
+    alsoNotifyUserIds?: string[];
+  },
 ): Promise<string[]> {
+  const alsoNotify = input.alsoNotifyUserIds ?? [];
+  // Built by hand: drizzle expands a JS array into a row list "($1, $2)" (and "()"
+  // when empty), which is not a uuid[]. No extras means no extra UNION branch.
+  const extraRecipients =
+    alsoNotify.length > 0
+      ? sql`UNION SELECT unnest(ARRAY[${sql.join(
+          alsoNotify.map((id) => sql`${id}::uuid`),
+          sql`, `,
+        )}]) AS user_id`
+      : sql``;
   // Recipients: everyone who has acted on the issue (participants), plus the
   // issue's CURRENT assignee even if they never acted (ADR 0021). UNION removes
   // duplicates; the assignee is read from the row as updated in this same
@@ -39,6 +55,7 @@ export async function createForIssueEvent(
       UNION
       SELECT assignee_id AS user_id FROM issues
       WHERE id = ${input.issueId}::uuid AND assignee_id IS NOT NULL
+      ${extraRecipients}
     ) AS recipients
     WHERE recipients.user_id != ${input.excludeActorId}::uuid
     RETURNING user_id

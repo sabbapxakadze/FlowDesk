@@ -1795,6 +1795,37 @@ The original plan for this slice, kept for the record:
    - **Small things noticed, not fixed:** initials for a name that ends in a number
      come out as "P5" (fine for real names); the dark-mode avatar circle is only
      faintly lighter than the card.
+   **Polish slice: DONE 2026-10-01** (four gaps found by the verification pass above):
+   - **Notice after a deletion:** a redirect caused by a deleted project or issue now
+     carries a one-off notice ("This project was deleted." / "This issue was deleted."),
+     shown by `Page`, dismissible, gone when you navigate on.
+   - **Renames and deletes reach other tabs:** `org:changed {kind}` on the organization
+     room for project renames, label rename/delete, sprint rename/delete; the app shell
+     (`useLiveOrganizationUpdates`) refetches the matching list. Measured: a background,
+     unfocused tab updated 173 ms after the save (before: only on focus).
+   - **No more 7-second "not found":** the query client does not retry 4xx answers
+     (network errors and 5xx still retry); a link to a missing issue now says so in 0.7 s
+     in the real browser. The 15 s timeout in the delete e2e test is gone.
+   - **The previous assignee is told** when the issue is unassigned or handed on
+     (ADR 0021 amended), even if they never acted on it; self-unassign tells nobody
+     about your own action; edits that leave the assignee alone add nobody.
+   - **Found by the tests while building it:** my first version of the previous-assignee
+     SQL passed a JS array to drizzle, which expands it into a row list `($1, $2)`
+     (`()` when empty); that is not a `uuid[]`, so creating ANY issue returned a 500.
+     Caught by a new broadcast test before it shipped; fragment now built explicitly.
+   - **Also added:** API broadcast tests for `org:changed`, `project:deleted` and
+     `issue:deleted` (6 tests in `realtime/org-broadcast.test.ts`; the delete broadcasts
+     of slices 3B and 3C were previously covered only by e2e), each also asserting another
+     organization's room hears nothing where that matters.
+   - **Verified:** mutations (no project-rename broadcast; 404s retried again; notice never
+     shown; previous assignee not passed on) each fail a named test; real-browser checks of
+     the 0.7 s not-found, the live rename, and the notice for both the deleter and a second
+     tab (redirected, notice shown, Dismiss clears it and keeps the URL). A fifth mutation
+     (previous assignee passed on every update) is an equivalent change and cannot fail any
+     test: with an unchanged assignee, "previous" is the current assignee, told once either
+     way. Suites: 272 API tests, 20 e2e tests.
+   - **Not done / still open:** an audit trail of who renamed or deleted what; sorting by
+     priority; the dark-mode avatar contrast; the Labels page confirm layout.
 8. **Attachment previews and a nicer comment card (owner idea, 2026-10-01; do it
    before Phase 9).** Today an attachment is only a link, and a comment is a grey
    rail with text. Wanted:

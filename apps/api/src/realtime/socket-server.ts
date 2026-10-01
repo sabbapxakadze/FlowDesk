@@ -311,6 +311,20 @@ export function broadcastIssueChanged(projectId: string, issueId: string): void 
 }
 
 /**
+ * Something shared by the whole organization was renamed, recoloured or removed
+ * (a project, a label, a sprint). Sent to the organization room, where every
+ * connected member already is, so any open tab refetches the matching list
+ * instead of staying stale until it happens to be focused. The payload only says
+ * WHAT kind of thing changed (and which project, for sprints): the client refetches
+ * through the normal endpoints, which keeps tenant scoping in one place.
+ */
+export type OrganizationChange = { kind: "project" } | { kind: "label" } | { kind: "sprint"; projectId: string };
+
+export function broadcastOrganizationChanged(organizationId: string, change: OrganizationChange): void {
+  ioInstance?.to(`org:${organizationId}`).emit("org:changed", change);
+}
+
+/**
  * A project was hard-deleted (ADR 0022). Sent to the whole organization room, not
  * just the project room: people who are not looking at the project (the sidebar,
  * the projects list) need to drop it too, and people who are need to be sent away.

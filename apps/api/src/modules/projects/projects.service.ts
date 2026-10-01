@@ -1,6 +1,10 @@
 import { AppError } from "../../shared/errors.js";
 import * as storage from "../../lib/storage.js";
-import { broadcastNotificationCreated, broadcastProjectDeleted } from "../../realtime/socket-server.js";
+import {
+  broadcastNotificationCreated,
+  broadcastOrganizationChanged,
+  broadcastProjectDeleted,
+} from "../../realtime/socket-server.js";
 import * as projectsRepository from "./projects.repository.js";
 
 /**
@@ -49,7 +53,10 @@ export async function createProject(input: { organizationId: string; name: strin
 }
 
 export async function renameProject(input: { organizationId: string; projectId: string; name: string }) {
-  return projectsRepository.updateName(input.organizationId, input.projectId, input.name);
+  const project = await projectsRepository.updateName(input.organizationId, input.projectId, input.name);
+  // Open tabs (the sidebar, titles) refetch the project list.
+  if (project) broadcastOrganizationChanged(input.organizationId, { kind: "project" });
+  return project;
 }
 
 /**

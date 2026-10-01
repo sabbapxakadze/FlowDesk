@@ -1,0 +1,60 @@
+import { useEffect } from "react";
+import { useMatch, useNavigate } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { issueKeys } from "../entities/issue";
+import { labelKeys } from "../entities/label";
+import { projectKeys } from "../entities/project";
+import { sprintKeys } from "../entities/sprint";
+import { getSocket } from "../shared/socket/socket-client";
+
+type OrganizationChange = { kind: "project" } | { kind: "label" } | { kind: "sprint"; projectId: string };
+
+/**
+ * Listens on the organization room (every connected member is in it), mounted
+ * once in the app shell, for two things:
+ *
+ * - org:changed (a project, label or sprint was renamed, recoloured or deleted):
+ *   refetch the matching list, so an open tab does not stay stale until it
+ *   happens to be focused. The event only says what kind of thing changed; the
+ *   data comes back through the normal endpoints.
+ * - project:deleted (ADR 0022): refetch the project list, and if this person is on
+ *   a page of that project, send them to the projects list with a short notice
+ *   instead of leaving them on pages that would now fail.
+ */
+export function useLiveOrganizationUpdates(organizationId: string): void {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const currentProjectId = useMatch("/projects/:projectId/*")?.params.projectId;
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    function handleChanged(change: OrganizationChange) {
+      if (change.kind === "project") {
+        void queryClient.invalidateQueries({ queryKey: projectKeys.list(organizationId) });
+      } else if (change.kind === "label") {
+        void queryClient.invalidateQueries({ queryKey: labelKeys.list(organizationId) });
+        // Issues cache their own label lists under issueKeys.all.
+        void queryClient.invalidateQueries({ queryKey: issueKeys.all });
+      } else {
+        void queryClient.invalidateQueries({ queryKey: sprintKeys.list(change.projectId) });
+        void queryClient.invalidateQueries({ queryKey: issueKeys.backlog(change.projectId) });
+      }
+    }
+
+    function handleProjectDeleted(payload: { projectId: string }) {
+      void queryClient.invalidateQueries({ queryKey: projectKeys.list(organizationId) });
+      if (payload.projectId === currentProjectId) {
+        navigate("/projects", { replace: true, state: { notice: "This project was deleted." } });
+      }
+    }
+
+    socket.on("org:changed", handleChanged);
+    socket.on("project:deleted", handleProjectDeleted);
+    return () => {
+      socket.off("org:changed", handleChanged);
+      socket.off("project:deleted", handleProjectDeleted);
+    };
+  }, [organizationId, currentProjectId, queryClient, navigate]);
+}

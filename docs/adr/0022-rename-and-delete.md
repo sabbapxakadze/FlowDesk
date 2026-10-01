@@ -111,10 +111,19 @@ its issues and sprints. Analytics are computed on read from `issue_events`
   organization-level audit log would be needed to keep that; not built.
 - Renames of projects, labels and sprints write no event either (events belong to
   issues), so there is no trail of who renamed what.
-- Other people's open pages show the old project or label name until their next
-  refetch; renames do not broadcast. (Deleting a project does broadcast.)
-- A person redirected because their project was deleted is not told why; they land
-  on the projects list. A short notice would help; not built.
+- Other people's open pages used to show the old project, label or sprint name until
+  that tab was focused. **Resolved 2026-10-01:** renames and label/sprint deletes
+  broadcast `org:changed {kind}` to the organization room (a project rename or delete:
+  `kind: "project"`, a label: `"label"`, a sprint: `"sprint"` plus its project id);
+  the app shell refetches the matching list. Measured in a real browser: a background,
+  unfocused tab updated 173 ms after the save. The event says only what kind of thing
+  changed; data comes back through the normal endpoints, so tenant scoping stays in
+  one place and another organization's room never receives it (tested).
+- A person redirected because their project or issue was deleted used to land on a
+  list without being told why. **Resolved 2026-10-01:** the redirect carries a
+  one-off notice ("This project was deleted." / "This issue was deleted.") in
+  navigation state, shown and dismissible by `Page`; it lives in the history entry
+  and is gone when you navigate on.
 - Label colour is validated as `#rrggbb`; the native colour picker produces
   lower-case, the API accepts both.
 

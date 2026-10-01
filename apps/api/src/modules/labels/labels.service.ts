@@ -1,4 +1,5 @@
 import { AppError } from "../../shared/errors.js";
+import { broadcastOrganizationChanged } from "../../realtime/socket-server.js";
 import * as labelsRepository from "./labels.repository.js";
 
 export async function listLabels(organizationId: string) {
@@ -42,7 +43,9 @@ export async function updateLabel(input: {
   changes: { name?: string; color?: string };
 }) {
   try {
-    return await labelsRepository.update(input.organizationId, input.labelId, input.changes);
+    const label = await labelsRepository.update(input.organizationId, input.labelId, input.changes);
+    if (label) broadcastOrganizationChanged(input.organizationId, { kind: "label" });
+    return label;
   } catch (err) {
     if (isUniqueViolation(err, "labels_organization_id_name_unique")) {
       throw new AppError(
@@ -56,5 +59,7 @@ export async function updateLabel(input: {
 }
 
 export async function deleteLabel(input: { organizationId: string; labelId: string }) {
-  return labelsRepository.remove(input.organizationId, input.labelId);
+  const deleted = await labelsRepository.remove(input.organizationId, input.labelId);
+  if (deleted) broadcastOrganizationChanged(input.organizationId, { kind: "label" });
+  return deleted;
 }

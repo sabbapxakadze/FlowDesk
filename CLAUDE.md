@@ -88,6 +88,10 @@ confirmation. Slice 3C (delete project) is done: the exact name is required by t
 API, everything cascades, files are removed, the organization is told live. Measuring
 it at 20,000 issues found a missing index (`notifications.issue_event_id`, 8.5 s of a
 9.0 s delete); migration 0018 fixed it (0.6 s). **Phase 8.5 slice 3 is complete.**
+A polish slice followed (2026-10-01): a notice after a deletion redirect, renames and
+deletes reaching other open tabs live (`org:changed`), no retry of 4xx answers (a bad
+link says "not found" in under a second), and the previous assignee being notified
+(ADR 0021 amended).
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,

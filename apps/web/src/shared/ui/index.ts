@@ -21,3 +21,4 @@ export { PriorityBadge } from "./PriorityBadge";
 export { PRIORITY_LABELS, PRIORITY_ORDER } from "./priorityLabels";
 export { Avatar } from "./Avatar";
 export { ConfirmDelete } from "./ConfirmDelete";
+export { NavigationNotice } from "./NavigationNotice";

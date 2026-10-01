@@ -115,7 +115,7 @@ export function IssueDetailPage() {
   );
   const { data: attachments } = useAttachments(organization!.id, projectId!, issueId!);
   const { viewers } = useLiveIssueDetailUpdates(projectId!, issueId!, () =>
-    navigate(`/projects/${projectId}`, { replace: true }),
+    navigate(`/projects/${projectId}`, { replace: true, state: { notice: "This issue was deleted." } }),
   );
   const otherViewers = viewers.filter((viewer) => viewer.userId !== user?.id);
 
@@ -233,7 +233,9 @@ export function IssueDetailPage() {
             organizationId={organization!.id}
             projectId={project.id}
             issueId={issue.id}
-            onDeleted={() => navigate(`/projects/${project.id}`, { replace: true })}
+            onDeleted={() =>
+              navigate(`/projects/${project.id}`, { replace: true, state: { notice: "This issue was deleted." } })
+            }
           />
         </section>
       )}
