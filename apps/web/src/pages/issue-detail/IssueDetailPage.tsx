@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import type { Attachment, IssueEvent } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
-import { useMemberNames } from "../../entities/member";
+import { useMemberNames, useMyRole } from "../../entities/member";
 import {
   AttachmentList,
   describeEvent,
@@ -11,6 +11,7 @@ import {
   useIssueEvents,
   useLiveIssueDetailUpdates,
 } from "../../entities/issue";
+import { DeleteIssueButton } from "../../features/delete-issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { CommentCard, CommentForm } from "../../features/post-comment";
 import { UploadAttachmentForm } from "../../features/upload-attachment";
@@ -102,6 +103,8 @@ export function IssueDetailPage() {
   const { data: projects, isPending: projectsPending } = useProjects(organization!.id);
   const project = projects?.find((p) => p.id === projectId);
   const nameOf = useMemberNames(organization!.id);
+  const role = useMyRole(organization!.id);
+  const navigate = useNavigate();
 
   const { data: issue, isPending: issuePending } = useIssue(organization!.id, projectId!, issueId!);
 
@@ -111,7 +114,9 @@ export function IssueDetailPage() {
     issueId!,
   );
   const { data: attachments } = useAttachments(organization!.id, projectId!, issueId!);
-  const { viewers } = useLiveIssueDetailUpdates(projectId!, issueId!);
+  const { viewers } = useLiveIssueDetailUpdates(projectId!, issueId!, () =>
+    navigate(`/projects/${projectId}`, { replace: true }),
+  );
   const otherViewers = viewers.filter((viewer) => viewer.userId !== user?.id);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -219,6 +224,19 @@ export function IssueDetailPage() {
       <div className="mt-4">
         <CommentForm organizationId={organization!.id} projectId={project.id} issueId={issue.id} />
       </div>
+
+      {/* The reporter, or an owner or admin (the API enforces the same rule). */}
+      {(issue.reporterId === user?.id || role === "owner" || role === "admin") && (
+        <section className="mt-10 border-t border-[var(--color-border-default)] pt-4">
+          <h2 className="mb-2 text-sm font-semibold">Danger zone</h2>
+          <DeleteIssueButton
+            organizationId={organization!.id}
+            projectId={project.id}
+            issueId={issue.id}
+            onDeleted={() => navigate(`/projects/${project.id}`, { replace: true })}
+          />
+        </section>
+      )}
     </Page>
   );
 }

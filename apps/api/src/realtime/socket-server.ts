@@ -311,6 +311,16 @@ export function broadcastIssueChanged(projectId: string, issueId: string): void 
 }
 
 /**
+ * An issue was hard-deleted (ADR 0022). Goes to the issue room (so anyone
+ * looking at it can be sent back to the list instead of seeing "not found") and
+ * to the project room (so boards and lists drop the card). A distinct event from
+ * issue:changed: a refetch of a deleted issue would be a 404.
+ */
+export function broadcastIssueDeleted(projectId: string, issueId: string): void {
+  ioInstance?.to(`project:${projectId}`).to(`issue:${issueId}`).emit("issue:deleted", { issueId });
+}
+
+/**
  * Comments never render on the board/list, so this only reaches
  * issue:{id} — a project-room viewer has no reason to hear about a
  * comment on an issue they aren't looking at. A distinct event from

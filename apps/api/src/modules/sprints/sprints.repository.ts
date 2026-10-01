@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { sprints, issues } from "../../db/schema/index.js";
 import { writeIssueEvent } from "../issues/issues.repository.js";
@@ -188,4 +188,32 @@ export async function complete(input: {
 
     return { status: "completed", sprint: updated, notifiedUserIds: [...notifiedUserIds] };
   });
+}
+
+/**
+ * Deletes a sprint that is not active. The "not active" condition is part of the
+ * DELETE itself, so a sprint started between a check and the delete cannot be
+ * removed. Issues pointing at it keep existing: issues.sprint_id is
+ * ON DELETE SET NULL (back to the backlog). A completed sprint's issues were
+ * already released when it completed.
+ */
+export async function remove(input: {
+  organizationId: string;
+  projectId: string;
+  sprintId: string;
+}): Promise<{ status: "deleted" } | { status: "active" } | { status: "not_found" }> {
+  const scope = and(
+    eq(sprints.id, input.sprintId),
+    eq(sprints.organizationId, input.organizationId),
+    eq(sprints.projectId, input.projectId),
+  );
+  const deleted = await db
+    .delete(sprints)
+    .where(and(scope, ne(sprints.status, "active")))
+    .returning({ id: sprints.id });
+  if (deleted.length > 0) return { status: "deleted" };
+
+  const [current] = await db.select({ status: sprints.status }).from(sprints).where(scope);
+  if (!current) return { status: "not_found" };
+  return { status: "active" };
 }

@@ -5,6 +5,7 @@ import { hasPermission, type Role } from "../../shared/permissions.js";
 import {
   broadcastIssueChanged,
   broadcastIssueCommented,
+  broadcastIssueDeleted,
   broadcastNotificationCreated,
 } from "../../realtime/socket-server.js";
 import * as storage from "../../lib/storage.js";
@@ -351,4 +352,37 @@ export async function deleteAttachment(input: {
 
 export async function getAttachmentForDownload(attachmentId: string) {
   return issuesRepository.findAttachmentForDownload(attachmentId);
+}
+
+/**
+ * Delete an issue: the reporter, or an owner/admin (mirrors comments). The
+ * permission middleware in front is only the floor (manage_issue); who reported
+ * it is a decision made here against the real row. After the database has
+ * committed: the uploaded files are removed from disk (best effort, logged),
+ * open pages are sent away, and everyone who had notifications for it refetches
+ * their bell (those notifications went with the issue).
+ */
+export async function deleteIssue(input: {
+  organizationId: string;
+  projectId: string;
+  issueId: string;
+  actorId: string;
+  actorRole: Role;
+}) {
+  const issue = await issuesRepository.findById(input.organizationId, input.projectId, input.issueId);
+  if (!issue) return { status: "not_found" } as const;
+  const isAdmin = input.actorRole === "owner" || input.actorRole === "admin";
+  if (issue.reporterId !== input.actorId && !isAdmin) return { status: "forbidden" } as const;
+
+  const result = await issuesRepository.deleteIssue(input);
+  if (result.status === "not_found") return result;
+
+  for (const storageKey of result.storageKeys) {
+    await storage.deleteFile(storageKey);
+  }
+  broadcastIssueDeleted(input.projectId, input.issueId);
+  // The event name says "created" but the client's reaction is simply to
+  // refetch its notification list and unread count, which is what is needed.
+  for (const userId of result.affectedUserIds) broadcastNotificationCreated(userId);
+  return { status: "deleted" } as const;
 }

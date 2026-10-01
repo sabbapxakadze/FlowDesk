@@ -29,3 +29,16 @@ export async function update(
     .returning();
   return label;
 }
+
+/**
+ * Scoped by organization. Removing the label cascades to issue_labels, so it
+ * disappears from every issue that used it; past activity keeps the name it had
+ * (events hold a snapshot). False = no such label in this organization.
+ */
+export async function remove(organizationId: string, labelId: string): Promise<boolean> {
+  const deleted = await db
+    .delete(labels)
+    .where(and(eq(labels.organizationId, organizationId), eq(labels.id, labelId)))
+    .returning({ id: labels.id });
+  return deleted.length > 0;
+}

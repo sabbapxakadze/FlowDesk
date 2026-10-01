@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { LabelBadge, useLabels } from "../../entities/label";
+import { useMyRole } from "../../entities/member";
+import { DeleteLabelButton } from "../../features/delete-label";
 import { EditLabelForm } from "../../features/edit-label";
 import { useAuth } from "../../shared/auth/useAuth";
 import {
@@ -22,6 +24,8 @@ export function LabelsPage() {
   const { organization } = useAuth();
   const { data: labels, isPending, isError, error } = useLabels(organization!.id);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const role = useMyRole(organization!.id);
+  const canDelete = role === "owner" || role === "admin";
 
   return (
     <Page>
@@ -45,7 +49,7 @@ export function LabelsPage() {
             <Card
               key={label.id}
               as="li"
-              className="flex items-center justify-between gap-3"
+              className="flex flex-wrap items-start justify-between gap-3"
             >
               {editingId === label.id ? (
                 <EditLabelForm
@@ -56,13 +60,12 @@ export function LabelsPage() {
               ) : (
                 <>
                   <LabelBadge label={label} />
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setEditingId(label.id)}
-                  >
-                    Edit
-                  </Button>
+                  <div className="flex items-start gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => setEditingId(label.id)}>
+                      Edit
+                    </Button>
+                    {canDelete && <DeleteLabelButton organizationId={organization!.id} label={label} />}
+                  </div>
                 </>
               )}
             </Card>

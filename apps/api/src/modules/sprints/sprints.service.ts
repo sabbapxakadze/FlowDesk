@@ -73,3 +73,7 @@ export async function renameSprint(input: {
 }) {
   return sprintsRepository.rename(input);
 }
+
+export async function deleteSprint(input: { organizationId: string; projectId: string; sprintId: string }) {
+  return sprintsRepository.remove(input);
+}

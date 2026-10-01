@@ -35,3 +35,12 @@ labelsRouter.patch(
   requirePermission("manage_issue"),
   labelsController.updateLabel,
 );
+
+// Admin-level, unlike renaming: removing a label changes every issue that uses it.
+labelsRouter.delete(
+  "/organizations/:organizationId/labels/:labelId",
+  requireAuth,
+  requireOrgMembership,
+  requirePermission("manage_project"),
+  labelsController.deleteLabel,
+);

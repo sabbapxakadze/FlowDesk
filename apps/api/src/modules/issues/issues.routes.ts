@@ -268,3 +268,15 @@ issuesRouter.delete(
 // presigned URL has. See issuesController.downloadAttachment and
 // lib/storage.ts.
 issuesRouter.get("/attachments/:attachmentId/download", issuesController.downloadAttachment);
+
+// Delete: manage_issue is only the floor (it keeps viewers out). Whether THIS
+// person reported the issue, or is an owner/admin, is decided in the service.
+issuesRouter.delete(
+  "/organizations/:organizationId/projects/:projectId/issues/:issueId",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireIssue,
+  requirePermission("manage_issue"),
+  issuesController.deleteIssue,
+);

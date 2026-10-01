@@ -1,0 +1,65 @@
+import { useState } from "react";
+import { Button } from "./Button";
+import { ErrorText } from "./ErrorText";
+
+/**
+ * A delete button that asks first, in place: click once to see what will be
+ * lost and a confirm button, click again to do it. Inline rather than
+ * window.confirm so it can be styled, reached with the keyboard and driven by a
+ * test like any other control. Domain-free: the caller supplies the words.
+ */
+export function ConfirmDelete({
+  label,
+  message,
+  confirmLabel = "Delete",
+  onConfirm,
+  isPending,
+  error,
+}: {
+  /** The button that starts it, e.g. "Delete issue". */
+  label: string;
+  /** What will be lost, shown once the first button is clicked. */
+  message: string;
+  confirmLabel?: string;
+  onConfirm: () => void;
+  isPending?: boolean;
+  error?: string | null;
+}) {
+  const [asking, setAsking] = useState(false);
+
+  if (!asking) {
+    return (
+      <Button type="button" variant="secondary" size="sm" onClick={() => setAsking(true)}>
+        {label}
+      </Button>
+    );
+  }
+
+  return (
+    <div role="alertdialog" aria-label={label} className="flex flex-col gap-2">
+      <p className="text-sm text-[var(--color-text-default)]">{message}</p>
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          disabled={isPending}
+          onClick={onConfirm}
+          className="text-[var(--color-text-danger)]"
+        >
+          {isPending ? "Deleting…" : confirmLabel}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          disabled={isPending}
+          onClick={() => setAsking(false)}
+        >
+          Cancel
+        </Button>
+      </div>
+      {error && <ErrorText>{error}</ErrorText>}
+    </div>
+  );
+}

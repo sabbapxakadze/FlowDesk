@@ -574,3 +574,26 @@ export async function downloadAttachment(req: Request, res: Response) {
   res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(attachment.filename)}"`);
   storage.readFileStream(attachment.storageKey).pipe(res);
 }
+
+export async function deleteIssue(req: Request, res: Response) {
+  if (!req.ctx?.projectId || !req.ctx.issueId) {
+    throw new Error("deleteIssue requires requireIssue to have run first");
+  }
+
+  const result = await issuesService.deleteIssue({
+    organizationId: req.ctx.organizationId,
+    projectId: req.ctx.projectId,
+    issueId: req.ctx.issueId,
+    actorId: req.ctx.userId,
+    actorRole: req.ctx.role,
+  });
+
+  if (result.status === "not_found") {
+    throw new AppError("issue_not_found", 404, "Issue not found.");
+  }
+  if (result.status === "forbidden") {
+    throw new AppError("forbidden", 403, "Only the person who reported an issue, or an owner or admin, can delete it.");
+  }
+
+  res.status(204).end();
+}

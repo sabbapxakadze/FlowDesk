@@ -1158,3 +1158,47 @@ export async function deleteAttachment(input: {
     return { status: "deleted", storageKey: attachment.storageKey, notifiedUserIds };
   });
 }
+
+/**
+ * Hard-deletes an issue (ADR 0022). Everything under it goes by ON DELETE
+ * CASCADE: events, comments, attachment rows, issue-labels and the
+ * notifications that point at its events. What the cascade cannot do is delete
+ * the uploaded FILES, so their storage keys are returned for the service to
+ * remove after the transaction commits. Also returns who had notifications for
+ * this issue (everyone who acted on it, plus the assignee) so their bells can be
+ * told to refetch. Scoped by organization and project in the query itself.
+ */
+export async function deleteIssue(input: {
+  organizationId: string;
+  projectId: string;
+  issueId: string;
+}): Promise<{ status: "deleted"; storageKeys: string[]; affectedUserIds: string[] } | { status: "not_found" }> {
+  return db.transaction(async (tx) => {
+    const scope = and(
+      eq(issues.id, input.issueId),
+      eq(issues.organizationId, input.organizationId),
+      eq(issues.projectId, input.projectId),
+    );
+    const [issue] = await tx.select({ id: issues.id, assigneeId: issues.assigneeId }).from(issues).where(scope);
+    if (!issue) return { status: "not_found" };
+
+    const files = await tx
+      .select({ storageKey: attachments.storageKey })
+      .from(attachments)
+      .where(eq(attachments.issueId, issue.id));
+    const actors = await tx
+      .selectDistinct({ userId: issueEvents.actorId })
+      .from(issueEvents)
+      .where(eq(issueEvents.issueId, issue.id));
+
+    await tx.delete(issues).where(scope);
+
+    const affected = new Set(actors.map((row) => row.userId));
+    if (issue.assigneeId) affected.add(issue.assigneeId);
+    return {
+      status: "deleted",
+      storageKeys: files.map((file) => file.storageKey),
+      affectedUserIds: [...affected],
+    };
+  });
+}

@@ -153,3 +153,24 @@ export async function renameSprint(req: Request, res: Response) {
 
   res.json(sprintResponseSchema.parse({ data: toWireFormat(result.sprint) }));
 }
+
+export async function deleteSprint(req: Request, res: Response) {
+  if (!req.ctx?.projectId || !req.ctx.sprintId) {
+    throw new Error("deleteSprint requires requireSprint to have run first");
+  }
+
+  const result = await sprintsService.deleteSprint({
+    organizationId: req.ctx.organizationId,
+    projectId: req.ctx.projectId,
+    sprintId: req.ctx.sprintId,
+  });
+
+  if (result.status === "active") {
+    throw new AppError("sprint_active", 409, "An active sprint cannot be deleted. Complete it first.");
+  }
+  if (result.status === "not_found") {
+    throw new AppError("sprint_not_found", 404, "Sprint not found.");
+  }
+
+  res.status(204).end();
+}

@@ -59,3 +59,14 @@ sprintsRouter.patch(
   requirePermission("manage_issue"),
   sprintsController.renameSprint,
 );
+
+// Any member who can manage issues may delete a sprint that is not active.
+sprintsRouter.delete(
+  "/organizations/:organizationId/projects/:projectId/sprints/:sprintId",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requireSprint,
+  requirePermission("manage_issue"),
+  sprintsController.deleteSprint,
+);

@@ -52,11 +52,14 @@ export function useLiveIssueUpdates(projectId: string): void {
     join();
     socket.on("connect", join);
     socket.on("issue:changed", handleIssueChanged);
+    // A deleted issue must leave the board and the list too (ADR 0022).
+    socket.on("issue:deleted", handleIssueChanged);
 
     return () => {
       cancelled = true;
       socket.off("connect", join);
       socket.off("issue:changed", handleIssueChanged);
+      socket.off("issue:deleted", handleIssueChanged);
       socket.emit("leave:project", { projectId });
     };
   }, [projectId, queryClient]);

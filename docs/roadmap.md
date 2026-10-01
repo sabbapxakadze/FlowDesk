@@ -1660,10 +1660,37 @@ The original plan for this slice, kept for the record:
      members request and the project links. **Not verified:** light mode and mobile
      width of the new pages; renames do not update other people's open tabs until
      they refetch; no event records who renamed what (no audit trail for renames).
-   - **3B, delete issue, label, sprint** (not started): hard delete; issue by the
-     reporter or an owner/admin; label by owner/admin; sprint by any member but not
-     while active; confirmations; files on disk removed; live redirect for anyone
-     viewing a deleted issue.
+   - **3B, delete issue, label, sprint: DONE 2026-10-01 (ADR 0022).** Hard delete.
+     Issue: the reporter or an owner/admin (decided in the service against the real
+     row); everything under it goes by cascade and its uploaded FILES are removed
+     from disk; anyone viewing it is sent to the project list live, boards and lists
+     drop it, and the bells of everyone who had notifications for it refetch. Label:
+     owner/admin; leaves every issue, history keeps the name. Sprint: any member who
+     can manage issues, refused with a 409 while active (the check is inside the
+     DELETE statement); its issues return to the backlog. Inline confirmation
+     everywhere (shared `ConfirmDelete`).
+     **Verified:** 8 API tests (issue: cascade of comments, events, attachment rows,
+     issue-labels and notifications, the uploaded file really gone from disk while a
+     neighbour issue's file and the label stay; reporter/admin/owner yes, other
+     member and viewer no; other org 403 and 404 and the repository query scoped on
+     its own; label: admin yes with history kept, member/viewer/other org refused,
+     bad id 400; sprint: planned and completed deleted with issues kept and
+     un-sprinted, active 409, member yes, viewer no, wrong project 404); five
+     mutations (files not removed, no reporter-or-admin rule, active sprint
+     deletable, label delete open to members, issue query unscoped) each fail a
+     named test; 3 e2e tests, 18 of 18 across repeats (issue: Cancel backs out,
+     confirm deletes, the second viewer is redirected live, a non-reporter member is
+     not offered the button; label: owner deletes, plain member offered no Delete;
+     sprint: Delete disappears once started), and two mutations (no broadcast of the
+     deletion; button always shown) fail the issue test. Light and dark
+     screenshots of the confirmations looked right. Suites: 256 API tests, 15 e2e.
+     **Not verified:** deleting an issue with a very large number of files; the
+     files-removed path when the disk delete itself fails (it is logged, not
+     tested); mobile width of the confirmations. **Polish noted:** on the Labels
+     page the confirm text sits beside the Edit button, a little cramped.
+     **Known gap:** the deleted issue's old URL shows a skeleton for about 7
+     seconds before "not found" (the pre-existing item in the small-UI-wins list);
+     the e2e test waits 15 s for it.
    - **3C, delete project** (not started): owner/admin, type the project name to
      confirm, large cascade, files removed, e2e test.
 3. **Invite teammates** by email with roles (the roles enum already exists).

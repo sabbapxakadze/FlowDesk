@@ -80,3 +80,24 @@ export async function updateLabel(req: Request, res: Response) {
 
   res.json(updateLabelResponseSchema.parse({ data: toWireFormat(label) }));
 }
+
+export async function deleteLabel(req: Request, res: Response) {
+  if (!req.ctx) {
+    throw new Error("deleteLabel requires requireOrgMembership to have run first");
+  }
+
+  const labelId = z.uuid().safeParse(req.params.labelId);
+  if (!labelId.success) {
+    throw new AppError("invalid_label_id", 400, "labelId must be a UUID.");
+  }
+
+  const deleted = await labelsService.deleteLabel({
+    organizationId: req.ctx.organizationId,
+    labelId: labelId.data,
+  });
+  if (!deleted) {
+    throw new AppError("label_not_found", 404, "Label not found.");
+  }
+
+  res.status(204).end();
+}

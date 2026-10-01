@@ -1,8 +1,8 @@
 # 0022 — Rename and delete for projects, labels, sprints and issues
 
-Status: Accepted — 2026-10-01. Rename (slice 3A) is built. Delete (slices 3B and
-3C) is decided here and not built yet; this ADR will be amended with what the
-build teaches.
+Status: Accepted — 2026-10-01. Rename (slice 3A) and delete for issues, labels and
+sprints (slice 3B) are built. Delete for projects (slice 3C) is decided here and not
+built yet; this ADR is amended with what each build teaches.
 
 ## Context
 
@@ -53,6 +53,29 @@ its issues and sprints. Analytics are computed on read from `issue_events`
   cascades rows, not files). Deleting a completed sprint removes it from velocity.
 - **Open pages:** a deleted issue broadcasts so anyone viewing it is sent back to
   the list.
+
+**Delete, as built in 3B**
+- `DELETE` routes for an issue, a label and a sprint, each answering `204`.
+- **Issue:** the permission middleware is only the floor (`manage_issue`, which
+  keeps viewers out); the service loads the issue and allows the reporter or an
+  owner/admin (`403` otherwise). The repository deletes inside one transaction and
+  returns the storage keys of the issue's files, who had notifications for it
+  (everyone who acted, plus the assignee), and nothing else is left to chance:
+  after the commit the service removes the files from disk (best effort, logged on
+  failure), broadcasts `issue:deleted` to the issue room and the project room, and
+  tells the affected people's bells to refetch (reusing the `notification:created`
+  event, whose only effect on the client is a refetch).
+- **Open pages:** the detail page is sent to the project list on `issue:deleted`
+  (it must not refetch a deleted issue: that is a 404); the board and list refetch.
+- **Label:** `manage_project` (owner/admin). Cascades to `issue_labels`.
+- **Sprint:** `manage_issue`; an active sprint is refused with `409 sprint_active`
+  and the "not active" condition is part of the DELETE statement itself, so a
+  sprint started a moment earlier cannot be removed. Issues keep existing
+  (`ON DELETE SET NULL`).
+- **UI:** a shared inline `ConfirmDelete` (click, read what will be lost, confirm or
+  cancel; not `window.confirm`), a "Danger zone" at the bottom of an issue the
+  viewer may delete, Delete on label rows for owners/admins, Delete on non-active
+  sprint rows.
 
 ## Consequences
 

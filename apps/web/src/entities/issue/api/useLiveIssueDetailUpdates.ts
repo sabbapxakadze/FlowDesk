@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSocket, whenOrgRoomReady } from "../../../shared/socket/socket-client";
 import { issueKeys } from "./queryKeys";
@@ -27,9 +27,16 @@ export type PresenceViewer = { userId: string; name: string };
 export function useLiveIssueDetailUpdates(
   projectId: string,
   issueId: string,
+  /** Called when this issue is deleted (by anyone, including this user). */
+  onDeleted?: () => void,
 ): { viewers: PresenceViewer[] } {
   const queryClient = useQueryClient();
   const [viewers, setViewers] = useState<PresenceViewer[]>([]);
+  // A ref, so a new callback each render does not tear down and rejoin the room.
+  const onDeletedRef = useRef(onDeleted);
+  useEffect(() => {
+    onDeletedRef.current = onDeleted;
+  });
 
   useEffect(() => {
     const socket = getSocket();
@@ -58,6 +65,12 @@ export function useLiveIssueDetailUpdates(
       void queryClient.invalidateQueries({ queryKey: issueKeys.attachments(issueId) });
     }
 
+    // The issue no longer exists: do not refetch it (that would be a 404), send
+    // the viewer away instead.
+    function handleDeleted(payload: { issueId: string }) {
+      if (payload.issueId === issueId) onDeletedRef.current?.();
+    }
+
     function handlePresenceUpdate(payload: { issueId: string; viewers: PresenceViewer[] }) {
       setViewers(payload.viewers);
     }
@@ -66,6 +79,7 @@ export function useLiveIssueDetailUpdates(
     socket.on("connect", join);
     socket.on("issue:changed", handleUpdate);
     socket.on("issue:commented", handleUpdate);
+    socket.on("issue:deleted", handleDeleted);
     socket.on("presence:update", handlePresenceUpdate);
 
     return () => {
@@ -73,6 +87,7 @@ export function useLiveIssueDetailUpdates(
       socket.off("connect", join);
       socket.off("issue:changed", handleUpdate);
       socket.off("issue:commented", handleUpdate);
+      socket.off("issue:deleted", handleDeleted);
       socket.off("presence:update", handlePresenceUpdate);
       socket.emit("leave:issue", { issueId });
       // Reset so navigating to a different issue doesn't briefly show

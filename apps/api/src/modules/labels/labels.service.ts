@@ -54,3 +54,7 @@ export async function updateLabel(input: {
     throw err;
   }
 }
+
+export async function deleteLabel(input: { organizationId: string; labelId: string }) {
+  return labelsRepository.remove(input.organizationId, input.labelId);
+}

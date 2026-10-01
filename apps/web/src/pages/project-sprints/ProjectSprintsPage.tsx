@@ -22,6 +22,7 @@ import { IssueSummary, SprintIssueCard, useBacklog } from "../../entities/issue"
 import { SprintStatusBadge, useSprints } from "../../entities/sprint";
 import { CreateSprintForm } from "../../features/create-sprint";
 import { useStartSprint, useCompleteSprint } from "../../features/manage-sprint";
+import { DeleteSprintButton } from "../../features/delete-sprint";
 import { RenameSprintForm } from "../../features/rename-sprint";
 import { useAssignIssueSprint } from "../../features/assign-issue-sprint";
 import { useAuth } from "../../shared/auth/useAuth";
@@ -187,6 +188,9 @@ export function ProjectSprintsPage() {
                   >
                     Rename
                   </Button>
+                )}
+                {renamingSprintId !== sprint.id && sprint.status !== "active" && (
+                  <DeleteSprintButton organizationId={organization!.id} projectId={project.id} sprint={sprint} />
                 )}
                 {sprint.status === "planned" && (
                   <Button
