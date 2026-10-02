@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { mkdir, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { env } from "../config/env.js";
 import { logger } from "./logger.js";
@@ -24,8 +24,14 @@ export async function saveFile(attachmentId: string, buffer: Buffer): Promise<st
   return storageKey;
 }
 
-export function readFileStream(storageKey: string) {
-  return createReadStream(path.join(env.UPLOADS_DIR, storageKey));
+/** `range` is inclusive on both ends, like an HTTP byte range. */
+export function readFileStream(storageKey: string, range?: { start: number; end: number }) {
+  return createReadStream(path.join(env.UPLOADS_DIR, storageKey), range);
+}
+
+/** The stored file's size in bytes; rejects if the file is missing. */
+export async function statFile(storageKey: string): Promise<number> {
+  return (await stat(path.join(env.UPLOADS_DIR, storageKey))).size;
 }
 
 /** Best-effort — a failed delete here shouldn't fail the API response

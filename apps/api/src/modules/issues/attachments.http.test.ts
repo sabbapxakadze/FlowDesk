@@ -159,4 +159,98 @@ describe("attachments — HTTP", () => {
       .expect(200);
     expect(listRes.body.data).toEqual([]);
   });
+  describe("video files and range requests", () => {
+    // 2000 distinct, non-repeating bytes so a wrong slice cannot match by accident.
+    const video = Buffer.from(Array.from({ length: 2000 }, (_, i) => (i * 7 + 3) % 256));
+
+    async function uploadVideo(contentType: string, filename: string, bytes: Buffer = video) {
+      const user = await registerAndLogIn("v@example.com", "Org V");
+      const projectId = await createProject(user.accessToken, user.organizationId, "VVV");
+      const issueId = await createIssue(user.accessToken, user.organizationId, projectId, "Has a video");
+      const res = await request(app)
+        .post(`/api/v1/organizations/${user.organizationId}/projects/${projectId}/issues/${issueId}/attachments`)
+        .set("Authorization", `Bearer ${user.accessToken}`)
+        .attach("file", bytes, { filename, contentType });
+      return { res, user };
+    }
+
+    const binary = (res: request.Response, done: (err: Error | null, body: Buffer) => void) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (c: Buffer) => chunks.push(c));
+      res.on("end", () => done(null, Buffer.concat(chunks)));
+    };
+
+    it("accepts mp4 and webm, and still rejects another video type", async () => {
+      expect((await uploadVideo("video/mp4", "a.mp4")).res.status).toBe(201);
+      await resetDatabase();
+      expect((await uploadVideo("video/webm", "a.webm")).res.status).toBe(201);
+      await resetDatabase();
+      const rejected = await uploadVideo("video/quicktime", "a.mov");
+      expect(rejected.res.status).toBe(400);
+      expect(rejected.res.body.error.code).toBe("unsupported_file_type");
+    });
+
+    it("keeps the 10 MB cap for video", async () => {
+      const { res } = await uploadVideo("video/mp4", "big.mp4", Buffer.alloc(11 * 1024 * 1024, 1));
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("file_too_large");
+    });
+
+    it("sends the whole file with length, Accept-Ranges and nosniff when no Range is asked", async () => {
+      const { res } = await uploadVideo("video/mp4", "a.mp4");
+      const down = await request(app).get(res.body.data.downloadUrl).buffer(true).parse(binary).expect(200);
+      expect(down.headers["accept-ranges"]).toBe("bytes");
+      expect(down.headers["content-length"]).toBe("2000");
+      expect(down.headers["x-content-type-options"]).toBe("nosniff");
+      expect(down.headers["content-type"]).toContain("video/mp4");
+      expect(Buffer.compare(down.body as Buffer, video)).toBe(0);
+    });
+
+    it.each([
+      ["bytes=0-99", 0, 99],
+      ["bytes=1000-1499", 1000, 1499],
+      ["bytes=1900-", 1900, 1999],
+      ["bytes=-50", 1950, 1999],
+    ])("answers %s with 206 and exactly those bytes", async (header, start, end) => {
+      const { res } = await uploadVideo("video/webm", "a.webm");
+      const down = await request(app)
+        .get(res.body.data.downloadUrl)
+        .set("Range", header)
+        .buffer(true)
+        .parse(binary)
+        .expect(206);
+      expect(down.headers["content-range"]).toBe(`bytes ${start}-${end}/2000`);
+      expect(down.headers["content-length"]).toBe(String(end - start + 1));
+      expect(Buffer.compare(down.body as Buffer, video.subarray(start, end + 1))).toBe(0);
+    });
+
+    it("answers a range past the end with 416 and the file size", async () => {
+      const { res } = await uploadVideo("video/mp4", "a.mp4");
+      const down = await request(app).get(res.body.data.downloadUrl).set("Range", "bytes=5000-").expect(416);
+      expect(down.headers["content-range"]).toBe("bytes */2000");
+    });
+
+    it("ignores several ranges and sends the whole file", async () => {
+      const { res } = await uploadVideo("video/mp4", "a.mp4");
+      const down = await request(app)
+        .get(res.body.data.downloadUrl)
+        .set("Range", "bytes=0-9,20-29")
+        .buffer(true)
+        .parse(binary)
+        .expect(200);
+      expect((down.body as Buffer).length).toBe(2000);
+    });
+
+    it("still refuses a tampered signature when a Range is sent", async () => {
+      const { res } = await uploadVideo("video/mp4", "a.mp4");
+      const tampered = (res.body.data.downloadUrl as string).replace(/sig=[0-9a-f]+/, "sig=00");
+      await request(app).get(tampered).set("Range", "bytes=0-9").expect(403);
+    });
+
+    it("answers 404, not a crash, when the stored file has gone missing", async () => {
+      const { res } = await uploadVideo("video/mp4", "a.mp4");
+      await clearTestUploads();
+      await request(app).get(res.body.data.downloadUrl).expect(404);
+    });
+  });
 });

@@ -56,10 +56,10 @@ test("a comment card shows who, when, the text and its files, and 'edited' after
   expect(await time.getAttribute("title")).toMatch(/\d{4}|\d{1,2}[:.]\d{2}/); // an exact date and time
   await expect(card.getByText("(edited)")).toHaveCount(0);
 
-  // The file is a chip inside the card: name as a link, and its size.
+  // The image is a thumbnail tile inside the card: the name is its link label, the size is in its tooltip.
   const chip = card.getByRole("link", { name: /shot\.png/ });
   await expect(chip).toBeVisible();
-  await expect(chip).toContainText(/\d+(\.\d)? (B|KB)/);
+  await expect(chip).toHaveAttribute("title", /shot\.png \(\d+(\.\d)? (B|KB)\)/);
   expect(await chip.getAttribute("href")).toContain("/api/v1/attachments/");
 
   // Edit: marked as edited afterwards.

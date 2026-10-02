@@ -96,7 +96,10 @@ stronger red on the final confirm), through new semantic action tokens and Butto
 with deeper hover/pressed states (plus a light ring in dark mode). Comments are now cards with a
 tinted header strip (avatar, name, time, "(edited)") and hover-revealed Edit/Delete icons, chosen
 by the owner in a three-option design pass. Image attachments open in a preview popup (zoom,
-Download; expired signed links are refetched); video, and thumbnails inside comments, are still to come.
+Download; expired signed links are refetched).
+Attachment previews followed (2026-10-02): comment cards with a header strip, an image/video
+preview popup with zoom or player controls and Download, and thumbnails in comments. Video
+(mp4/webm, 10 MB) needed range requests on the download route so seeking works (ADR 0023).
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,

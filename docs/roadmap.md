@@ -1907,7 +1907,7 @@ The original plan for this slice, kept for the record:
    `+` / `-` zoom, `0` fits. Clicking the dimmed area closes it; focus returns to what opened it.
    Non-images (PDF, text, CSV) keep the old behaviour: a link in a new tab. A middle or
    ctrl/cmd click on an image still opens it the normal way. Built as a domain-free
-   `shared/ui/ImagePreviewDialog` (native `<dialog>`, like the search popup) plus one
+   `shared/ui/ImagePreviewDialog` (since renamed `MediaPreviewDialog`, ADR 0023) (native `<dialog>`, like the search popup) plus one
    `entities/issue/ui/AttachmentLink` used by both places; `formatFileSize` is now one shared
    helper (two copies removed); `buttonVariants` moved to its own file so the Download link
    can look like a Button. **Expired links:** the signed link lives 5 minutes, so when the
@@ -1929,6 +1929,25 @@ The original plan for this slice, kept for the record:
    player in this popup), thumbnails inside the comment, previous / next between images, pinch or
    wheel zoom, PDF preview. **Notes:** zoom percentages above fit make the image scroll inside
    the popup; the first focusable control (the close X) gets the focus ring when the popup opens.
+   **Video and comment thumbnails: DONE 2026-10-02 (slice 3 of the item below, ADR 0023).**
+   `video/mp4` and `video/webm` can be attached (10 MB cap unchanged; other video types are
+   refused by the form and the API). The download route now answers `Range` requests (206 with
+   `Content-Range`, 416 past the end, whole file for anything unsupported) so seeking works, and
+   sends `nosniff`. Comments show images and videos as 96 px thumbnail tiles (the original scaled
+   by the browser; a video shows its first frame with a play badge); documents stay text chips.
+   Clicking a tile opens the popup, which is now `MediaPreviewDialog`: a video gets the browser
+   controls and autoplay, no zoom. Thumbnail and popup share `useAttachmentPreview` (expired-link
+   refetch). **Verified:** API tests (mp4/webm accepted, mov and 11 MB refused, byte-exact slices
+   for four range forms, 416, whole file with headers, several ranges ignored, tampered signature
+   with a Range still 403, missing file 404) plus 6 unit tests for the parser; 6 new e2e tests
+   (a WebM recorded in the browser: tile with measured 160x90 first frame; popup plays, has
+   controls, no zoom, Download, and the media request got 206; image tile; document chip; expired
+   link recovered for a thumbnail; mov refused); full e2e 41 of 41. Mutations caught: suffix range
+   off by one (2 tests), range ignored by the route (4 API tests and the 206 e2e), thumbnail load
+   error not handled (the expired-link e2e). **Not verified:** seeking in a real long video by hand
+   (the e2e video from MediaRecorder has no seek index), mp4 playback (no mp4 fixture was made;
+   mp4 is covered only by the upload/download tests), Safari/Firefox. **Not done:** previous /
+   next between media, PDF preview, real thumbnails, byte sniffing.
 8. **Attachment previews (the rest of this owner idea, 2026-10-01; do it
    before Phase 9).** Today an attachment is only a link, and a comment is a grey
    rail with text. Wanted:

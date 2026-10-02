@@ -18,3 +18,5 @@ export { BoardCard } from "./ui/BoardCard";
 export { SprintIssueCard } from "./ui/SprintIssueCard";
 export { AttachmentList } from "./ui/AttachmentList";
 export { AttachmentLink } from "./ui/AttachmentLink";
+export { AttachmentThumbnail } from "./ui/AttachmentThumbnail";
+export { previewKind } from "./lib/previewKind";

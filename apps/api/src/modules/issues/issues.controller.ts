@@ -26,6 +26,7 @@ import {
 } from "@flowdesk/contracts";
 import { AppError } from "../../shared/errors.js";
 import * as storage from "../../lib/storage.js";
+import { parseRange } from "../../lib/http-range.js";
 import * as issuesService from "./issues.service.js";
 
 // Same Date -> ISO string conversion projects.controller.ts does — Drizzle
@@ -570,9 +571,39 @@ export async function downloadAttachment(req: Request, res: Response) {
     throw new AppError("attachment_not_found", 404, "Attachment not found.");
   }
 
+  let size: number;
+  try {
+    size = await storage.statFile(attachment.storageKey);
+  } catch {
+    throw new AppError("attachment_not_found", 404, "Attachment not found.");
+  }
+
   res.setHeader("Content-Type", attachment.mimeType);
   res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(attachment.filename)}"`);
-  storage.readFileStream(attachment.storageKey).pipe(res);
+  // The type was client-supplied at upload; stop the browser second-guessing it.
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Accept-Ranges", "bytes");
+
+  const range = parseRange(req.header("range"), size);
+  if (range.kind === "unsatisfiable") {
+    res.status(416).setHeader("Content-Range", `bytes */${size}`);
+    res.end();
+    return;
+  }
+
+  const stream =
+    range.kind === "range"
+      ? storage.readFileStream(attachment.storageKey, range)
+      : storage.readFileStream(attachment.storageKey);
+  if (range.kind === "range") {
+    res.status(206);
+    res.setHeader("Content-Range", `bytes ${range.start}-${range.end}/${size}`);
+    res.setHeader("Content-Length", range.end - range.start + 1);
+  } else {
+    res.setHeader("Content-Length", size);
+  }
+  stream.on("error", () => res.destroy());
+  stream.pipe(res);
 }
 
 export async function deleteIssue(req: Request, res: Response) {

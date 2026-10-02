@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileText, Image as ImageIcon, Pencil, Trash2 } from "lucide-react";
+import { FileText, Pencil, Trash2 } from "lucide-react";
 import type { Attachment, IssueEvent } from "@flowdesk/contracts";
-import { AttachmentLink, issueKeys } from "../../../entities/issue";
+import { AttachmentLink, AttachmentThumbnail, issueKeys, previewKind } from "../../../entities/issue";
 import { Avatar, Button, ErrorText, Textarea, Time } from "../../../shared/ui";
 import { formatFileSize } from "../../../shared/ui/lib/formatFileSize";
 import { deleteComment } from "../api/deleteComment";
@@ -17,15 +17,14 @@ const ACTION_REVEAL =
 const ICON_BUTTON =
   "rounded-[var(--radius-control)] p-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-border-default)] focus-visible:outline-2 focus-visible:outline-[var(--color-border-focus)]";
 
-/** A file attached to the comment: icon, name (a signed download link) and size. */
+/** A document attached to the comment: icon, name (a signed download link) and size. */
 function FileChip({ file }: { file: Attachment }) {
-  const Icon = file.mimeType.startsWith("image/") ? ImageIcon : FileText;
   return (
     <AttachmentLink
       attachment={file}
       className="inline-flex max-w-full items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-border-default)] px-2 py-1 text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-border-default)]"
     >
-      <Icon size={14} aria-hidden="true" className="shrink-0" />
+      <FileText size={14} aria-hidden="true" className="shrink-0" />
       <span className="truncate text-[var(--color-text-link)] underline">
         {file.filename}
       </span>
@@ -187,9 +186,13 @@ export function CommentCard({
 
         {files.length > 0 && (
           <div className="mt-3 flex flex-wrap items-start gap-2">
-            {files.map((file) => (
-              <FileChip key={file.id} file={file} />
-            ))}
+            {files.map((file) =>
+              previewKind(file.mimeType) ? (
+                <AttachmentThumbnail key={file.id} attachment={file} />
+              ) : (
+                <FileChip key={file.id} file={file} />
+              ),
+            )}
           </div>
         )}
 
