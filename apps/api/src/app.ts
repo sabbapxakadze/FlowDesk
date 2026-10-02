@@ -11,6 +11,7 @@ import { sprintsRouter } from "./modules/sprints/sprints.routes.js";
 import { notificationsRouter } from "./modules/notifications/notifications.routes.js";
 import { analyticsRouter } from "./modules/analytics/analytics.routes.js";
 import { organizationsRouter } from "./modules/organizations/organizations.routes.js";
+import { invitationsRouter } from "./modules/invitations/invitations.routes.js";
 
 /**
  * Split from index.ts so tests can exercise the real middleware chain
@@ -35,6 +36,7 @@ app.use("/api/v1", sprintsRouter);
 app.use("/api/v1", notificationsRouter);
 app.use("/api/v1", analyticsRouter);
 app.use("/api/v1", organizationsRouter);
+app.use("/api/v1", invitationsRouter);
 
 // Must be registered after every route — see error-handler.ts.
 app.use(errorHandler);

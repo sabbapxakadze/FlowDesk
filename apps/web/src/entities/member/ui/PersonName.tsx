@@ -1,7 +1,6 @@
 import { Avatar, PersonHover } from "../../../shared/ui";
 import { useMembers } from "../api/useMembers";
-
-const ROLE_LABELS = { owner: "Owner", admin: "Admin", member: "Member", viewer: "Viewer" } as const;
+import { ROLE_LABELS } from "../lib/roleLabels";
 
 /**
  * A person wherever a sentence or a row mentions one: their name (optionally with

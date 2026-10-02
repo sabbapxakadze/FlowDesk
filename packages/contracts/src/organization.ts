@@ -18,6 +18,8 @@ export const organizationMemberSchema = z.object({
   name: z.string(),
   email: z.string(),
   role: z.enum(["owner", "admin", "member", "viewer"]),
+  /** When they joined the organization. */
+  joinedAt: z.iso.datetime(),
 });
 
 export type OrganizationMember = z.infer<typeof organizationMemberSchema>;

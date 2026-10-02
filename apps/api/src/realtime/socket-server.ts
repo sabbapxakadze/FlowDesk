@@ -318,7 +318,12 @@ export function broadcastIssueChanged(projectId: string, issueId: string): void 
  * WHAT kind of thing changed (and which project, for sprints): the client refetches
  * through the normal endpoints, which keeps tenant scoping in one place.
  */
-export type OrganizationChange = { kind: "project" } | { kind: "label" } | { kind: "sprint"; projectId: string };
+export type OrganizationChange =
+  | { kind: "project" }
+  | { kind: "label" }
+  | { kind: "sprint"; projectId: string }
+  // The member list or the pending invitations changed (someone invited, revoked, joined).
+  | { kind: "members" };
 
 export function broadcastOrganizationChanged(organizationId: string, change: OrganizationChange): void {
   ioInstance?.to(`org:${organizationId}`).emit("org:changed", change);

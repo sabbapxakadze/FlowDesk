@@ -7,7 +7,13 @@
  */
 export type Role = "owner" | "admin" | "member" | "viewer";
 
-export type Permission = "view_project" | "manage_project" | "view_issue" | "manage_issue";
+export type Permission =
+  | "view_project"
+  | "manage_project"
+  | "view_issue"
+  | "manage_issue"
+  // Invite people to the organization and (later) manage their roles (ADR 0024).
+  | "manage_members";
 
 // manage_issue is deliberately broader than manage_project: creating a
 // project is an admin-level action, but filing/editing issues is the
@@ -15,8 +21,8 @@ export type Permission = "view_project" | "manage_project" | "view_issue" | "man
 // one permission would block regular members from using the tracker at
 // all — see the Phase 3 slice 1 plan's "Decisions" section.
 const ROLE_PERMISSIONS: Record<Role, ReadonlySet<Permission>> = {
-  owner: new Set(["view_project", "manage_project", "view_issue", "manage_issue"]),
-  admin: new Set(["view_project", "manage_project", "view_issue", "manage_issue"]),
+  owner: new Set(["view_project", "manage_project", "view_issue", "manage_issue", "manage_members"]),
+  admin: new Set(["view_project", "manage_project", "view_issue", "manage_issue", "manage_members"]),
   member: new Set(["view_project", "view_issue", "manage_issue"]),
   viewer: new Set(["view_project", "view_issue"]),
 };

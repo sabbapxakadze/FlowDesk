@@ -41,6 +41,16 @@ export async function findPrimaryOrganizationForUser(userId: string) {
   return row;
 }
 
+/** An organization by id (name for emails and the accept page). */
+export async function findOrganizationById(organizationId: string) {
+  const [row] = await db
+    .select({ id: organizations.id, name: organizations.name, slug: organizations.slug })
+    .from(organizations)
+    .where(eq(organizations.id, organizationId))
+    .limit(1);
+  return row;
+}
+
 /** Everyone in the organization, for the assignee picker. Scoped by organizationId. */
 export async function listMembers(organizationId: string) {
   return db
@@ -49,6 +59,7 @@ export async function listMembers(organizationId: string) {
       name: users.name,
       email: users.email,
       role: organizationMembers.role,
+      joinedAt: organizationMembers.createdAt,
     })
     .from(organizationMembers)
     .innerJoin(users, eq(organizationMembers.userId, users.id))

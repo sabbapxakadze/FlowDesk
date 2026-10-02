@@ -35,6 +35,30 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
   });
 }
 
+export async function sendInvitationEmail(input: {
+  to: string;
+  token: string;
+  organizationName: string;
+  inviterName: string;
+  role: string;
+}): Promise<void> {
+  const link = `${env.APP_URL}/invite?token=${encodeURIComponent(input.token)}`;
+  await sendEmail({
+    to: input.to,
+    subject: `${input.inviterName} invited you to ${input.organizationName} on FlowDesk`,
+    html: `<p>${escapeHtml(input.inviterName)} invited you to join <strong>${escapeHtml(input.organizationName)}</strong> on FlowDesk as ${escapeHtml(input.role)}.</p><p><a href="${link}">Accept the invitation</a></p><p>This link expires in 7 days. If you were not expecting this, you can ignore this email.</p>`,
+  });
+}
+
+/** Names are typed by users and go into an HTML email, so they are escaped. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
   const link = `${env.APP_URL}/reset-password?token=${encodeURIComponent(token)}`;
   await sendEmail({

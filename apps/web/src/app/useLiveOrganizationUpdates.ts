@@ -1,19 +1,26 @@
 import { useEffect } from "react";
 import { useMatch, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { invitationKeys } from "../entities/invitation";
 import { issueKeys } from "../entities/issue";
 import { labelKeys } from "../entities/label";
+import { memberKeys } from "../entities/member";
 import { projectKeys } from "../entities/project";
 import { sprintKeys } from "../entities/sprint";
 import { getSocket } from "../shared/socket/socket-client";
 
-type OrganizationChange = { kind: "project" } | { kind: "label" } | { kind: "sprint"; projectId: string };
+type OrganizationChange =
+  | { kind: "project" }
+  | { kind: "label" }
+  | { kind: "sprint"; projectId: string }
+  | { kind: "members" };
 
 /**
  * Listens on the organization room (every connected member is in it), mounted
  * once in the app shell, for two things:
  *
- * - org:changed (a project, label or sprint was renamed, recoloured or deleted):
+ * - org:changed (a project, label or sprint was renamed, recoloured or deleted, or the
+ *   members or invitations changed):
  *   refetch the matching list, so an open tab does not stay stale until it
  *   happens to be focused. The event only says what kind of thing changed; the
  *   data comes back through the normal endpoints.
@@ -33,6 +40,10 @@ export function useLiveOrganizationUpdates(organizationId: string): void {
     function handleChanged(change: OrganizationChange) {
       if (change.kind === "project") {
         void queryClient.invalidateQueries({ queryKey: projectKeys.list(organizationId) });
+      } else if (change.kind === "members") {
+        // Someone was invited, an invitation was revoked, or someone joined.
+        void queryClient.invalidateQueries({ queryKey: memberKeys.list(organizationId) });
+        void queryClient.invalidateQueries({ queryKey: invitationKeys.list(organizationId) });
       } else if (change.kind === "label") {
         void queryClient.invalidateQueries({ queryKey: labelKeys.list(organizationId) });
         // Issues cache their own label lists under issueKeys.all.

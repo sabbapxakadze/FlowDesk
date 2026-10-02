@@ -2035,6 +2035,34 @@ The original plan for this slice, kept for the record:
    comment icon buttons are still 26 px). **Not verified:** the notification "Mark all read"
    and three of the four chart toggles by eye (only one chart toggle was on screen), the notice
    dismiss X, the mobile menu buttons, and dark mode. **Not done:** `loading` prop on Button.
+   **Collaborators, slice A (invite, accept, members list): DONE 2026-10-03 (ADR 0024).**
+   Owners and admins invite an email with a role (admin, member or viewer); the invitee opens a
+   one-time link, picks a name and password, and the new account joins THAT organization
+   (verified email, no personal organization). Only people without an account can be invited
+   for now (the app is one organization per user; the refusal says so). New `invitations`
+   table (token stored as a hash, partial unique index: one open invitation per organization
+   and email), permission `manage_members`, three org-scoped endpoints and two public ones
+   (token in the body, rate limited), a Members page at `/members` (member list with role and
+   join date for everyone; invite form, one-time Copy link and the pending list with Revoke for
+   owners and admins) and the public `/invite` page. Open tabs refresh live (`org:changed`,
+   new `members` kind). **Verified:** 16 new API tests (hash-only storage, roles, 403s,
+   existing account and already-member refusals, one open invitation per email and the expired
+   replacement, tenant isolation, revoke, preview, accept creating a verified account in the
+   right organization with the right role, single use, two simultaneous accepts, weak
+   password not using the invitation up, email taken meanwhile) and 5 e2e tests (the whole
+   journey with two browsers including the owner's page updating without a reload and the
+   Copy button, revoke killing the link, a member sees no invite controls, the plain refusal
+   messages, a bad or missing link); API suite 305 of 305, full e2e green. Mutations caught:
+   no permission check, revoke ignoring the organization, accept not claiming the invitation,
+   no broadcast after accepting, the form shown to everyone. **A bug pattern found while
+   writing it:** drizzle 0.45 puts the Postgres error code on `err.cause`, so a duplicate-key
+   check that reads `err.code` never matches; `auth.service.ts`'s `isUniqueViolation` still does
+   that (so a register race would answer 500, not 409), the other modules already read
+   `cause`. Named, not changed here. **Not done:** change a role, remove a member (their issues
+   become unassigned) and re-send an invitation (slice B); inviting someone who already has an
+   account (needs an organization switcher); showing the join date on the hover card; showing
+   invitation history; an invitation email that really arrives was not checked (the email
+   provider refuses test addresses in dev).
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

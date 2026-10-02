@@ -22,15 +22,15 @@ const pool = new pg.Pool({ connectionString, max: 2 });
 /** Same table list as the API tests' resetDatabase (apps/api/src/db/test-utils.ts). */
 export async function resetDatabase() {
   await pool.query(
-    "TRUNCATE TABLE organizations, projects, users, organization_members, sessions, auth_tokens, issues, issue_events, labels, issue_labels, comments, sprints, notifications, attachments RESTART IDENTITY CASCADE",
+    "TRUNCATE TABLE organizations, projects, users, organization_members, sessions, auth_tokens, issues, issue_events, labels, issue_labels, comments, sprints, notifications, attachments, invitations RESTART IDENTITY CASCADE",
   );
 }
 
 /**
- * There is no invite flow yet, so a second person in an organization is
- * inserted directly: a new user that reuses the existing user's password hash
- * (so both log in with the same password, with no hashing library needed here)
- * and a membership in that user's organization.
+ * A second person in an organization, inserted directly (the invitation flow has
+ * its own e2e test; most tests just need another member quickly): a new user that
+ * reuses the existing user's password hash (so both log in with the same password,
+ * with no hashing library needed here) and a membership in that user's organization.
  */
 export async function addOrgMember(
   existingEmail: string,

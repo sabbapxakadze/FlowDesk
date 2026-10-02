@@ -100,6 +100,7 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
           <kbd className="text-xs opacity-70">Ctrl K</kbd>
         </button>
         <SideLink to="/labels">Labels</SideLink>
+        <SideLink to="/members">Members</SideLink>
 
         <SectionLabel>Your projects</SectionLabel>
         {isPending ? (
