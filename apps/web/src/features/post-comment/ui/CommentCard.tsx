@@ -2,16 +2,11 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileText, Image as ImageIcon, Pencil, Trash2 } from "lucide-react";
 import type { Attachment, IssueEvent } from "@flowdesk/contracts";
-import { issueKeys } from "../../../entities/issue";
+import { AttachmentLink, issueKeys } from "../../../entities/issue";
 import { Avatar, Button, ErrorText, Textarea, Time } from "../../../shared/ui";
+import { formatFileSize } from "../../../shared/ui/lib/formatFileSize";
 import { deleteComment } from "../api/deleteComment";
 import { updateComment } from "../api/updateComment";
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 // Edit and Delete are quiet until you point at the comment or tab into it, so a
 // long thread is not a wall of buttons. On a touch screen (no hover) they are
@@ -26,18 +21,16 @@ const ICON_BUTTON =
 function FileChip({ file }: { file: Attachment }) {
   const Icon = file.mimeType.startsWith("image/") ? ImageIcon : FileText;
   return (
-    <a
-      href={file.downloadUrl}
-      target="_blank"
-      rel="noreferrer"
+    <AttachmentLink
+      attachment={file}
       className="inline-flex max-w-full items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-border-default)] px-2 py-1 text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-border-default)]"
     >
       <Icon size={14} aria-hidden="true" className="shrink-0" />
       <span className="truncate text-[var(--color-text-link)] underline">
         {file.filename}
       </span>
-      <span className="shrink-0">{formatSize(file.sizeBytes)}</span>
-    </a>
+      <span className="shrink-0">{formatFileSize(file.sizeBytes)}</span>
+    </AttachmentLink>
   );
 }
 

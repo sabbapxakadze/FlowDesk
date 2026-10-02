@@ -1,4 +1,5 @@
 export { Button, type ButtonProps } from "./Button";
+export { buttonVariants } from "./buttonVariants";
 export { Input } from "./Input";
 export { Textarea } from "./Textarea";
 export { Select } from "./Select";
@@ -22,3 +23,4 @@ export { PRIORITY_LABELS, PRIORITY_ORDER } from "./priorityLabels";
 export { Avatar } from "./Avatar";
 export { ConfirmDelete } from "./ConfirmDelete";
 export { NavigationNotice } from "./NavigationNotice";
+export { ImagePreviewDialog } from "./ImagePreviewDialog";

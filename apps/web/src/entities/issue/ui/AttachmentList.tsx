@@ -1,12 +1,8 @@
 import { useAttachments } from "../api/useAttachments";
 import { useDeleteAttachment } from "../api/useDeleteAttachment";
 import { Card, EmptyState, Skeleton } from "../../../shared/ui";
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+import { formatFileSize } from "../../../shared/ui/lib/formatFileSize";
+import { AttachmentLink } from "./AttachmentLink";
 
 /**
  * downloadUrl is used directly as a real <a href> — it's already a
@@ -43,17 +39,12 @@ export function AttachmentList({
     <ul className="flex flex-col gap-2">
       {attachments?.map((attachment) => (
         <Card key={attachment.id} as="li" className="flex items-center justify-between gap-2">
-          <a
-            href={attachment.downloadUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm text-[var(--color-text-link)] underline"
-          >
+          <AttachmentLink attachment={attachment} className="text-sm text-[var(--color-text-link)] underline">
             {attachment.filename}
-          </a>
+          </AttachmentLink>
           <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
             <span>
-              {formatSize(attachment.sizeBytes)} · {attachment.uploaderName}
+              {formatFileSize(attachment.sizeBytes)} · {attachment.uploaderName}
               {attachment.commentId && " · from a comment"}
             </span>
             <button

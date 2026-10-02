@@ -17,3 +17,4 @@ export { IssueSummary } from "./ui/IssueSummary";
 export { BoardCard } from "./ui/BoardCard";
 export { SprintIssueCard } from "./ui/SprintIssueCard";
 export { AttachmentList } from "./ui/AttachmentList";
+export { AttachmentLink } from "./ui/AttachmentLink";

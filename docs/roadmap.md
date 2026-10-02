@@ -1899,6 +1899,36 @@ The original plan for this slice, kept for the record:
    without the fix). **Not done yet:** image and video previews (files are still chips), the
    preview popup, video support; the Edit/Delete icon buttons are raw `<button>`s (a candidate
    for the button cleanup slice).
+   **Image preview popup: DONE 2026-10-02 (slice 2 of the item below).** Clicking an image
+   attachment, in the issue's Attachments list or on a comment's file chip, opens a modal
+   preview: the image fitted to the window, its name and size, zoom out / in (10% to 500%,
+   steps of 1.25, the percentage is measured from the drawn size), Fit, a Download link (the
+   `download` attribute, so it saves instead of showing), and Close. Keyboard: Esc closes,
+   `+` / `-` zoom, `0` fits. Clicking the dimmed area closes it; focus returns to what opened it.
+   Non-images (PDF, text, CSV) keep the old behaviour: a link in a new tab. A middle or
+   ctrl/cmd click on an image still opens it the normal way. Built as a domain-free
+   `shared/ui/ImagePreviewDialog` (native `<dialog>`, like the search popup) plus one
+   `entities/issue/ui/AttachmentLink` used by both places; `formatFileSize` is now one shared
+   helper (two copies removed); `buttonVariants` moved to its own file so the Download link
+   can look like a Button. **Expired links:** the signed link lives 5 minutes, so when the
+   image fails to load the attachment list is refetched once and the image is requested again
+   (with a `retry` parameter, because a refetch within the same second can mint an identical
+   link); no backend change. **Verified:** 7 e2e tests, 28 of 28 across 4 repeat runs (opens with
+   name, size and Download, Esc closes and focus returns, reopens; outside click and Close;
+   zoom by button and keyboard measured on the real drawn width; the Attachments list opens the
+   same popup; a text file opens a new tab and no popup; an expired link is recovered, simulated
+   by failing the first image request with 403; a 400 px screen keeps every control inside the
+   window); a generated PNG with real dimensions (`e2e/support/png.ts`); five mutations (load error
+   not handled, no `download` attribute, every file type opens the popup, zoom does nothing, the
+   bug below back) each fail a named test; light, dark and 400 px screenshots looked right.
+   **Real bug found by the tests and fixed:** the popup opened and closed itself in the same
+   instant. React runs effects twice in development, and the first cleanup called
+   `dialog.close()`, whose `close` event fired after the second run had re-attached its listener,
+   so the popup reported itself closed. Fix: no `close()` in the cleanup, and `showModal()` only if
+   not already open. **Not done yet:** video (slice 3: allowed types, range requests, a video
+   player in this popup), thumbnails inside the comment, previous / next between images, pinch or
+   wheel zoom, PDF preview. **Notes:** zoom percentages above fit make the image scroll inside
+   the popup; the first focusable control (the close X) gets the focus ring when the popup opens.
 8. **Attachment previews (the rest of this owner idea, 2026-10-01; do it
    before Phase 9).** Today an attachment is only a link, and a comment is a grey
    rail with text. Wanted:
