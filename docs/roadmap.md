@@ -1948,6 +1948,27 @@ The original plan for this slice, kept for the record:
    (the e2e video from MediaRecorder has no seek index), mp4 playback (no mp4 fixture was made;
    mp4 is covered only by the upload/download tests), Safari/Firefox. **Not done:** previous /
    next between media, PDF preview, real thumbnails, byte sniffing.
+   **Activity lines and person cards: DONE 2026-10-02 (owner design passes).** Each activity
+   line on an issue is now an icon in a tinted circle (green added, red removed, status colour
+   for a status change, accent for other changes, muted for a reorder), the sentence with real
+   badges for status, priority and label, and the time at the right edge (new `widgets/activity-line`;
+   three semantic tokens `--color-event-*`, shown on `/design-system`). A person's name is a button
+   that opens a small card (avatar, name, role, email) on hover or keyboard focus: in the timeline
+   (the actor and anyone mentioned, such as the assignee), comment headers (avatar and name),
+   the issue header assignee, the "also viewing" line and the attachment list. Built as a
+   domain-free `shared/ui/PersonHover` plus `entities/member/PersonName`; the attachment list takes
+   the person through a `renderPerson` prop because entities cannot import each other. The card
+   opens after a 300 ms pause with a 150 ms fade and closes after 100 ms (the owner found the
+   instant version too jumpy). **Bug found by the owner and fixed:** the card opened anywhere on a
+   comment, because the comment card is a Tailwind `group` and the card used a plain `group-hover`;
+   the card now has its own named group (`group/person`). **Verified:** 11 new e2e tests
+   (`activity-line.spec.ts`, `person-hover.spec.ts`: layout, colours resolved from the tokens, hover
+   and keyboard, delay, moving onto the card, no opening elsewhere on a comment, phone width, the
+   "also viewing" names with a second user), 50 of 50 e2e overall, repeat runs stable; mutations
+   caught (no delay, unnamed group). **Not done:** the card on board and sprint card avatars
+   (inside links and drag surfaces), notification rows (the whole row is a button), the sidebar
+   user name (the card would open off screen); a "View profile" link (no profile page yet); dark
+   mode and a real touch device were not looked at.
 8. **Attachment previews (the rest of this owner idea, 2026-10-01; do it
    before Phase 9).** Today an attachment is only a link, and a comment is a grey
    rail with text. Wanted:
@@ -1992,6 +2013,28 @@ The original plan for this slice, kept for the record:
    styled button where a variant exists (or at least a documented list of exceptions).
    Do it after the comment cards, because the new cards will change most of those
    buttons anyway.
+   **Button cleanup: DONE 2026-10-02.** `Button` gained a `link` variant (underlined, link
+   coloured, no padding) and `buttonVariants` is now merged with tailwind-merge so it can also
+   style a router `<Link>` or an `<a>` (`buttonVariants({ variant: "link" })`). New `IconButton`
+   (a required `label` that becomes the aria-label; tones neutral, danger, sidebar; sizes sm, lg).
+   Converted: the link-style text buttons (attachment Remove and name, issue card Edit, issue
+   header Edit, Mark all read, four chart "View as table" toggles, the page back link, five
+   login/register links) and the icon buttons (comment Edit and Delete, the popup close X, the
+   notice dismiss X, the two mobile menu buttons). The single leftover `className` override on a
+   Button was a margin. **Guard:** two lint rules (`eslint.config.js`, run by `pnpm lint` and the
+   pre-push hook) fail on a hand-written `text-link underline` class and on any raw `<button>`
+   outside a short list of files, each with its reason (the Button and IconButton themselves,
+   the person-card trigger, the theme switch, the drag handle, the label and file-chip remove
+   buttons, command palette rows, notification rows and bell, sidebar items). The guard found one
+   real case while being added (the file name styled as a link inside a comment chip; it is text
+   inside a link, so it carries a documented disable). Both rules were proven by a throwaway file
+   with a raw button and two hand-written link styles (3 errors, then the file was removed).
+   **Verified:** typecheck, lint, 50 of 50 e2e; in the browser, computed styles of the converted
+   controls on the design-system page, the issue page, the project page, the analytics page and
+   the forgot-password page (same colour, underline, no padding, same font sizes as before; the
+   comment icon buttons are still 26 px). **Not verified:** the notification "Mark all read"
+   and three of the four chart toggles by eye (only one chart toggle was on screen), the notice
+   dismiss X, the mobile menu buttons, and dark mode. **Not done:** `loading` prop on Button.
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

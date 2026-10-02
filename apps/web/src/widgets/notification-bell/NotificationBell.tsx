@@ -11,7 +11,7 @@ import {
 } from "../../entities/notification";
 import { describeEvent } from "../../entities/issue";
 import { useAuth } from "../../shared/auth/useAuth";
-import { EmptyState, Skeleton } from "../../shared/ui";
+import { Button, EmptyState, Skeleton } from "../../shared/ui";
 
 function NotificationRow({ notification, onSelect }: { notification: Notification; onSelect: () => void }) {
   const unread = notification.readAt === null;
@@ -119,14 +119,15 @@ export function NotificationBell({ panelAlign = "left" }: { panelAlign?: "left" 
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">Notifications</p>
             {count > 0 && (
-              <button
+              <Button
                 type="button"
+                variant="link"
+                className="text-xs"
                 onClick={() => markAllRead.mutate()}
                 disabled={markAllRead.isPending}
-                className="text-xs text-[var(--color-text-link)] underline disabled:opacity-50"
               >
                 Mark all read
-              </button>
+              </Button>
             )}
           </div>
 

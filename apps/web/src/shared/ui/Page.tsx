@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router";
+import { buttonVariants } from "./buttonVariants";
 import { cn } from "./lib/cn";
 import { NavigationNotice } from "./NavigationNotice";
 
@@ -54,7 +55,7 @@ export function PageHeader({
       {back && (
         <Link
           to={back.to}
-          className="mb-2 inline-flex items-center gap-1 text-sm text-[var(--color-text-link)] underline"
+          className={cn(buttonVariants({ variant: "link" }), "mb-2 inline-flex items-center gap-1")}
         >
           <ArrowLeft size={14} aria-hidden="true" />
           {back.label}

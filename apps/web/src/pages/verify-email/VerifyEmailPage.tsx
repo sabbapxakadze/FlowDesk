@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { apiPostVoid } from "../../shared/api/client";
+import { buttonVariants } from "../../shared/ui";
 
 type Status = "pending" | "success" | "error";
 
@@ -38,7 +39,7 @@ export function VerifyEmailPage() {
       {status === "success" && (
         <p className="text-sm">
           Your email is verified.{" "}
-          <Link to="/login" className="text-[var(--color-text-link)] underline">
+          <Link to="/login" className={buttonVariants({ variant: "link" })}>
             Log in
           </Link>
         </p>

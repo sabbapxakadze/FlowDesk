@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router";
 import { loginRequestSchema, type LoginRequest } from "@flowdesk/contracts";
 import { useAuth } from "../../../shared/auth/useAuth";
-import { Button, ErrorText, Field, Input } from "../../../shared/ui";
+import { Button, buttonVariants, ErrorText, Field, Input } from "../../../shared/ui";
 import { loginUser } from "../api/loginUser";
 
 export function LoginForm() {
@@ -46,7 +46,7 @@ export function LoginForm() {
         {mutation.isPending ? "Logging in…" : "Log in"}
       </Button>
 
-      <Link to="/forgot-password" className="text-sm text-[var(--color-text-link)] underline">
+      <Link to="/forgot-password" className={buttonVariants({ variant: "link" })}>
         Forgot password?
       </Link>
     </form>

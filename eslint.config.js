@@ -103,6 +103,57 @@ export default tseslint.config(
     },
   },
 
+  // apps/web: keep buttons and text links consistent (Button cleanup slice, 2026-10-02).
+  // 1. A text link is `buttonVariants({ variant: "link" })` or <Button variant="link">,
+  //    not a hand-written `text-link underline` class string.
+  // 2. A button is <Button> or <IconButton>. A raw <button> is only for controls that are
+  //    not a text or icon button; each such file is listed below with the reason.
+  {
+    files: ["apps/web/src/**/*.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Literal[value=/text-\\[var\\(--color-text-link\\)\\] underline/]",
+          message:
+            'Use <Button variant="link"> or buttonVariants({ variant: "link" }) instead of hand-writing the link style.',
+        },
+        {
+          selector: "TemplateElement[value.raw=/text-\\[var\\(--color-text-link\\)\\] underline/]",
+          message:
+            'Use <Button variant="link"> or buttonVariants({ variant: "link" }) instead of hand-writing the link style.',
+        },
+        {
+          selector: "JSXOpeningElement[name.name='button']",
+          message:
+            "Use <Button> or <IconButton>. If this control is neither a text nor an icon button, add the file to the raw-button list in eslint.config.js with the reason.",
+        },
+      ],
+    },
+  },
+  // The files allowed to hold a raw <button>, and why:
+  {
+    files: [
+      "apps/web/src/shared/ui/Button.tsx", // the Button itself
+      "apps/web/src/shared/ui/IconButton.tsx", // the IconButton itself
+      "apps/web/src/shared/ui/PersonHover.tsx", // the name that opens a card: text plus avatar, not a Button look
+      "apps/web/src/shared/ui/ThemeSwitch.tsx", // a segmented toggle group
+      "apps/web/src/entities/issue/ui/DragHandle.tsx", // a drag handle with dnd-kit listeners
+      "apps/web/src/entities/label/ui/LabelBadge.tsx", // the small remove X inside a coloured pill
+      "apps/web/src/features/post-comment/ui/CommentForm.tsx", // the x that removes a chosen file inside a chip
+      "apps/web/src/widgets/command-palette/CommandPalette.tsx", // result rows and the open trigger
+      "apps/web/src/widgets/notification-bell/NotificationBell.tsx", // the bell and the notification rows
+      "apps/web/src/widgets/sidebar/Sidebar.tsx", // sidebar items and Log out use the sidebar colours
+      "apps/web/src/pages/design-system/**", // documents raw controls on purpose
+    ],
+    rules: { "no-restricted-syntax": "off" },
+  },
+  // The one place that defines the link look is allowed to write it out.
+  {
+    files: ["apps/web/src/shared/ui/buttonVariants.ts"],
+    rules: { "no-restricted-syntax": "off" },
+  },
+
   // apps/api: no React/FSD rules, just TS.
   {
     files: ["apps/api/src/**/*.ts", "packages/**/src/**/*.ts"],

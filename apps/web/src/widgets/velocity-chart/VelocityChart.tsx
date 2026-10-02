@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useVelocity, type VelocitySprint } from "../../entities/analytics";
-import { AnchoredTooltip, EmptyState, ErrorText, anchoredTooltipProps, Skeleton, WrappingTick } from "../../shared/ui";
+import { AnchoredTooltip, Button, EmptyState, ErrorText, anchoredTooltipProps, Skeleton, WrappingTick } from "../../shared/ui";
 
 function Stat({ label, value, lead = false }: { label: string; value: string; lead?: boolean }) {
   return (
@@ -105,13 +105,9 @@ export function VelocityChart({
         </ResponsiveContainer>
       </div>
       <p className="mt-1 text-sm text-[var(--color-text-muted)]">{summaryText}</p>
-      <button
-        type="button"
-        onClick={() => setShowTable((open) => !open)}
-        className="mt-1 text-sm text-[var(--color-text-link)] underline"
-      >
+      <Button type="button" variant="link" className="mt-1" onClick={() => setShowTable((open) => !open)}>
         {showTable ? "Hide table" : "View as table"}
-      </button>
+      </Button>
       {showTable && (
         <table className="mt-2 w-full max-w-md text-left text-sm">
           <thead>

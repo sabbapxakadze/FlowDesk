@@ -16,7 +16,7 @@ import { CommentCard, CommentForm } from "../../features/post-comment";
 import { UploadAttachmentForm } from "../../features/upload-attachment";
 import { ActivityLine } from "../../widgets/activity-line";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Page, PageHeader, PriorityBadge, Skeleton, StatusBadge } from "../../shared/ui";
+import { Button, Page, PageHeader, PriorityBadge, Skeleton, StatusBadge } from "../../shared/ui";
 
 function IssueDetailSkeleton() {
   return (
@@ -182,15 +182,16 @@ export function IssueDetailPage() {
                   />
                 </span>
               )}
-              <button
+              <Button
+                type="button"
+                variant="link"
                 onClick={() => {
                   setShowConflictNotice(false);
                   setIsEditing(true);
                 }}
-                className="text-sm text-[var(--color-text-link)] underline"
               >
                 Edit
-              </button>
+              </Button>
             </div>
             {otherViewers.length > 0 && (
               <p className="mt-1 text-xs text-[var(--color-text-muted)]">

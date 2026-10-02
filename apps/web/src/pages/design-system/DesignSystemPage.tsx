@@ -1,13 +1,16 @@
 import { useState } from "react";
+import { Pencil, Trash2, X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { IssueStatus } from "@flowdesk/contracts";
 import {
   Button,
+  buttonVariants,
   Card,
   ColumnHeader,
   EmptyState,
   ErrorText,
   Field,
+  IconButton,
   Input,
   Page,
   PageHeader,
@@ -335,6 +338,39 @@ export function DesignSystemPage() {
         </div>
         <div className="mt-3 max-w-sm">
           <Button fullWidth>Full width</Button>
+        </div>
+        <p className="mt-4 mb-2 text-sm text-[var(--color-text-muted)]">
+          Link: text that acts (Edit, Remove, "View as table"). For a router Link or an anchor, use
+          buttonVariants({"{ variant: \"link\" }"}) so it looks the same.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="link">Edit</Button>
+          <Button variant="link" disabled>
+            Disabled link
+          </Button>
+          <a href="#link-variant" className={buttonVariants({ variant: "link" })}>
+            An anchor with the link look
+          </a>
+        </div>
+        <p className="mt-4 mb-2 text-sm text-[var(--color-text-muted)]">
+          IconButton: a button that is only an icon. The label is required (it is the accessible
+          name). Tones: neutral, danger, sidebar.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <IconButton label="Edit (neutral)">
+            <Pencil size={14} aria-hidden="true" />
+          </IconButton>
+          <IconButton label="Delete (danger)" tone="danger">
+            <Trash2 size={14} aria-hidden="true" />
+          </IconButton>
+          <IconButton label="Close, large" size="lg">
+            <X size={18} aria-hidden="true" />
+          </IconButton>
+          <span className="rounded-[var(--radius-control)] bg-[var(--color-bg-sidebar)] p-1">
+            <IconButton label="Menu (sidebar)" tone="sidebar" size="lg">
+              <X size={18} aria-hidden="true" />
+            </IconButton>
+          </span>
         </div>
       </Section>
 

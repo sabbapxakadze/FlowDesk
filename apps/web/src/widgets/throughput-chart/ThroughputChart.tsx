@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useThroughput, type ThroughputPoint } from "../../entities/analytics";
-import { AnchoredTooltip, EmptyState, ErrorText, anchoredTooltipProps, Skeleton } from "../../shared/ui";
+import { AnchoredTooltip, Button, EmptyState, ErrorText, anchoredTooltipProps, Skeleton } from "../../shared/ui";
 
 // weekStart is a plain UTC date (Monday). Formatted in UTC on purpose: a
 // local-timezone format would show "Sep 27" for Monday Sep 28 west of UTC.
@@ -117,13 +117,9 @@ export function ThroughputChart({
         </ResponsiveContainer>
       </div>
       <p className="mt-1 text-sm text-[var(--color-text-muted)]">{summary}</p>
-      <button
-        type="button"
-        onClick={() => setShowTable((open) => !open)}
-        className="mt-1 text-sm text-[var(--color-text-link)] underline"
-      >
+      <Button type="button" variant="link" className="mt-1" onClick={() => setShowTable((open) => !open)}>
         {showTable ? "Hide table" : "View as table"}
-      </button>
+      </Button>
       {showTable && <ThroughputTable points={data} />}
     </div>
   );

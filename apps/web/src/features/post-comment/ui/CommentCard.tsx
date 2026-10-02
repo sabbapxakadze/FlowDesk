@@ -4,7 +4,7 @@ import { FileText, Pencil, Trash2 } from "lucide-react";
 import type { Attachment, IssueEvent } from "@flowdesk/contracts";
 import { AttachmentLink, AttachmentThumbnail, issueKeys, previewKind } from "../../../entities/issue";
 import { PersonName } from "../../../entities/member";
-import { Button, ErrorText, Textarea, Time } from "../../../shared/ui";
+import { Button, ErrorText, IconButton, Textarea, Time } from "../../../shared/ui";
 import { formatFileSize } from "../../../shared/ui/lib/formatFileSize";
 import { deleteComment } from "../api/deleteComment";
 import { updateComment } from "../api/updateComment";
@@ -15,9 +15,6 @@ import { updateComment } from "../api/updateComment";
 const ACTION_REVEAL =
   "opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100";
 
-const ICON_BUTTON =
-  "rounded-[var(--radius-control)] p-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-border-default)] focus-visible:outline-2 focus-visible:outline-[var(--color-border-focus)]";
-
 /** A document attached to the comment: icon, name (a signed download link) and size. */
 function FileChip({ file }: { file: Attachment }) {
   return (
@@ -26,6 +23,8 @@ function FileChip({ file }: { file: Attachment }) {
       className="inline-flex max-w-full items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-border-default)] px-2 py-1 text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-border-default)]"
     >
       <FileText size={14} aria-hidden="true" className="shrink-0" />
+      {/* Not a button: text inside the chip's own link, drawn link-like. */}
+      {/* eslint-disable-next-line no-restricted-syntax */}
       <span className="truncate text-[var(--color-text-link)] underline">
         {file.filename}
       </span>
@@ -123,27 +122,20 @@ export function CommentCard({
         {showActions && (
           <div className={`flex shrink-0 items-center gap-1 ${ACTION_REVEAL}`}>
             {payload.canEdit && (
-              <button
-                type="button"
-                aria-label="Edit this comment"
+              <IconButton
+                label="Edit this comment"
                 onClick={() => {
                   setDraft(payload.body);
                   setIsEditing(true);
                 }}
-                className={`${ICON_BUTTON} hover:text-[var(--color-text-default)]`}
               >
                 <Pencil size={14} aria-hidden="true" />
-              </button>
+              </IconButton>
             )}
             {payload.canDelete && (
-              <button
-                type="button"
-                aria-label="Delete this comment"
-                onClick={() => setConfirmingDelete(true)}
-                className={`${ICON_BUTTON} hover:text-[var(--color-text-danger)]`}
-              >
+              <IconButton label="Delete this comment" tone="danger" onClick={() => setConfirmingDelete(true)}>
                 <Trash2 size={14} aria-hidden="true" />
-              </button>
+              </IconButton>
             )}
           </div>
         )}

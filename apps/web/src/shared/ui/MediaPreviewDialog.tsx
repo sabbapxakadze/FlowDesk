@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Minus, Plus, X } from "lucide-react";
 import { Button } from "./Button";
 import { buttonVariants } from "./buttonVariants";
+import { IconButton } from "./IconButton";
 
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 5;
@@ -105,14 +106,9 @@ export function MediaPreviewDialog({
           <span className="font-semibold">{filename}</span>
           <span className="ml-2 text-xs text-[var(--color-text-muted)]">{sizeLabel}</span>
         </p>
-        <button
-          type="button"
-          aria-label="Close preview"
-          onClick={() => dialogRef.current?.close()}
-          className="shrink-0 rounded-[var(--radius-control)] p-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-border-default)] hover:text-[var(--color-text-default)] focus-visible:outline-2 focus-visible:outline-[var(--color-border-focus)]"
-        >
+        <IconButton label="Close preview" onClick={() => dialogRef.current?.close()}>
           <X size={16} aria-hidden="true" />
-        </button>
+        </IconButton>
       </div>
 
       <div className="flex min-h-40 flex-1 overflow-auto bg-[var(--color-bg-page)] p-3">

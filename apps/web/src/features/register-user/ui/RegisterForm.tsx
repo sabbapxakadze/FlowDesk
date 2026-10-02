@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { registerRequestSchema, type RegisterRequest } from "@flowdesk/contracts";
 import { ApiError } from "../../../shared/api/client";
-import { Button, ErrorText, Field, Input } from "../../../shared/ui";
+import { Button, buttonVariants, ErrorText, Field, Input } from "../../../shared/ui";
 import { registerUser } from "../api/registerUser";
 
 /**
@@ -42,7 +42,7 @@ export function RegisterForm() {
       <p className="text-sm">
         Account created for <strong>{mutation.data.organization.name}</strong>. Check your
         email for a verification link, then{" "}
-        <Link to="/login" className="text-[var(--color-text-link)] underline">
+        <Link to="/login" className={buttonVariants({ variant: "link" })}>
           log in
         </Link>
         .

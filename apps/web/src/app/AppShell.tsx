@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { Menu, X } from "lucide-react";
 import { Outlet } from "react-router";
 import { useAuth } from "../shared/auth/useAuth";
+import { IconButton } from "../shared/ui";
 import { NotificationBell } from "../widgets/notification-bell";
 import { Sidebar } from "../widgets/sidebar";
 import { useLiveOrganizationUpdates } from "./useLiveOrganizationUpdates";
@@ -61,15 +62,15 @@ export function AppShell() {
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--color-border-sidebar)] bg-[var(--color-bg-sidebar)] px-3 py-2">
-        <button
-          type="button"
+        <IconButton
+          label="Open menu"
+          tone="sidebar"
+          size="lg"
           onClick={() => setDrawerOpen(true)}
-          aria-label="Open menu"
           aria-expanded={open}
-          className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-text-sidebar-active)] hover:bg-[var(--color-bg-sidebar-active)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text-sidebar-active)]"
         >
           <Menu size={20} aria-hidden="true" />
-        </button>
+        </IconButton>
         <span className="font-display text-xl text-[var(--color-text-sidebar-active)]">FlowDesk</span>
         <div className="ml-auto">
           <NotificationBell panelAlign="right" />
@@ -91,15 +92,15 @@ export function AppShell() {
           <div className="absolute inset-y-0 left-0 w-64 max-w-[85vw]">
             <Sidebar
               actions={
-                <button
-                  type="button"
+                <IconButton
+                  label="Close menu"
+                  tone="sidebar"
+                  size="lg"
                   onClick={() => setDrawerOpen(false)}
-                  aria-label="Close menu"
                   autoFocus
-                  className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-text-sidebar-active)] hover:bg-[var(--color-bg-sidebar-active)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text-sidebar-active)]"
                 >
                   <X size={18} aria-hidden="true" />
-                </button>
+                </IconButton>
               }
             />
           </div>

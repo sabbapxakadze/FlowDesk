@@ -100,6 +100,10 @@ Download; expired signed links are refetched).
 Attachment previews followed (2026-10-02): comment cards with a header strip, an image/video
 preview popup with zoom or player controls and Download, and thumbnails in comments. Video
 (mp4/webm, 10 MB) needed range requests on the download route so seeking works (ADR 0023).
+Issue activity lines are icon rows colored by event kind, and a person's name opens a hover card
+(role, email) wherever it is shown in a sentence or header (`shared/ui/PersonHover`, `entities/member/PersonName`).
+Buttons are standardised (Button cleanup, 2026-10-02): `Button` has a `link` variant, there is an `IconButton`,
+and lint fails on hand-written link styles and unlisted raw `<button>`s.
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,

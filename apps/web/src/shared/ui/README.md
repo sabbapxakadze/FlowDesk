@@ -17,3 +17,8 @@ Add the next component here when a real screen needs it, not before.
 `Page` and `PageHeader` (Phase 3.6 slice 2d) are the frame of every logged-in
 page. `PageHeader` imports react-router's `Link` for its back link, the one
 router dependency in this library.
+
+Buttons (Button cleanup slice, 2026-10-02): text that acts is `<Button variant="link">`
+(or `buttonVariants({ variant: "link" })` on a `Link` or `a`); an icon-only button is
+`IconButton` (its `label` is required). Lint fails on a hand-written link style and on a raw
+`<button>` outside the short list in `eslint.config.js`.

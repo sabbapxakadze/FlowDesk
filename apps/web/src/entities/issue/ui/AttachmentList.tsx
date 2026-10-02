@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useAttachments } from "../api/useAttachments";
 import { useDeleteAttachment } from "../api/useDeleteAttachment";
-import { Card, EmptyState, Skeleton } from "../../../shared/ui";
+import { Button, buttonVariants, Card, EmptyState, Skeleton } from "../../../shared/ui";
 import { formatFileSize } from "../../../shared/ui/lib/formatFileSize";
 import { AttachmentLink } from "./AttachmentLink";
 
@@ -44,7 +44,7 @@ export function AttachmentList({
     <ul className="flex flex-col gap-2">
       {attachments?.map((attachment) => (
         <Card key={attachment.id} as="li" className="flex items-center justify-between gap-2">
-          <AttachmentLink attachment={attachment} className="text-sm text-[var(--color-text-link)] underline">
+          <AttachmentLink attachment={attachment} className={buttonVariants({ variant: "link" })}>
             {attachment.filename}
           </AttachmentLink>
           <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
@@ -55,14 +55,15 @@ export function AttachmentList({
                 : attachment.uploaderName}
               {attachment.commentId && " · from a comment"}
             </span>
-            <button
+            <Button
               type="button"
+              variant="link"
+              className="text-xs"
               onClick={() => deleteMutation.mutate(attachment.id)}
               disabled={deleteMutation.isPending}
-              className="text-[var(--color-text-link)] underline disabled:opacity-50"
             >
               Remove
-            </button>
+            </Button>
           </div>
         </Card>
       ))}

@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { RegisterForm } from "../../features/register-user";
+import { buttonVariants } from "../../shared/ui";
 
 export function RegisterPage() {
   return (
@@ -8,7 +9,7 @@ export function RegisterPage() {
       <RegisterForm />
       <p className="mt-6 text-sm text-[var(--color-text-muted)]">
         Already have an account?{" "}
-        <Link to="/login" className="text-[var(--color-text-link)] underline">
+        <Link to="/login" className={buttonVariants({ variant: "link" })}>
           Log in
         </Link>
       </p>

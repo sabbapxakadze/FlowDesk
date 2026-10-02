@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Card, StatusBadge } from "../../../shared/ui";
+import { Button, Card, StatusBadge } from "../../../shared/ui";
 import type { Issue } from "../model";
 import { IssueSummary } from "./IssueSummary";
 
@@ -35,9 +35,9 @@ export function IssueCard({
         </IssueSummary>
       </Link>
       {onEdit && (
-        <button onClick={onEdit} className="shrink-0 text-sm text-[var(--color-text-link)] underline">
+        <Button type="button" variant="link" className="shrink-0" onClick={onEdit}>
           Edit
-        </button>
+        </Button>
       )}
     </Card>
   );

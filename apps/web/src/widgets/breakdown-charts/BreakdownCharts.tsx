@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useBreakdown } from "../../entities/analytics";
-import { AnchoredTooltip, EmptyState, ErrorText, anchoredTooltipProps, Skeleton, STATUS_LABELS } from "../../shared/ui";
+import { AnchoredTooltip, Button, EmptyState, ErrorText, anchoredTooltipProps, Skeleton, STATUS_LABELS } from "../../shared/ui";
 
 type Row = { name: string; count: number };
 
@@ -79,13 +79,9 @@ function BarSection({
         </ResponsiveContainer>
       </div>
       <p className="mt-1 text-sm text-[var(--color-text-muted)]">{summary}</p>
-      <button
-        type="button"
-        onClick={() => setShowTable((open) => !open)}
-        className="mt-1 text-sm text-[var(--color-text-link)] underline"
-      >
+      <Button type="button" variant="link" className="mt-1" onClick={() => setShowTable((open) => !open)}>
         {showTable ? "Hide table" : "View as table"}
-      </button>
+      </Button>
       {showTable && (
         <table className="mt-2 w-full max-w-xs text-left text-sm">
           <thead>

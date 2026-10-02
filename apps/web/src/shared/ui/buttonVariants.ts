@@ -1,6 +1,7 @@
-import { cva } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
+import { twMerge } from "tailwind-merge";
 
-export const buttonVariants = cva(
+const buttonVariantClasses = cva(
   "rounded-[var(--radius-control)] text-sm transition-[opacity,background-color,box-shadow] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-border-focus)]",
   {
     variants: {
@@ -22,6 +23,10 @@ export const buttonVariants = cva(
         // ...and a stronger red for the final, irreversible confirm.
         dangerStrong:
           "bg-[var(--color-bg-action-danger-strong)] text-[var(--color-text-on-action-strong)] enabled:hover:bg-[var(--color-bg-action-danger-strong-hover)] enabled:hover:ring-2 enabled:hover:ring-[var(--color-ring-action-hover)] enabled:active:brightness-90",
+        // Text that acts: an underlined link-coloured word (Edit, Remove, "View as table").
+        // No padding (see the compound variant below); for a router <Link> or an <a>,
+        // use buttonVariants({ variant: "link" }) so it looks the same.
+        link: "text-[var(--color-text-link)] underline",
       },
       size: {
         sm: "px-3 py-1",
@@ -30,6 +35,17 @@ export const buttonVariants = cva(
       // Full-width buttons for the centered auth forms.
       fullWidth: { true: "w-full", false: "" },
     },
+    // A link has no box of its own, whatever the size.
+    compoundVariants: [{ variant: "link", class: "p-0" }],
     defaultVariants: { variant: "primary", size: "md", fullWidth: false },
   },
 );
+
+/**
+ * The classes for a button-looking element. Merged with tailwind-merge so a later
+ * class wins over an earlier one (the link variant's `p-0` over the size's `px-3`),
+ * both for <Button> and for an <a> or <Link> that only borrows the look.
+ */
+export function buttonVariants(props?: VariantProps<typeof buttonVariantClasses>): string {
+  return twMerge(buttonVariantClasses(props));
+}

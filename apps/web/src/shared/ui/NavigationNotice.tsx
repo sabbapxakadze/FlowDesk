@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
+import { IconButton } from "./IconButton";
 
 /**
  * A one-off message handed over by the page you were just redirected from, e.g.
@@ -20,14 +21,13 @@ export function NavigationNotice() {
       className="mb-4 flex items-start justify-between gap-3 rounded-[var(--radius-control)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm"
     >
       <span>{notice}</span>
-      <button
-        type="button"
-        aria-label="Dismiss"
+      <IconButton
+        label="Dismiss"
+        className="-my-1 -mr-1"
         onClick={() => navigate(location.pathname + location.search, { replace: true, state: null })}
-        className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-default)]"
       >
         <X size={14} aria-hidden="true" />
-      </button>
+      </IconButton>
     </div>
   );
 }

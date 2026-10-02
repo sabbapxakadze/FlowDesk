@@ -1,5 +1,6 @@
 export { Button, type ButtonProps } from "./Button";
 export { buttonVariants } from "./buttonVariants";
+export { IconButton } from "./IconButton";
 export { Input } from "./Input";
 export { Textarea } from "./Textarea";
 export { Select } from "./Select";
