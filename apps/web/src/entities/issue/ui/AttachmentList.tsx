@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useAttachments } from "../api/useAttachments";
 import { useDeleteAttachment } from "../api/useDeleteAttachment";
 import { Card, EmptyState, Skeleton } from "../../../shared/ui";
@@ -15,10 +16,14 @@ export function AttachmentList({
   organizationId,
   projectId,
   issueId,
+  renderPerson,
 }: {
   organizationId: string;
   projectId: string;
   issueId: string;
+  /** How to show the uploader (the page passes the hoverable person name; entities
+   * cannot import each other). Defaults to the plain name. */
+  renderPerson?: (person: { userId: string; name: string }) => ReactNode;
 }) {
   const { data: attachments, isPending } = useAttachments(organizationId, projectId, issueId);
   const deleteMutation = useDeleteAttachment(organizationId, projectId, issueId);
@@ -44,7 +49,10 @@ export function AttachmentList({
           </AttachmentLink>
           <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
             <span>
-              {formatFileSize(attachment.sizeBytes)} · {attachment.uploaderName}
+              {formatFileSize(attachment.sizeBytes)} ·{" "}
+              {renderPerson
+                ? renderPerson({ userId: attachment.uploaderId, name: attachment.uploaderName })
+                : attachment.uploaderName}
               {attachment.commentId && " · from a comment"}
             </span>
             <button

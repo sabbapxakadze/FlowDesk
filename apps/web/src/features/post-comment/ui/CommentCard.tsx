@@ -3,7 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileText, Pencil, Trash2 } from "lucide-react";
 import type { Attachment, IssueEvent } from "@flowdesk/contracts";
 import { AttachmentLink, AttachmentThumbnail, issueKeys, previewKind } from "../../../entities/issue";
-import { Avatar, Button, ErrorText, Textarea, Time } from "../../../shared/ui";
+import { PersonName } from "../../../entities/member";
+import { Button, ErrorText, Textarea, Time } from "../../../shared/ui";
 import { formatFileSize } from "../../../shared/ui/lib/formatFileSize";
 import { deleteComment } from "../api/deleteComment";
 import { updateComment } from "../api/updateComment";
@@ -104,17 +105,20 @@ export function CommentCard({
     !isEditing && !confirmingDelete && (payload.canEdit || payload.canDelete);
 
   return (
-    <div className="group overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-bg-surface)] shadow-sm">
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border-default)] bg-[var(--color-border-default)]/40 px-4 py-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <Avatar name={event.actorName} size="md" />
-          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-xs text-[var(--color-text-muted)]">
-            <span className="text-sm font-semibold text-[var(--color-text-default)]">
-              {event.actorName}
-            </span>
-            <Time iso={event.createdAt} />
-            {payload.edited && <span>(edited)</span>}
-          </div>
+    <div className="group rounded-[var(--radius-card)] bg-[var(--color-bg-surface)] shadow-sm">
+      <div className="flex items-center justify-between gap-2 rounded-t-[var(--radius-card)] border-b border-[var(--color-border-default)] bg-[var(--color-border-default)]/40 px-4 py-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--color-text-muted)]">
+          <span className="text-sm font-semibold">
+            <PersonName
+              organizationId={organizationId}
+              userId={event.actorId}
+              name={event.actorName}
+              withAvatar
+              avatarSize="md"
+            />
+          </span>
+          <Time iso={event.createdAt} />
+          {payload.edited && <span>(edited)</span>}
         </div>
         {showActions && (
           <div className={`flex shrink-0 items-center gap-1 ${ACTION_REVEAL}`}>

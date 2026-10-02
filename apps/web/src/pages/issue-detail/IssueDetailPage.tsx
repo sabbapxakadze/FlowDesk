@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import type { Attachment, IssueEvent } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
-import { useMemberNames, useMyRole } from "../../entities/member";
+import { PersonName, useMemberNames, useMyRole } from "../../entities/member";
 import {
   AttachmentList,
-  describeEvent,
   useAttachments,
   useIssue,
   useIssueEvents,
@@ -15,8 +14,9 @@ import { DeleteIssueButton } from "../../features/delete-issue";
 import { EditIssueForm } from "../../features/edit-issue";
 import { CommentCard, CommentForm } from "../../features/post-comment";
 import { UploadAttachmentForm } from "../../features/upload-attachment";
+import { ActivityLine } from "../../widgets/activity-line";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Avatar, Page, PageHeader, PriorityBadge, Skeleton, StatusBadge, Time } from "../../shared/ui";
+import { Page, PageHeader, PriorityBadge, Skeleton, StatusBadge } from "../../shared/ui";
 
 function IssueDetailSkeleton() {
   return (
@@ -46,12 +46,31 @@ function TimelineSkeleton() {
 }
 
 /** "Alice is also viewing" / "Alice and Bob are also viewing" / "Alice,
- * Bob, and Carol are also viewing" — plain English list join, not
- * worth a shared/ui component for the one place this is used. */
-function describeViewers(names: string[]): string {
-  if (names.length === 1) return `${names[0]} is also viewing`;
-  if (names.length === 2) return `${names[0]} and ${names[1]} are also viewing`;
-  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]} are also viewing`;
+ * Bob, and Carol are also viewing" — plain English list join, with each name
+ * the hoverable person name. Not worth a shared/ui component for the one place
+ * this is used. */
+function Viewers({
+  viewers,
+  organizationId,
+}: {
+  viewers: { userId: string; name: string }[];
+  organizationId: string;
+}) {
+  const people = viewers.map((viewer) => (
+    <PersonName key={viewer.userId} organizationId={organizationId} userId={viewer.userId} name={viewer.name} />
+  ));
+  const last = people.length - 1;
+  return (
+    <>
+      {people.map((person, i) => (
+        <span key={viewers[i]!.userId}>
+          {i > 0 && (i === last ? (last === 1 ? " and " : ", and ") : ", ")}
+          {person}
+        </span>
+      ))}
+      {people.length === 1 ? " is also viewing" : " are also viewing"}
+    </>
+  );
 }
 
 function TimelineEntry({
@@ -81,16 +100,7 @@ function TimelineEntry({
     );
   }
 
-  // An activity line: a small dot, then the sentence and its time as ONE run of text,
-  // so on a narrow screen the time wraps with the sentence instead of splitting off.
-  return (
-    <li className="flex items-baseline gap-2 pl-3 text-sm text-[var(--color-text-muted)]">
-      <span className="h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full bg-[var(--color-border-input)]" />
-      <span>
-        {event.actorName} {describeEvent(event)} · <Time iso={event.createdAt} />
-      </span>
-    </li>
-  );
+  return <ActivityLine event={event} organizationId={organizationId} />;
 }
 
 export function IssueDetailPage() {
@@ -164,8 +174,12 @@ export function IssueDetailPage() {
               <PriorityBadge priority={issue.priority} />
               {nameOf(issue.assigneeId) && (
                 <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
-                  <Avatar name={nameOf(issue.assigneeId)!} />
-                  {nameOf(issue.assigneeId)}
+                  <PersonName
+                    organizationId={organization!.id}
+                    userId={issue.assigneeId!}
+                    name={nameOf(issue.assigneeId)!}
+                    withAvatar
+                  />
                 </span>
               )}
               <button
@@ -180,7 +194,7 @@ export function IssueDetailPage() {
             </div>
             {otherViewers.length > 0 && (
               <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                {describeViewers(otherViewers.map((viewer) => viewer.name))}
+                <Viewers viewers={otherViewers} organizationId={organization!.id} />
               </p>
             )}
           </PageHeader>
@@ -194,7 +208,14 @@ export function IssueDetailPage() {
       )}
 
       <h2 className="mt-6 mb-2 text-lg font-semibold">Attachments</h2>
-      <AttachmentList organizationId={organization!.id} projectId={project.id} issueId={issue.id} />
+      <AttachmentList
+        organizationId={organization!.id}
+        projectId={project.id}
+        issueId={issue.id}
+        renderPerson={(person) => (
+          <PersonName organizationId={organization!.id} userId={person.userId} name={person.name} />
+        )}
+      />
       <div className="mt-2">
         <UploadAttachmentForm organizationId={organization!.id} projectId={project.id} issueId={issue.id} />
       </div>

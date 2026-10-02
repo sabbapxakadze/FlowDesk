@@ -30,7 +30,10 @@ test("a comment, an edit and a delete by one person show up live for another", a
   await expect(pageB.getByRole("heading", { name: "Discuss me" })).toBeVisible();
 
   // Presence: A sees B (also proves both sockets joined the issue room).
-  await expect(pageA.getByText("Second Person is also viewing")).toBeVisible();
+  // The name is now a hoverable button inside the sentence, so check both parts.
+  const viewing = pageA.locator("p", { hasText: /is also viewing/ });
+  await expect(viewing).toBeVisible();
+  await expect(viewing.getByRole("button", { name: "Second Person" })).toBeVisible();
 
   // A posts: B sees it with no reload.
   await pageA.getByPlaceholder("Add a comment…").fill("Hello from A");

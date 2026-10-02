@@ -57,6 +57,12 @@
   --color-status-in-progress: var(--color-accent-700);
   --color-status-done: var(--color-emerald-600);
 
+  /* Timeline dots (issue activity): added/created, removed/deleted, and
+     changed/assigned. Status changes reuse the status tokens above. */
+  --color-event-added: var(--color-emerald-600);
+  --color-event-removed: var(--color-red-600);
+  --color-event-changed: var(--color-accent-600);
+
   /* Charts (Phase 8). Semantic, so a chart never hardcodes a color and
      dark mode is a redefinition here, not a flip in the component. Grid
      and axis are deliberately recessive; the mark carries the color. */
@@ -124,6 +130,10 @@
     --color-status-in-progress: var(--color-accent-400);
     --color-status-done: var(--color-emerald-400);
 
+    --color-event-added: var(--color-emerald-400);
+    --color-event-removed: var(--color-red-400);
+    --color-event-changed: var(--color-accent-400);
+
     --color-chart-primary: var(--color-accent-400);
     --color-chart-grid: var(--color-neutral-800);
     --color-chart-axis: var(--color-neutral-400);
@@ -167,6 +177,10 @@
   --color-status-todo: var(--color-neutral-400);
   --color-status-in-progress: var(--color-accent-400);
   --color-status-done: var(--color-emerald-400);
+
+  --color-event-added: var(--color-emerald-400);
+  --color-event-removed: var(--color-red-400);
+  --color-event-changed: var(--color-accent-400);
 
   --color-chart-primary: var(--color-accent-400);
   --color-chart-grid: var(--color-neutral-800);

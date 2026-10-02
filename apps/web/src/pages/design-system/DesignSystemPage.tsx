@@ -85,6 +85,15 @@ const TOKEN_GROUPS: TokenGroup[] = [
     ],
   },
   {
+    title: "Timeline events",
+    note: "The dot before each activity line on an issue. Status changes use the status colours.",
+    tokens: [
+      { name: "event-added", cssVar: "--color-event-added", kind: "fill" },
+      { name: "event-removed", cssVar: "--color-event-removed", kind: "fill" },
+      { name: "event-changed", cssVar: "--color-event-changed", kind: "fill" },
+    ],
+  },
+  {
     title: "Charts",
     tokens: [
       { name: "chart-primary", cssVar: "--color-chart-primary", kind: "fill" },

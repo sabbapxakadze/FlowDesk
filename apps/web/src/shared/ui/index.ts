@@ -24,3 +24,4 @@ export { Avatar } from "./Avatar";
 export { ConfirmDelete } from "./ConfirmDelete";
 export { NavigationNotice } from "./NavigationNotice";
 export { MediaPreviewDialog } from "./MediaPreviewDialog";
+export { PersonHover } from "./PersonHover";
