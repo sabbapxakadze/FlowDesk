@@ -55,7 +55,7 @@ test("a comment, an edit and a delete by one person show up live for another", a
   // A deletes: B sees the placeholder.
   const editedA = pageA.locator("li", { hasText: "Hello again from A" });
   await editedA.getByRole("button", { name: "Delete" }).click();
-  await editedA.getByRole("button", { name: "Yes" }).click();
+  await editedA.getByRole("button", { name: "Confirm delete" }).click();
   await expect(pageB.getByText("Comment deleted")).toBeVisible();
 
   await contextB.close();

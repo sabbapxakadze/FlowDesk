@@ -1878,7 +1878,28 @@ The original plan for this slice, kept for the record:
    **Not done:** the comment "Delete / Yes" text links stay link-style red text; the
    dark-mode hover boundary of the green is only about 2.6:1 against the page (the ring and
    the unchanged label carry it); touch screens have no hover.
-8. **Attachment previews and a nicer comment card (owner idea, 2026-10-01; do it
+   **Comment cards: DONE 2026-10-02 (first part of the item below).** Design pass: three
+   options (speech bubbles, card with a header strip, open thread) were built from the real
+   tokens on the design-system page; the owner chose **B, the header strip**. Built: avatar,
+   name, relative time (exact date on hover), "(edited)" in a tinted header; Edit and Delete as
+   icon buttons shown on hover or keyboard focus (always on touch screens); inline edit with a
+   green Save; a delete confirmation that says the files stay in Attachments; the file list as
+   chips (icon, link, size); a dashed "Comment deleted" card; the timeline's grey left rail is
+   gone (activity lines keep a small dot, and the sentence and its time wrap as one run on a
+   narrow screen). `Avatar` got a `md` size. The two losing options and their temporary
+   design-system section were deleted. **Verified:** 5 new e2e tests (card content, hover and
+   keyboard reveal measured on the real opacity, always visible on a touch-emulating context,
+   delete Cancel and the files message, a 300-character unbroken word kept inside the card at
+   400 px) and the two older comment tests updated for the new "Confirm delete" button;
+   mutations (no touch rule, no keyboard-focus reveal, no hover reveal, no word-breaking) each
+   fail a test; light, dark and 400 px screenshots of the real issue page looked right.
+   **Found while testing:** my first long-word test passed even without the fix, because the
+   card clips its contents (`overflow-hidden`): the text was being cut off while the page looked
+   fine; the test now also checks the text fits its own box (2,293 px of text in a 336 px box
+   without the fix). **Not done yet:** image and video previews (files are still chips), the
+   preview popup, video support; the Edit/Delete icon buttons are raw `<button>`s (a candidate
+   for the button cleanup slice).
+8. **Attachment previews (the rest of this owner idea, 2026-10-01; do it
    before Phase 9).** Today an attachment is only a link, and a comment is a grey
    rail with text. Wanted:
    - **Preview popup:** clicking an attachment that is an image or a video opens a
@@ -1907,7 +1928,22 @@ The original plan for this slice, kept for the record:
    - **Tests when built:** e2e (open the popup, Esc closes it, Download link has the
      right target, a comment with an image shows a thumbnail that opens the popup),
      keyboard and focus handling of the dialog, and the narrow-width check.
-9. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
+9. **Button cleanup (owner decision 2026-10-01: its OWN small slice, AFTER the
+   attachment-preview and comment-card work, not folded into it).** `shared/ui/Button`
+   is already the one button (variants `primary`, `secondary`, `success`, `danger`,
+   `dangerStrong`; sizes `sm`, `md`; `fullWidth`; colours and hover from semantic
+   tokens). A count on 2026-10-01 found it is not used everywhere: 41 `<Button>` uses
+   against 26 raw `<button>` elements, and 10 `className` overrides on Buttons. Many of
+   the raw ones are legitimate (icon-only buttons, sidebar items, theme switch, chart
+   toggles, search rows, the notice's dismiss X). The real gap is the **link-style text
+   buttons** (Edit, Remove, Delete, Yes/Cancel on comments, attachments and issue
+   cards) that repeat `text-[var(--color-text-link)] underline` by hand. Plan: add a
+   `link` variant (and maybe a `loading` prop), convert those, remove the overrides,
+   keep legitimately different controls raw, and add a test that fails on a new raw
+   styled button where a variant exists (or at least a documented list of exceptions).
+   Do it after the comment cards, because the new cards will change most of those
+   buttons anyway.
+10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.
 

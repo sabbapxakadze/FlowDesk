@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { FileText, Image as ImageIcon, Pencil, Trash2 } from "lucide-react";
 import type { Attachment, IssueEvent } from "@flowdesk/contracts";
 import { issueKeys } from "../../../entities/issue";
-import { Button, Card, ErrorText, Textarea, Time } from "../../../shared/ui";
+import { Avatar, Button, ErrorText, Textarea, Time } from "../../../shared/ui";
 import { deleteComment } from "../api/deleteComment";
 import { updateComment } from "../api/updateComment";
 
@@ -12,10 +13,40 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Edit and Delete are quiet until you point at the comment or tab into it, so a
+// long thread is not a wall of buttons. On a touch screen (no hover) they are
+// always shown, so nothing is unreachable.
+const ACTION_REVEAL =
+  "opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100";
+
+const ICON_BUTTON =
+  "rounded-[var(--radius-control)] p-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-border-default)] focus-visible:outline-2 focus-visible:outline-[var(--color-border-focus)]";
+
+/** A file attached to the comment: icon, name (a signed download link) and size. */
+function FileChip({ file }: { file: Attachment }) {
+  const Icon = file.mimeType.startsWith("image/") ? ImageIcon : FileText;
+  return (
+    <a
+      href={file.downloadUrl}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex max-w-full items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-border-default)] px-2 py-1 text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-border-default)]"
+    >
+      <Icon size={14} aria-hidden="true" className="shrink-0" />
+      <span className="truncate text-[var(--color-text-link)] underline">
+        {file.filename}
+      </span>
+      <span className="shrink-0">{formatSize(file.sizeBytes)}</span>
+    </a>
+  );
+}
+
 /**
- * One comment on the timeline. The server decides `canEdit`/`canDelete` for
- * this viewer (see listIssueEvents), so there is no role logic here: a button
- * shows exactly when the server would accept the request.
+ * One comment on the timeline, as a card with a tinted header strip (the owner
+ * picked this layout, Phase 8.5 design pass): avatar, name, relative time (exact
+ * date on hover), "(edited)", and Edit/Delete for whoever may use them. The server
+ * decides `canEdit`/`canDelete` for this viewer (see listIssueEvents), so there is
+ * no role logic here: a button shows exactly when the server would accept it.
  *
  * Delete is a two-step inline confirm, not window.confirm: it stays inside the
  * page, is keyboard reachable, and can be driven like any other UI.
@@ -53,7 +84,10 @@ export function CommentCard({
   }
 
   const editMutation = useMutation({
-    mutationFn: () => updateComment(organizationId, projectId, issueId, payload.commentId, { body: draft }),
+    mutationFn: () =>
+      updateComment(organizationId, projectId, issueId, payload.commentId, {
+        body: draft,
+      }),
     onSuccess: () => {
       setIsEditing(false);
       refresh();
@@ -61,131 +95,145 @@ export function CommentCard({
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => deleteComment(organizationId, projectId, issueId, payload.commentId),
+    mutationFn: () =>
+      deleteComment(organizationId, projectId, issueId, payload.commentId),
     onSuccess: refresh,
   });
 
   if (payload.deleted) {
     return (
-      <Card className="rounded-[var(--radius-control)] px-3 py-2">
-        <p className="text-sm text-[var(--color-text-muted)] italic">
-          Comment deleted · <Time iso={event.createdAt} />
-        </p>
-      </Card>
+      <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border-input)] px-4 py-2 text-sm text-[var(--color-text-muted)] italic">
+        Comment deleted · <Time iso={event.createdAt} />
+      </div>
     );
   }
 
+  const showActions =
+    !isEditing && !confirmingDelete && (payload.canEdit || payload.canDelete);
+
   return (
-    <Card className="rounded-[var(--radius-control)] px-3 py-2">
-      <p className="text-xs text-[var(--color-text-muted)]">
-        {event.actorName} commented · <Time iso={event.createdAt} />
-        {payload.edited && " (edited)"}
-      </p>
-
-      {isEditing ? (
-        <div className="mt-1 flex flex-col gap-2">
-          <Textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={3}
-            aria-label="Edit comment"
-            autoFocus
-          />
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="success"
-              disabled={editMutation.isPending || !draft.trim() || draft === payload.body}
-              onClick={() => editMutation.mutate()}
-            >
-              {editMutation.isPending ? "Saving…" : "Save"}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={editMutation.isPending}
-              onClick={() => {
-                setIsEditing(false);
-                setDraft(payload.body);
-              }}
-            >
-              Cancel
-            </Button>
+    <div className="group overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-bg-surface)] shadow-sm">
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border-default)] bg-[var(--color-border-default)]/40 px-4 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <Avatar name={event.actorName} size="md" />
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-xs text-[var(--color-text-muted)]">
+            <span className="text-sm font-semibold text-[var(--color-text-default)]">
+              {event.actorName}
+            </span>
+            <Time iso={event.createdAt} />
+            {payload.edited && <span>(edited)</span>}
           </div>
-          {editMutation.isError && <ErrorText>{editMutation.error.message}</ErrorText>}
         </div>
-      ) : (
-        <p className="text-sm whitespace-pre-wrap">{payload.body}</p>
-      )}
-
-      {files.length > 0 && (
-        <ul className="mt-2 flex flex-col gap-1">
-          {files.map((file) => (
-            <li key={file.id} className="text-xs text-[var(--color-text-muted)]">
-              <a
-                href={file.downloadUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[var(--color-text-link)] underline"
-              >
-                {file.filename}
-              </a>{" "}
-              · {formatSize(file.sizeBytes)}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {!isEditing && (payload.canEdit || payload.canDelete) && (
-        <div className="mt-1 flex items-center gap-3 text-xs">
-          {confirmingDelete ? (
-            <>
-              <span className="text-[var(--color-text-muted)]">Delete?</span>
+        {showActions && (
+          <div className={`flex shrink-0 items-center gap-1 ${ACTION_REVEAL}`}>
+            {payload.canEdit && (
               <button
                 type="button"
-                disabled={deleteMutation.isPending}
-                onClick={() => deleteMutation.mutate()}
-                className="text-[var(--color-text-danger)] underline disabled:opacity-50"
+                aria-label="Edit this comment"
+                onClick={() => {
+                  setDraft(payload.body);
+                  setIsEditing(true);
+                }}
+                className={`${ICON_BUTTON} hover:text-[var(--color-text-default)]`}
               >
-                {deleteMutation.isPending ? "Deleting…" : "Yes"}
+                <Pencil size={14} aria-hidden="true" />
               </button>
+            )}
+            {payload.canDelete && (
               <button
                 type="button"
-                disabled={deleteMutation.isPending}
-                onClick={() => setConfirmingDelete(false)}
-                className="text-[var(--color-text-link)] underline"
+                aria-label="Delete this comment"
+                onClick={() => setConfirmingDelete(true)}
+                className={`${ICON_BUTTON} hover:text-[var(--color-text-danger)]`}
+              >
+                <Trash2 size={14} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="px-4 py-3">
+        {isEditing ? (
+          <div className="flex flex-col gap-2">
+            <Textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              rows={3}
+              aria-label="Edit comment"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="success"
+                disabled={
+                  editMutation.isPending || !draft.trim() || draft === payload.body
+                }
+                onClick={() => editMutation.mutate()}
+              >
+                {editMutation.isPending ? "Saving…" : "Save"}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={editMutation.isPending}
+                onClick={() => {
+                  setIsEditing(false);
+                  setDraft(payload.body);
+                }}
               >
                 Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              {payload.canEdit && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDraft(payload.body);
-                    setIsEditing(true);
-                  }}
-                  className="text-[var(--color-text-link)] underline"
-                >
-                  Edit
-                </button>
-              )}
-              {payload.canDelete && (
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(true)}
-                  className="text-[var(--color-text-link)] underline"
-                >
-                  Delete
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      )}
-      {deleteMutation.isError && <ErrorText>{deleteMutation.error.message}</ErrorText>}
-    </Card>
+              </Button>
+            </div>
+            {editMutation.isError && <ErrorText>{editMutation.error.message}</ErrorText>}
+          </div>
+        ) : (
+          <p className="text-sm break-words whitespace-pre-wrap">{payload.body}</p>
+        )}
+
+        {files.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-start gap-2">
+            {files.map((file) => (
+              <FileChip key={file.id} file={file} />
+            ))}
+          </div>
+        )}
+
+        {confirmingDelete && (
+          <div
+            role="alertdialog"
+            aria-label="Delete comment"
+            className="mt-3 flex flex-col gap-2 border-t border-[var(--color-border-default)] pt-3"
+          >
+            <p className="text-sm">
+              Delete this comment? Its text is removed from the timeline. Any files stay
+              in Attachments.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="dangerStrong"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate()}
+              >
+                {deleteMutation.isPending ? "Deleting…" : "Confirm delete"}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={deleteMutation.isPending}
+                onClick={() => setConfirmingDelete(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+            {deleteMutation.isError && (
+              <ErrorText>{deleteMutation.error.message}</ErrorText>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

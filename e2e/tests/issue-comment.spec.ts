@@ -38,7 +38,7 @@ test("create a project and an issue, then post, edit and delete a comment", asyn
 
   // Delete (two steps: Delete, then Yes)
   await edited.getByRole("button", { name: "Delete" }).click();
-  await edited.getByRole("button", { name: "Yes" }).click();
+  await edited.getByRole("button", { name: "Confirm delete" }).click();
   await expect(page.getByText("Comment deleted")).toBeVisible();
   await expect(page.getByText("Second version")).toHaveCount(0);
 });

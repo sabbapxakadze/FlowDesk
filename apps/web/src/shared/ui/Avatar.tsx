@@ -10,13 +10,24 @@ function initialsOf(name: string): string {
  * A small circle with a person's initials. The full name is the accessible
  * name and the hover title, so the initials are never the only information.
  */
-export function Avatar({ name, label }: { name: string; label?: string }) {
+export function Avatar({
+  name,
+  label,
+  size = "sm",
+}: {
+  name: string;
+  label?: string;
+  /** sm = 20px (cards, lists); md = 28px (comment headers). */
+  size?: "sm" | "md";
+}) {
   return (
     <span
       role="img"
       aria-label={label ?? name}
       title={name}
-      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-border-default)] text-[10px] font-medium text-[var(--color-text-default)]"
+      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--color-border-default)] font-medium text-[var(--color-text-default)] ${
+        size === "md" ? "h-7 w-7 text-xs" : "h-5 w-5 text-[10px]"
+      }`}
     >
       {initialsOf(name)}
     </span>

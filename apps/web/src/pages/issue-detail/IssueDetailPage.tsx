@@ -54,13 +54,6 @@ function describeViewers(names: string[]): string {
   return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]} are also viewing`;
 }
 
-/** The dot that sits on the timeline's left rail, centered on its line. */
-function TimelineDot() {
-  return (
-    <span className="absolute top-1.5 -left-5 h-2 w-2 -translate-x-1/2 rounded-full bg-[var(--color-border-input)]" />
-  );
-}
-
 function TimelineEntry({
   event,
   files,
@@ -76,8 +69,7 @@ function TimelineEntry({
 }) {
   if (event.type === "issue.commented") {
     return (
-      <li className="relative">
-        <TimelineDot />
+      <li>
         <CommentCard
           event={event}
           files={files}
@@ -89,10 +81,14 @@ function TimelineEntry({
     );
   }
 
+  // An activity line: a small dot, then the sentence and its time as ONE run of text,
+  // so on a narrow screen the time wraps with the sentence instead of splitting off.
   return (
-    <li className="relative text-sm text-[var(--color-text-muted)]">
-      <TimelineDot />
-      {event.actorName} {describeEvent(event)} · <Time iso={event.createdAt} />
+    <li className="flex items-baseline gap-2 pl-3 text-sm text-[var(--color-text-muted)]">
+      <span className="h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full bg-[var(--color-border-input)]" />
+      <span>
+        {event.actorName} {describeEvent(event)} · <Time iso={event.createdAt} />
+      </span>
     </li>
   );
 }
@@ -207,7 +203,7 @@ export function IssueDetailPage() {
       {eventsPending ? (
         <TimelineSkeleton />
       ) : (
-        <ul className="flex flex-col gap-3 border-l border-[var(--color-border-input)] pl-5">
+        <ul className="flex flex-col gap-3">
           {events?.map((event) => (
             <TimelineEntry
               key={event.id}

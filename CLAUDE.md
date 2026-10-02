@@ -93,8 +93,9 @@ deletes reaching other open tabs live (`org:changed`), no retry of 4xx answers (
 link says "not found" in under a second), and the previous assignee being notified
 (ADR 0021 amended). Save buttons are now green and Delete is red (a red first click, a
 stronger red on the final confirm), through new semantic action tokens and Button variants,
-with deeper hover/pressed states (plus a light ring in dark mode). Save buttons are now green and Delete is red (outline first, solid red
-on the final confirm), through new semantic action tokens and Button variants.
+with deeper hover/pressed states (plus a light ring in dark mode). Comments are now cards with a
+tinted header strip (avatar, name, time, "(edited)") and hover-revealed Edit/Delete icons, chosen
+by the owner in a three-option design pass; previews of images and video are still to come.
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,
