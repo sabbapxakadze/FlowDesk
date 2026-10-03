@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
+import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
 import { useMembers, useMemberNames } from "../../entities/member";
 import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
 import { CreateIssueForm } from "../../features/create-issue";
@@ -95,6 +96,7 @@ export function ProjectDetailPage() {
   // Which issue (if any) is currently showing its edit form instead of its
   // card — page-level state because IssueCard (entities layer) can't
   // import EditIssueForm (features layer); this is where the two compose.
+  const panel = useIssuePanel();
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
   const [showConflictNotice, setShowConflictNotice] = useState(false);
 
@@ -252,6 +254,7 @@ export function ProjectDetailPage() {
                 issue={issue}
                 projectKey={project.key}
                 assigneeName={nameOf(issue.assigneeId)}
+                onOpen={panel.open}
                 onEdit={() => {
                   setShowConflictNotice(false);
                   setEditingIssueId(issue.id);
@@ -273,6 +276,7 @@ export function ProjectDetailPage() {
           {isFetchingNextPage ? "Loading…" : "Load more"}
         </Button>
       )}
+      <IssuePanel projectId={project.id} />
     </Page>
   );
 }

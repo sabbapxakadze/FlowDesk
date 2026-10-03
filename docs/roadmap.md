@@ -2088,6 +2088,37 @@ The original plan for this slice, kept for the record:
    orgless account not rejoining, the row key that keeps the re-sent link. **Not done:** closing
    a removed person's open tab or socket, ownership transfer, leaving by yourself, showing the
    join date on the hover card, history of who removed whom beyond the issue events.
+   **Issue side panel: DONE 2026-10-03 (ADR 0025; the owner's "open it beside the page, like
+   Notion" idea).** Clicking an issue on the list, the board or the sprints page opens it in a
+   floating card at the right (480 px, no dimming, the page stays usable; a full-screen sheet on a
+   phone): a tinted strip with the key, "Open full page" and close, then the same content as the
+   full page (description, attachments, activity, comments, edit, delete, live updates, hover
+   cards). The open issue is `?issue=<id>` (Back closes it, a reload keeps it, filters are
+   kept); clicking another issue swaps it, clicking empty page closes it, Esc closes it. Built by
+   first moving the issue page body into `widgets/issue-detail` (no visible change, 60 of 60 e2e
+   green), then adding a `panel` variant, `shared/ui/SidePanel`, `useIssuePanel`/`IssuePanel`,
+   and an `onOpen` on the three cards (modified clicks still open the full page; search, the
+   command palette and notifications still go to the full page). **Verified:** 14 new e2e tests
+   (opening with key, heading level and full-page link; Esc and focus returning to the card; swap
+   and Back; inside clicks and posting a comment in the panel; outside click; a page button still
+   acting while the panel closes and the other filters surviving; reload; Ctrl+click and the
+   full-page link; an unknown id; the board click, with a real drag NOT opening it; the sprints
+   page; deleting from the panel; another person's comment arriving live; Esc and clicks inside an
+   image preview not closing the panel; the phone sheet; the wide layout measured at 480 px with a
+   12 px margin and nothing shifting); mutations caught (cards not exempt from outside-close, the
+   Esc guard for dialogs, modified clicks opening the panel, closing on pointerdown). **Real bug found
+   by a test and fixed:** closing on `pointerdown` raced with a page button's own URL update (both
+   from stale copies) and the button re-added `?issue=`; now it closes on `click` and reads the live URL.
+   A second bug found by eye in the real app and fixed: an uploader name at the right end of the
+   attachments row had a hidden hover card sticking out past the panel, which added a horizontal
+   scrollbar (the card now opens leftwards there, with a test). Two more things the owner found by eye and fixed: in dark mode the panel's attachment cards had the same colour as
+   the panel (light mode only showed them through a shadow), so the panel body now uses the page colour like the full
+   page; and the open notifications dropdown was painted UNDER the Analytics charts because the sidebar is `sticky`
+   (its own stacking context) with no z-index, now `z-30` (the panel stays above at `z-40`). Both have measuring
+   tests (card vs body colour in light and dark; a positioned probe over the window must not cover the dropdown).
+   **Not verified / not done:** a draft comment is lost when the panel closes, no focus trap (non-modal on purpose),
+   no slide animation, the board is covered on narrow laptops, search results still open the
+   full page.
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

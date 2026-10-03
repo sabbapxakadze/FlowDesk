@@ -27,11 +27,18 @@ export function PersonHover({
   name,
   roleLabel,
   email,
+  align = "left",
   children,
 }: {
   name: string;
   roleLabel?: string;
   email?: string;
+  /**
+   * Which edge of the name the card lines up with. A name at the right end of a row (the
+   * uploader in the attachment list) uses "right" so the card opens leftwards: even while
+   * invisible, a card sticking out past a scrolling container adds a horizontal scrollbar.
+   */
+  align?: "left" | "right";
   /** What the button shows; defaults to the name. */
   children?: ReactNode;
 }) {
@@ -48,7 +55,7 @@ export function PersonHover({
       <span
         id={cardId}
         role="tooltip"
-        className="invisible absolute left-0 top-full z-20 w-64 max-w-[calc(100vw-2rem)] pt-1 text-left text-xs font-normal opacity-0 transition-[opacity,visibility] delay-100 duration-150 group-focus-within/person:visible group-focus-within/person:opacity-100 group-focus-within/person:delay-300 group-hover/person:visible group-hover/person:opacity-100 group-hover/person:delay-300 motion-reduce:transition-none"
+        className={`invisible absolute ${align === "right" ? "right-0" : "left-0"} top-full z-20 w-64 max-w-[calc(100vw-2rem)] pt-1 text-left text-xs font-normal opacity-0 transition-[opacity,visibility] delay-100 duration-150 group-focus-within/person:visible group-focus-within/person:opacity-100 group-focus-within/person:delay-300 group-hover/person:visible group-hover/person:opacity-100 group-hover/person:delay-300 motion-reduce:transition-none`}
       >
         <span className="block rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-3 text-[var(--color-text-default)] shadow-lg">
           <span className="flex items-center gap-2">

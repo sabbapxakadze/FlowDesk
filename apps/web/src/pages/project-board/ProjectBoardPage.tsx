@@ -31,6 +31,7 @@ import { useProjects } from "../../entities/project";
 import { useMemberNames } from "../../entities/member";
 import { BoardCard, IssueSummary, useBoard, useLiveIssueUpdates } from "../../entities/issue";
 import { useMoveIssue } from "../../features/move-issue";
+import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
 import { useAuth } from "../../shared/auth/useAuth";
 import {
   Card,
@@ -170,6 +171,7 @@ function BoardColumn({
 export function ProjectBoardPage() {
   const { organization } = useAuth();
   const { projectId } = useParams<{ projectId: string }>();
+  const panel = useIssuePanel();
   const { data: projects, isPending: projectsPending } = useProjects(organization!.id);
   const nameOf = useMemberNames(organization!.id);
   const project = projects?.find((p) => p.id === projectId);
@@ -398,6 +400,7 @@ export function ProjectBoardPage() {
                           issue={issue}
                           projectKey={project.key}
                           assigneeName={nameOf(issue.assigneeId)}
+                          onOpen={panel.open}
                         />
                       ))}
                     </ul>
@@ -422,6 +425,7 @@ export function ProjectBoardPage() {
           </DragOverlay>
         </DndContext>
       )}
+      <IssuePanel projectId={project.id} />
     </Page>
   );
 }

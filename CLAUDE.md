@@ -107,6 +107,8 @@ and lint fails on hand-written link styles and unlisted raw `<button>`s.
 Collaborators slice A is done (ADR 0024): owners and admins invite people without an account by email with a
 role, through a one-time link; a Members page lists people and pending invitations. Slice B adds role changes, removal
 (membership only; their issues are unassigned; they can be invited back) and re-sending an invitation.
+Issues open in a floating side panel (`?issue=<id>`, ADR 0025) from the list, board and sprints pages; the
+issue page body is the shared `widgets/issue-detail` used by both the page and the panel.
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,

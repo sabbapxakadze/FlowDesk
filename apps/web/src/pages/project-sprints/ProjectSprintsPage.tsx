@@ -19,6 +19,7 @@ import type { Issue } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
 import { useMemberNames } from "../../entities/member";
 import { IssueSummary, SprintIssueCard, useBacklog } from "../../entities/issue";
+import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
 import { SprintStatusBadge, useSprints } from "../../entities/sprint";
 import { CreateSprintForm } from "../../features/create-sprint";
 import { useStartSprint, useCompleteSprint } from "../../features/manage-sprint";
@@ -68,6 +69,7 @@ function DropZone({ id, children }: { id: "backlog" | "active-sprint"; children:
 export function ProjectSprintsPage() {
   const { organization } = useAuth();
   const { projectId } = useParams<{ projectId: string }>();
+  const panel = useIssuePanel();
   const { data: projects, isPending: projectsPending } = useProjects(organization!.id);
   const nameOf = useMemberNames(organization!.id);
   const project = projects?.find((p) => p.id === projectId);
@@ -244,6 +246,7 @@ export function ProjectSprintsPage() {
                         issue={issue}
                         projectKey={project.key}
                         assigneeName={nameOf(issue.assigneeId)}
+                        onOpen={panel.open}
                       />
                     ))}
                   </ul>
@@ -271,6 +274,7 @@ export function ProjectSprintsPage() {
                         issue={issue}
                         projectKey={project.key}
                         assigneeName={nameOf(issue.assigneeId)}
+                        onOpen={panel.open}
                       />
                     ))}
                   </ul>
@@ -294,6 +298,7 @@ export function ProjectSprintsPage() {
           </DragOverlay>
         </DndContext>
       )}
+      <IssuePanel projectId={project.id} />
     </Page>
   );
 }

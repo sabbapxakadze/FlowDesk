@@ -49,7 +49,10 @@ export function AppShell() {
   if (isDesktop) {
     return (
       <div className="grid min-h-screen grid-cols-[232px_1fr]">
-        <div className="sticky top-0 h-screen">
+        {/* z-30: a sticky element makes its own stacking context, and without a z-index it
+            paints BELOW later positioned content (the charts), hiding the notifications
+            dropdown that opens from the sidebar. The side panel (z-40) stays above it. */}
+        <div className="sticky top-0 z-30 h-screen">
           <Sidebar actions={<NotificationBell panelAlign="left" />} />
         </div>
         <div className="min-w-0">

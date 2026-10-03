@@ -17,12 +17,15 @@ export function PersonName({
   name,
   withAvatar = false,
   avatarSize = "sm",
+  align,
 }: {
   organizationId: string;
   userId: string;
   name: string;
   withAvatar?: boolean;
   avatarSize?: "sm" | "md";
+  /** "right" for a name at the right end of a row, so its card opens leftwards. */
+  align?: "left" | "right";
 }) {
   const { data: members } = useMembers(organizationId);
   const member = members?.find((m) => m.userId === userId);
@@ -33,6 +36,7 @@ export function PersonName({
       name={shownName}
       roleLabel={member ? ROLE_LABELS[member.role] : undefined}
       email={member?.email}
+      align={align}
     >
       {withAvatar ? (
         <>

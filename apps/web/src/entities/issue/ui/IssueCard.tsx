@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { Button, Card, StatusBadge } from "../../../shared/ui";
 import type { Issue } from "../model";
+import { openIssueOnClick } from "../lib/issueLinkClick";
 import { IssueSummary } from "./IssueSummary";
 
 /**
@@ -19,15 +20,23 @@ export function IssueCard({
   projectKey,
   assigneeName,
   onEdit,
+  onOpen,
 }: {
   issue: Issue;
   projectKey: string;
   assigneeName?: string | null;
   onEdit?: () => void;
+  /** Open the issue in the side panel instead of navigating (modified clicks still navigate). */
+  onOpen?: (issueId: string) => void;
 }) {
   return (
     <Card as="li" hoverable className="flex items-start justify-between gap-2">
-      <Link to={`/projects/${issue.projectId}/issues/${issue.id}`} className="block min-w-0 flex-1">
+      <Link
+        to={`/projects/${issue.projectId}/issues/${issue.id}`}
+        data-panel-trigger
+        onClick={(event) => openIssueOnClick(event, onOpen, issue.id)}
+        className="block min-w-0 flex-1"
+      >
         <IssueSummary issue={issue} projectKey={projectKey} assigneeName={assigneeName}>
           <div className="mt-1.5">
             <StatusBadge status={issue.status} />

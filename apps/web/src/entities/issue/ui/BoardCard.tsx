@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { Issue } from "@flowdesk/contracts";
 import { Card } from "../../../shared/ui";
 import { pointerListeners, useDragClickGuard } from "../lib/dragHelpers";
+import { openIssueOnClick } from "../lib/issueLinkClick";
 import { DragHandle } from "./DragHandle";
 import { IssueSummary } from "./IssueSummary";
 
@@ -27,10 +28,13 @@ export function BoardCard({
   issue,
   projectKey,
   assigneeName,
+  onOpen,
 }: {
   issue: Issue;
   projectKey: string;
   assigneeName?: string | null;
+  /** Open the issue in the side panel instead of navigating (modified clicks still navigate). */
+  onOpen?: (issueId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: issue.id,
@@ -49,7 +53,11 @@ export function BoardCard({
         <Link
           to={`/projects/${issue.projectId}/issues/${issue.id}`}
           draggable={false}
-          onClick={guardClick}
+          data-panel-trigger
+          onClick={(event) => {
+            guardClick(event);
+            openIssueOnClick(event, onOpen, issue.id);
+          }}
           className="block min-w-0 flex-1"
         >
           <IssueSummary issue={issue} projectKey={projectKey} assigneeName={assigneeName} />

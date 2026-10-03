@@ -25,4 +25,5 @@ export { Avatar } from "./Avatar";
 export { ConfirmDelete } from "./ConfirmDelete";
 export { NavigationNotice } from "./NavigationNotice";
 export { MediaPreviewDialog } from "./MediaPreviewDialog";
+export { SidePanel } from "./SidePanel";
 export { PersonHover } from "./PersonHover";
