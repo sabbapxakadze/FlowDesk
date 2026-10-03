@@ -99,6 +99,17 @@ test("a click outside that lands on a link still works while the panel closes; c
   await cardLink(page, "Alpha issue").click();
   await expect(panelOf(page)).toBeVisible();
 
+  // A REAL click on a filter first (selectOption fires no click, which is how this once passed
+  // while a real mouse closed the panel), including Sort, which used to sit under the panel at
+  // this window width (the filter row now wraps clear of it).
+  const panelBox = (await panelOf(page).boundingBox())!;
+  for (const label of ["Filter by status", "Filter by priority", "Filter by assignee", "Sort"]) {
+    const box = (await page.getByLabel(label).boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(panelBox.x);
+    await page.getByLabel(label).click();
+    await page.keyboard.press("Escape"); // close the native option list, if one opened
+    await expect(panelOf(page)).toBeVisible();
+  }
   await page.getByLabel("Sort").selectOption({ label: "Highest priority first" });
   await expect(page).toHaveURL(/sort=priority/);
   await expect(page).toHaveURL(/status=todo/);

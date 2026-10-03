@@ -173,7 +173,14 @@ export function ProjectDetailPage() {
 
       <CreateIssueForm organizationId={organization!.id} projectId={project.id} />
 
-      <div className="mt-4 mb-3 flex flex-wrap items-center gap-2">
+      {/* data-panel-trigger: working the filters while an issue is open in the side panel must not
+          close it (the panel ignores clicks here), and the list changes behind it. */}
+      {/* While the floating panel is open (480px wide, plus its margin) the row keeps clear of it, so
+          a filter that would sit underneath wraps onto a second line instead of being unreachable. */}
+      <div
+        data-panel-trigger
+        className={`mt-4 mb-3 flex flex-wrap items-center gap-2 ${panel.issueId ? "sm:pr-[31rem]" : ""}`}
+      >
         <Select
           value={status ?? ""}
           onChange={(e) => setStatusFilter(e.target.value)}

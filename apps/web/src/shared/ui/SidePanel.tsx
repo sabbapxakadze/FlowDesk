@@ -10,7 +10,8 @@ import { useEffect, useRef, type ReactNode } from "react";
  * - A click anywhere outside closes it, except a click a link already handled (its router
  *   handler called preventDefault and is navigating: closing too would send the page back to
  *   where it was; the panel goes away by itself when the page changes), on an element marked `data-panel-trigger`
- *   (the cards that open or swap it) and inside any open <dialog> (the command palette,
+ *   (the cards that open or swap it, and controls that work on the page behind it, like the issue
+ *   list's filters) and inside any open <dialog> (the command palette,
  *   an image preview). The click is not swallowed: if it landed on a button, that button
  *   still acts, and the panel closes after it. It listens for `click`, not `pointerdown`, on
  *   purpose: the button's own handler may change the URL (a filter), and closing first would
