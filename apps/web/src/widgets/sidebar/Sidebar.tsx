@@ -101,6 +101,7 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
         </button>
         <SideLink to="/labels">Labels</SideLink>
         <SideLink to="/members">Members</SideLink>
+        {canManageProject && <SideLink to="/audit-log">Audit log</SideLink>}
 
         <SectionLabel>Your projects</SectionLabel>
         {isPending ? (

@@ -259,6 +259,7 @@ describe("delete issue (HTTP)", () => {
       organizationId: outsider.organizationId,
       projectId,
       issueId,
+      actorId: outsider.userId,
     });
     expect(direct.status).toBe("not_found");
     expect(await db.select().from(issues).where(eq(issues.id, issueId))).toHaveLength(1);
@@ -606,6 +607,7 @@ describe("delete project (HTTP)", () => {
     const direct = await projectsRepository.remove({
       organizationId: outsider.organizationId,
       projectId,
+      actorId: outsider.userId,
     });
     expect(direct.status).toBe("not_found");
     expect(

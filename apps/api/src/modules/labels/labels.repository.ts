@@ -1,6 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { labels } from "../../db/schema/index.js";
+import { issueLabels, labels } from "../../db/schema/index.js";
+import * as auditRepository from "../audit/audit.repository.js";
 
 export async function listByOrganization(organizationId: string) {
   return db.select().from(labels).where(eq(labels.organizationId, organizationId));
@@ -21,13 +22,36 @@ export async function update(
   organizationId: string,
   labelId: string,
   changes: { name?: string; color?: string },
+  actorId: string,
 ) {
-  const [label] = await db
-    .update(labels)
-    .set({ ...changes, updatedAt: new Date() })
-    .where(and(eq(labels.organizationId, organizationId), eq(labels.id, labelId)))
-    .returning();
-  return label;
+  return db.transaction(async (tx) => {
+    const scope = and(eq(labels.organizationId, organizationId), eq(labels.id, labelId));
+    const [before] = await tx.select().from(labels).where(scope);
+    if (!before) return undefined;
+    const [label] = await tx
+      .update(labels)
+      .set({ ...changes, updatedAt: new Date() })
+      .where(scope)
+      .returning();
+    if (label) {
+      // Only the fields that really changed, each with its old and new value (label.updated).
+      const details: Record<string, { from: string; to: string }> = {};
+      if (changes.name !== undefined && changes.name !== before.name) details.name = { from: before.name, to: changes.name };
+      if (changes.color !== undefined && changes.color !== before.color) details.color = { from: before.color, to: changes.color };
+      if (Object.keys(details).length > 0) {
+        await auditRepository.record(tx, {
+          organizationId,
+          actorId,
+          action: "label.updated",
+          targetType: "label",
+          targetId: labelId,
+          targetLabel: label.name,
+          details,
+        });
+      }
+    }
+    return label;
+  });
 }
 
 /**
@@ -35,10 +59,26 @@ export async function update(
  * disappears from every issue that used it; past activity keeps the name it had
  * (events hold a snapshot). False = no such label in this organization.
  */
-export async function remove(organizationId: string, labelId: string): Promise<boolean> {
-  const deleted = await db
-    .delete(labels)
-    .where(and(eq(labels.organizationId, organizationId), eq(labels.id, labelId)))
-    .returning({ id: labels.id });
-  return deleted.length > 0;
+export async function remove(organizationId: string, labelId: string, actorId: string): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const scope = and(eq(labels.organizationId, organizationId), eq(labels.id, labelId));
+    const [label] = await tx.select().from(labels).where(scope);
+    if (!label) return false;
+    // Recorded before the delete, with how many issues carried it at this moment.
+    const [{ usedOnIssues } = { usedOnIssues: 0 }] = await tx
+      .select({ usedOnIssues: sql<number>`count(*)::int` })
+      .from(issueLabels)
+      .where(eq(issueLabels.labelId, labelId));
+    await auditRepository.record(tx, {
+      organizationId,
+      actorId,
+      action: "label.deleted",
+      targetType: "label",
+      targetId: labelId,
+      targetLabel: label.name,
+      details: { color: label.color, usedOnIssues },
+    });
+    const deleted = await tx.delete(labels).where(scope).returning({ id: labels.id });
+    return deleted.length > 0;
+  });
 }

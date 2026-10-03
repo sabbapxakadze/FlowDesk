@@ -11,6 +11,7 @@ import {
   sprints,
   users,
 } from "../../db/schema/index.js";
+import * as auditRepository from "../audit/audit.repository.js";
 import * as notificationsRepository from "../notifications/notifications.repository.js";
 import { issuePrioritySchema, type IssuePriority, type IssueStatus } from "@flowdesk/contracts";
 
@@ -1208,6 +1209,7 @@ export async function deleteIssue(input: {
   organizationId: string;
   projectId: string;
   issueId: string;
+  actorId: string;
 }): Promise<{ status: "deleted"; storageKeys: string[]; affectedUserIds: string[] } | { status: "not_found" }> {
   return db.transaction(async (tx) => {
     const scope = and(
@@ -1215,8 +1217,21 @@ export async function deleteIssue(input: {
       eq(issues.organizationId, input.organizationId),
       eq(issues.projectId, input.projectId),
     );
-    const [issue] = await tx.select({ id: issues.id, assigneeId: issues.assigneeId }).from(issues).where(scope);
+    const [issue] = await tx
+      .select({
+        id: issues.id,
+        assigneeId: issues.assigneeId,
+        number: issues.number,
+        title: issues.title,
+        status: issues.status,
+      })
+      .from(issues)
+      .where(scope);
     if (!issue) return { status: "not_found" };
+    const [project] = await tx
+      .select({ key: projects.key, name: projects.name })
+      .from(projects)
+      .where(eq(projects.id, input.projectId));
 
     const files = await tx
       .select({ storageKey: attachments.storageKey })
@@ -1226,6 +1241,18 @@ export async function deleteIssue(input: {
       .selectDistinct({ userId: issueEvents.actorId })
       .from(issueEvents)
       .where(eq(issueEvents.issueId, issue.id));
+
+    // Recorded before the delete: the issue and its whole timeline are gone a statement later, so
+    // the key, title and project are copied into the audit row (issue.deleted).
+    await auditRepository.record(tx, {
+      organizationId: input.organizationId,
+      actorId: input.actorId,
+      action: "issue.deleted",
+      targetType: "issue",
+      targetId: issue.id,
+      targetLabel: `${project?.key ?? ""}-${issue.number} ${issue.title}`.trim(),
+      details: { status: issue.status, projectName: project?.name ?? "", attachments: files.length },
+    });
 
     await tx.delete(issues).where(scope);
 

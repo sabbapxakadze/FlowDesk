@@ -1,9 +1,20 @@
 import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { sprints, issues } from "../../db/schema/index.js";
+import { sprints, issues, projects } from "../../db/schema/index.js";
+import * as auditRepository from "../audit/audit.repository.js";
 import { writeIssueEvent } from "../issues/issues.repository.js";
 
 type SprintRow = typeof sprints.$inferSelect;
+type Tx = auditRepository.Tx;
+
+/** The project's name at this moment, for the audit row (a sprint is read in the context of its project). */
+async function projectNameOf(tx: Tx, organizationId: string, projectId: string): Promise<string> {
+  const [row] = await tx
+    .select({ name: projects.name })
+    .from(projects)
+    .where(and(eq(projects.organizationId, organizationId), eq(projects.id, projectId)));
+  return row?.name ?? "";
+}
 
 export async function listByProject(organizationId: string, projectId: string) {
   return db
@@ -54,32 +65,46 @@ export async function start(input: {
   projectId: string;
   sprintId: string;
   expectedVersion: number;
+  actorId: string;
 }): Promise<
   { status: "started"; sprint: SprintRow } | { status: "conflict"; current: SprintRow } | { status: "not_found" }
 > {
-  const [updated] = await db
-    .update(sprints)
-    .set({ status: "active", version: sql`${sprints.version} + 1`, updatedAt: new Date() })
-    .where(
-      and(
-        eq(sprints.id, input.sprintId),
-        eq(sprints.organizationId, input.organizationId),
-        eq(sprints.projectId, input.projectId),
-        eq(sprints.version, input.expectedVersion),
-        eq(sprints.status, "planned"),
-      ),
-    )
-    .returning();
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(sprints)
+      .set({ status: "active", version: sql`${sprints.version} + 1`, updatedAt: new Date() })
+      .where(
+        and(
+          eq(sprints.id, input.sprintId),
+          eq(sprints.organizationId, input.organizationId),
+          eq(sprints.projectId, input.projectId),
+          eq(sprints.version, input.expectedVersion),
+          eq(sprints.status, "planned"),
+        ),
+      )
+      .returning();
 
-  if (updated) return { status: "started", sprint: updated };
+    if (updated) {
+      await auditRepository.record(tx, {
+        organizationId: input.organizationId,
+        actorId: input.actorId,
+        action: "sprint.started",
+        targetType: "sprint",
+        targetId: updated.id,
+        targetLabel: updated.name,
+        details: { projectName: await projectNameOf(tx, input.organizationId, input.projectId) },
+      });
+      return { status: "started" as const, sprint: updated };
+    }
 
-  const [current] = await db
-    .select()
-    .from(sprints)
-    .where(
-      and(eq(sprints.id, input.sprintId), eq(sprints.organizationId, input.organizationId), eq(sprints.projectId, input.projectId)),
-    );
-  return current ? { status: "conflict", current } : { status: "not_found" };
+    const [current] = await tx
+      .select()
+      .from(sprints)
+      .where(
+        and(eq(sprints.id, input.sprintId), eq(sprints.organizationId, input.organizationId), eq(sprints.projectId, input.projectId)),
+      );
+    return current ? { status: "conflict" as const, current } : { status: "not_found" as const };
+  });
 }
 
 /**
@@ -94,6 +119,7 @@ export async function rename(input: {
   sprintId: string;
   expectedVersion: number;
   name: string;
+  actorId: string;
 }): Promise<
   { status: "renamed"; sprint: SprintRow } | { status: "conflict"; current: SprintRow } | { status: "not_found" }
 > {
@@ -102,16 +128,32 @@ export async function rename(input: {
     eq(sprints.organizationId, input.organizationId),
     eq(sprints.projectId, input.projectId),
   );
-  const [updated] = await db
-    .update(sprints)
-    .set({ name: input.name, version: sql`${sprints.version} + 1`, updatedAt: new Date() })
-    .where(and(scope, eq(sprints.version, input.expectedVersion)))
-    .returning();
+  return db.transaction(async (tx) => {
+    const [before] = await tx.select({ name: sprints.name }).from(sprints).where(scope);
+    const [updated] = await tx
+      .update(sprints)
+      .set({ name: input.name, version: sql`${sprints.version} + 1`, updatedAt: new Date() })
+      .where(and(scope, eq(sprints.version, input.expectedVersion)))
+      .returning();
 
-  if (updated) return { status: "renamed", sprint: updated };
+    if (updated) {
+      if (before && before.name !== updated.name) {
+        await auditRepository.record(tx, {
+          organizationId: input.organizationId,
+          actorId: input.actorId,
+          action: "sprint.renamed",
+          targetType: "sprint",
+          targetId: updated.id,
+          targetLabel: updated.name,
+          details: { from: before.name, to: updated.name, projectName: await projectNameOf(tx, input.organizationId, input.projectId) },
+        });
+      }
+      return { status: "renamed" as const, sprint: updated };
+    }
 
-  const [current] = await db.select().from(sprints).where(scope);
-  return current ? { status: "conflict", current } : { status: "not_found" };
+    const [current] = await tx.select().from(sprints).where(scope);
+    return current ? { status: "conflict" as const, current } : { status: "not_found" as const };
+  });
 }
 
 /**
@@ -186,6 +228,19 @@ export async function complete(input: {
       for (const userId of notified) notifiedUserIds.add(userId);
     }
 
+    await auditRepository.record(tx, {
+      organizationId: input.organizationId,
+      actorId: input.actorId,
+      action: "sprint.completed",
+      targetType: "sprint",
+      targetId: updated.id,
+      targetLabel: updated.name,
+      details: {
+        releasedIssues: released.length,
+        projectName: await projectNameOf(tx, input.organizationId, input.projectId),
+      },
+    });
+
     return { status: "completed", sprint: updated, notifiedUserIds: [...notifiedUserIds] };
   });
 }
@@ -201,19 +256,37 @@ export async function remove(input: {
   organizationId: string;
   projectId: string;
   sprintId: string;
+  actorId: string;
 }): Promise<{ status: "deleted" } | { status: "active" } | { status: "not_found" }> {
   const scope = and(
     eq(sprints.id, input.sprintId),
     eq(sprints.organizationId, input.organizationId),
     eq(sprints.projectId, input.projectId),
   );
-  const deleted = await db
-    .delete(sprints)
-    .where(and(scope, ne(sprints.status, "active")))
-    .returning({ id: sprints.id });
-  if (deleted.length > 0) return { status: "deleted" };
+  return db.transaction(async (tx) => {
+    const [before] = await tx.select({ name: sprints.name, status: sprints.status }).from(sprints).where(scope);
+    const deleted = await tx
+      .delete(sprints)
+      .where(and(scope, ne(sprints.status, "active")))
+      .returning({ id: sprints.id });
+    if (deleted.length > 0) {
+      await auditRepository.record(tx, {
+        organizationId: input.organizationId,
+        actorId: input.actorId,
+        action: "sprint.deleted",
+        targetType: "sprint",
+        targetId: input.sprintId,
+        targetLabel: before?.name ?? "",
+        details: {
+          status: before?.status,
+          projectName: await projectNameOf(tx, input.organizationId, input.projectId),
+        },
+      });
+      return { status: "deleted" as const };
+    }
 
-  const [current] = await db.select({ status: sprints.status }).from(sprints).where(scope);
-  if (!current) return { status: "not_found" };
-  return { status: "active" };
+    const [current] = await tx.select({ status: sprints.status }).from(sprints).where(scope);
+    if (!current) return { status: "not_found" as const };
+    return { status: "active" as const };
+  });
 }

@@ -362,7 +362,7 @@ describe("members: repository scoping on its own", () => {
 
     const repo = await import("./organizations.repository.js");
     expect(await repo.removeMember({ organizationId: other.organizationId, userId: member.userId, actorId: other.userId })).toBeUndefined();
-    expect(await repo.updateMemberRole(other.organizationId, member.userId, "viewer")).toBeUndefined();
+    expect(await repo.updateMemberRole(other.organizationId, member.userId, "viewer", other.userId)).toBeUndefined();
     expect(await roleOf(owner, member.userId)).toBe("member");
   });
 });

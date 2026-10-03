@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "../../db/client.js";
 import { resetDatabase } from "../../db/test-utils.js";
-import { organizations, projects } from "../../db/schema/index.js";
+import { organizations, projects, users } from "../../db/schema/index.js";
 import * as projectsRepository from "./projects.repository.js";
 import * as projectsService from "./projects.service.js";
 
@@ -62,6 +62,16 @@ describe("projects repository", () => {
  * key silently fell through to a raw 500. Found and fixed while building
  * Phase 3 slice 3's identical label-uniqueness check.
  */
+/** The audit log needs a real person as the actor of every write. */
+async function makeActor() {
+  const [user] = await db
+    .insert(users)
+    .values({ email: `actor-${Math.random().toString(36).slice(2)}@example.com`, passwordHash: "x", name: "Actor" })
+    .returning();
+  if (!user) throw new Error("setup failed");
+  return user.id;
+}
+
 describe("projects service — duplicate key", () => {
   beforeEach(async () => {
     await resetDatabase();
@@ -71,10 +81,11 @@ describe("projects service — duplicate key", () => {
     const [org] = await db.insert(organizations).values({ name: "Org", slug: "org" }).returning();
     if (!org) throw new Error("setup failed");
 
-    await projectsService.createProject({ organizationId: org.id, name: "Website", key: "WEB" });
+    const actorId = await makeActor();
+    await projectsService.createProject({ organizationId: org.id, name: "Website", key: "WEB", actorId });
 
     await expect(
-      projectsService.createProject({ organizationId: org.id, name: "Other", key: "WEB" }),
+      projectsService.createProject({ organizationId: org.id, name: "Other", key: "WEB", actorId }),
     ).rejects.toMatchObject({ status: 409, code: "project_key_taken" });
   });
 
@@ -83,10 +94,11 @@ describe("projects service — duplicate key", () => {
     const [orgB] = await db.insert(organizations).values({ name: "Org B", slug: "org-b" }).returning();
     if (!orgA || !orgB) throw new Error("setup failed");
 
-    await projectsService.createProject({ organizationId: orgA.id, name: "Website", key: "WEB" });
+    const actorId = await makeActor();
+    await projectsService.createProject({ organizationId: orgA.id, name: "Website", key: "WEB", actorId });
 
     await expect(
-      projectsService.createProject({ organizationId: orgB.id, name: "Website", key: "WEB" }),
+      projectsService.createProject({ organizationId: orgB.id, name: "Website", key: "WEB", actorId }),
     ).resolves.toMatchObject({ key: "WEB" });
   });
 });

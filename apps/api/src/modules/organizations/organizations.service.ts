@@ -35,7 +35,12 @@ export async function changeMemberRole(input: {
   role: "admin" | "member" | "viewer";
 }) {
   await loadTarget(input.organizationId, input.actor, input.targetUserId);
-  await organizationsRepository.updateMemberRole(input.organizationId, input.targetUserId, input.role);
+  await organizationsRepository.updateMemberRole(
+    input.organizationId,
+    input.targetUserId,
+    input.role,
+    input.actor.userId,
+  );
   broadcastOrganizationChanged(input.organizationId, { kind: "members" });
 }
 

@@ -153,8 +153,8 @@ export async function resendInvitation(input: { organizationId: string; actorId:
   return deliverInvitation({ created, token, organizationId: input.organizationId, actorId: input.actorId });
 }
 
-export async function revokeInvitation(organizationId: string, invitationId: string) {
-  const revoked = await invitationsRepository.revoke(organizationId, invitationId);
+export async function revokeInvitation(organizationId: string, invitationId: string, actorId: string) {
+  const revoked = await invitationsRepository.revoke(organizationId, invitationId, actorId);
   if (!revoked) {
     throw new AppError("invitation_not_found", 404, "Invitation not found.");
   }

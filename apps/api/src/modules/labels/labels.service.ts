@@ -41,9 +41,10 @@ export async function updateLabel(input: {
   organizationId: string;
   labelId: string;
   changes: { name?: string; color?: string };
+  actorId: string;
 }) {
   try {
-    const label = await labelsRepository.update(input.organizationId, input.labelId, input.changes);
+    const label = await labelsRepository.update(input.organizationId, input.labelId, input.changes, input.actorId);
     if (label) broadcastOrganizationChanged(input.organizationId, { kind: "label" });
     return label;
   } catch (err) {
@@ -58,8 +59,8 @@ export async function updateLabel(input: {
   }
 }
 
-export async function deleteLabel(input: { organizationId: string; labelId: string }) {
-  const deleted = await labelsRepository.remove(input.organizationId, input.labelId);
+export async function deleteLabel(input: { organizationId: string; labelId: string; actorId: string }) {
+  const deleted = await labelsRepository.remove(input.organizationId, input.labelId, input.actorId);
   if (deleted) broadcastOrganizationChanged(input.organizationId, { kind: "label" });
   return deleted;
 }

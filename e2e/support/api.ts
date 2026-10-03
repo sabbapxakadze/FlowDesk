@@ -36,7 +36,7 @@ export async function createIssueViaApi(
   return { projectId, issueIds };
 }
 
-async function apiSession(request: APIRequestContext) {
+export async function apiSession(request: APIRequestContext) {
   const login = await request.post("/api/v1/auth/login", {
     data: { email: TEST_USER.email, password: TEST_USER.password },
   });

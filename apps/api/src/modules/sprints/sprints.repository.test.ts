@@ -67,7 +67,7 @@ describe("sprints repository", () => {
   });
 
   it("starts a planned sprint and bumps its version", async () => {
-    const { org, project } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
     const sprint = await sprintsRepository.create({ organizationId: org.id, projectId: project.id, name: "Sprint 1", startDate: null, endDate: null });
 
     const result = await sprintsRepository.start({
@@ -75,6 +75,7 @@ describe("sprints repository", () => {
       projectId: project.id,
       sprintId: sprint.id,
       expectedVersion: sprint.version,
+      actorId: user.id,
     });
 
     if (result.status !== "started") throw new Error("expected started");
@@ -83,25 +84,25 @@ describe("sprints repository", () => {
   });
 
   it("rejects starting a second sprint while one is already active", async () => {
-    const { org, project } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
     const first = await sprintsRepository.create({ organizationId: org.id, projectId: project.id, name: "Sprint 1", startDate: null, endDate: null });
     const second = await sprintsRepository.create({ organizationId: org.id, projectId: project.id, name: "Sprint 2", startDate: null, endDate: null });
 
-    await sprintsService.startSprint({ organizationId: org.id, projectId: project.id, sprintId: first.id, expectedVersion: first.version });
+    await sprintsService.startSprint({ organizationId: org.id, projectId: project.id, sprintId: first.id, expectedVersion: first.version, actorId: user.id });
 
     await expect(
-      sprintsService.startSprint({ organizationId: org.id, projectId: project.id, sprintId: second.id, expectedVersion: second.version }),
+      sprintsService.startSprint({ organizationId: org.id, projectId: project.id, sprintId: second.id, expectedVersion: second.version, actorId: user.id }),
     ).rejects.toMatchObject({ status: 409, code: "sprint_already_active" });
   });
 
   it("lets exactly one of two concurrent starts on different sprints succeed", async () => {
-    const { org, project } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
     const first = await sprintsRepository.create({ organizationId: org.id, projectId: project.id, name: "Sprint 1", startDate: null, endDate: null });
     const second = await sprintsRepository.create({ organizationId: org.id, projectId: project.id, name: "Sprint 2", startDate: null, endDate: null });
 
     const results = await Promise.allSettled([
-      sprintsService.startSprint({ organizationId: org.id, projectId: project.id, sprintId: first.id, expectedVersion: first.version }),
-      sprintsService.startSprint({ organizationId: org.id, projectId: project.id, sprintId: second.id, expectedVersion: second.version }),
+      sprintsService.startSprint({ organizationId: org.id, projectId: project.id, sprintId: first.id, expectedVersion: first.version, actorId: user.id }),
+      sprintsService.startSprint({ organizationId: org.id, projectId: project.id, sprintId: second.id, expectedVersion: second.version, actorId: user.id }),
     ]);
 
     const fulfilled = results.filter((r) => r.status === "fulfilled");
@@ -114,7 +115,7 @@ describe("sprints repository", () => {
   });
 
   it("returns a conflict without starting the row when the version is stale", async () => {
-    const { org, project } = await seedOrgProjectUser("Org", "org", "PRJ");
+    const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
     const sprint = await sprintsRepository.create({ organizationId: org.id, projectId: project.id, name: "Sprint 1", startDate: null, endDate: null });
 
     const result = await sprintsRepository.start({
@@ -122,6 +123,7 @@ describe("sprints repository", () => {
       projectId: project.id,
       sprintId: sprint.id,
       expectedVersion: sprint.version + 5,
+      actorId: user.id,
     });
 
     expect(result.status).toBe("conflict");
@@ -132,7 +134,7 @@ describe("sprints repository", () => {
   it("completes an active sprint, returns its issues to the backlog, and writes a sprint_completed event per issue", async () => {
     const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
     const sprint = await sprintsRepository.create({ organizationId: org.id, projectId: project.id, name: "Sprint 1", startDate: null, endDate: null });
-    await sprintsRepository.start({ organizationId: org.id, projectId: project.id, sprintId: sprint.id, expectedVersion: sprint.version });
+    await sprintsRepository.start({ organizationId: org.id, projectId: project.id, sprintId: sprint.id, expectedVersion: sprint.version, actorId: user.id });
 
     const issueA = await issuesRepository.create({ organizationId: org.id, projectId: project.id, title: "A", description: null, reporterId: user.id });
     const issueB = await issuesRepository.create({ organizationId: org.id, projectId: project.id, title: "B", description: null, reporterId: user.id });
@@ -164,7 +166,7 @@ describe("sprints repository", () => {
   it("returns a conflict without completing the row when the version is stale", async () => {
     const { org, project, user } = await seedOrgProjectUser("Org", "org", "PRJ");
     const sprint = await sprintsRepository.create({ organizationId: org.id, projectId: project.id, name: "Sprint 1", startDate: null, endDate: null });
-    await sprintsRepository.start({ organizationId: org.id, projectId: project.id, sprintId: sprint.id, expectedVersion: sprint.version });
+    await sprintsRepository.start({ organizationId: org.id, projectId: project.id, sprintId: sprint.id, expectedVersion: sprint.version, actorId: user.id });
 
     const result = await sprintsRepository.complete({
       organizationId: org.id,

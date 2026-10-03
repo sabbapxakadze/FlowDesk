@@ -63,6 +63,7 @@ export async function startSprint(req: Request, res: Response) {
     projectId: req.ctx.projectId,
     sprintId: req.ctx.sprintId,
     expectedVersion: parsed.data.version,
+    actorId: req.ctx.userId,
   });
 
   if (result.status === "conflict") {
@@ -135,6 +136,7 @@ export async function renameSprint(req: Request, res: Response) {
     sprintId: req.ctx.sprintId,
     expectedVersion: parsed.data.version,
     name: parsed.data.name,
+    actorId: req.ctx.userId,
   });
 
   if (result.status === "conflict") {
@@ -163,6 +165,7 @@ export async function deleteSprint(req: Request, res: Response) {
     organizationId: req.ctx.organizationId,
     projectId: req.ctx.projectId,
     sprintId: req.ctx.sprintId,
+    actorId: req.ctx.userId,
   });
 
   if (result.status === "active") {

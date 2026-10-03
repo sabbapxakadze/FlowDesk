@@ -1288,7 +1288,7 @@ describe("issues repository — sprints", () => {
       startDate: null,
       endDate: null,
     });
-    await sprintsRepository.start({ organizationId: org.id, projectId: project.id, sprintId: sprint.id, expectedVersion: sprint.version });
+    await sprintsRepository.start({ organizationId: org.id, projectId: project.id, sprintId: sprint.id, expectedVersion: sprint.version, actorId: user.id });
 
     const inSprint = await issuesRepository.create({
       organizationId: org.id,

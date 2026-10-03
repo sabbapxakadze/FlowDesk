@@ -9,6 +9,7 @@ import { ProjectAnalyticsPage } from "../pages/project-analytics/ProjectAnalytic
 import { SearchPage } from "../pages/search/SearchPage";
 import { LabelsPage } from "../pages/labels/LabelsPage";
 import { MembersPage } from "../pages/members/MembersPage";
+import { AuditLogPage } from "../pages/audit-log/AuditLogPage";
 import { AcceptInvitePage } from "../pages/accept-invite/AcceptInvitePage";
 import { ProjectSettingsPage } from "../pages/project-settings/ProjectSettingsPage";
 import { RegisterPage } from "../pages/register/RegisterPage";
@@ -57,6 +58,7 @@ export function App() {
               <Route path="/search" element={<SearchPage />} />
             <Route path="/labels" element={<LabelsPage />} />
             <Route path="/members" element={<MembersPage />} />
+            <Route path="/audit-log" element={<AuditLogPage />} />
             <Route path="/projects/:projectId/settings" element={<ProjectSettingsPage />} />
             </Route>
             <Route element={<AuthLayout />}>

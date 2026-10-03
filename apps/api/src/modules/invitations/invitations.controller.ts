@@ -47,7 +47,7 @@ export async function revoke(req: Request, res: Response) {
   if (!invitationId.success) {
     throw new AppError("invalid_invitation_id", 400, "invitationId must be a UUID.");
   }
-  await invitationsService.revokeInvitation(ctx.organizationId, invitationId.data);
+  await invitationsService.revokeInvitation(ctx.organizationId, invitationId.data, ctx.userId);
   res.status(204).end();
 }
 

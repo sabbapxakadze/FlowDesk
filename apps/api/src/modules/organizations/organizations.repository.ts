@@ -1,6 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { issues, organizationMembers, organizations, users } from "../../db/schema/index.js";
+import * as auditRepository from "../audit/audit.repository.js";
 import { writeIssueEvent } from "../issues/issues.repository.js";
 
 /**
@@ -85,13 +86,33 @@ export async function findMember(organizationId: string, userId: string) {
 type Role = "owner" | "admin" | "member" | "viewer";
 
 /** Sets a member's role in THIS organization; undefined when they are not a member. */
-export async function updateMemberRole(organizationId: string, userId: string, role: Role) {
-  const [row] = await db
-    .update(organizationMembers)
-    .set({ role })
-    .where(and(eq(organizationMembers.organizationId, organizationId), eq(organizationMembers.userId, userId)))
-    .returning({ userId: organizationMembers.userId });
-  return row;
+export async function updateMemberRole(organizationId: string, userId: string, role: Role, actorId: string) {
+  return db.transaction(async (tx) => {
+    const scope = and(eq(organizationMembers.organizationId, organizationId), eq(organizationMembers.userId, userId));
+    const [before] = await tx
+      .select({ role: organizationMembers.role, name: users.name, email: users.email })
+      .from(organizationMembers)
+      .innerJoin(users, eq(organizationMembers.userId, users.id))
+      .where(scope);
+    if (!before) return undefined;
+    const [row] = await tx
+      .update(organizationMembers)
+      .set({ role })
+      .where(scope)
+      .returning({ userId: organizationMembers.userId });
+    if (row && before.role !== role) {
+      await auditRepository.record(tx, {
+        organizationId,
+        actorId,
+        action: "member.role_changed",
+        targetType: "member",
+        targetId: userId,
+        targetLabel: before.name,
+        details: { email: before.email, from: before.role, to: role },
+      });
+    }
+    return row;
+  });
 }
 
 /**
@@ -105,6 +126,16 @@ export async function updateMemberRole(organizationId: string, userId: string, r
  */
 export async function removeMember(input: { organizationId: string; userId: string; actorId: string }) {
   return db.transaction(async (tx) => {
+    const [who] = await tx
+      .select({ name: users.name, email: users.email, role: organizationMembers.role })
+      .from(organizationMembers)
+      .innerJoin(users, eq(organizationMembers.userId, users.id))
+      .where(
+        and(
+          eq(organizationMembers.organizationId, input.organizationId),
+          eq(organizationMembers.userId, input.userId),
+        ),
+      );
     const [deleted] = await tx
       .delete(organizationMembers)
       .where(
@@ -136,6 +167,17 @@ export async function removeMember(input: { organizationId: string; userId: stri
         },
         { notify: false },
       );
+    }
+    if (who) {
+      await auditRepository.record(tx, {
+        organizationId: input.organizationId,
+        actorId: input.actorId,
+        action: "member.removed",
+        targetType: "member",
+        targetId: input.userId,
+        targetLabel: who.name,
+        details: { email: who.email, role: who.role, unassignedIssues: assigned.length },
+      });
     }
     return { unassigned: assigned };
   });

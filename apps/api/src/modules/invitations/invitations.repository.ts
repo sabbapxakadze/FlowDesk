@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull, lt } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { invitations, organizationMembers, organizations, users } from "../../db/schema/index.js";
+import * as auditRepository from "../audit/audit.repository.js";
 
 type InvitableRole = "admin" | "member" | "viewer";
 
@@ -58,18 +59,38 @@ export async function create(input: {
       );
     const [row] = await tx.insert(invitations).values(input).returning();
     if (!row) throw new Error("Failed to create invitation");
+    await auditRepository.record(tx, {
+      organizationId: input.organizationId,
+      actorId: input.invitedBy,
+      action: "member.invited",
+      targetType: "member",
+      targetLabel: row.email,
+      details: { role: row.role },
+    });
     return row;
   });
 }
 
 /** Revokes an open invitation of THIS organization; undefined when there is none. */
-export async function revoke(organizationId: string, invitationId: string) {
-  const [row] = await db
-    .update(invitations)
-    .set({ revokedAt: new Date() })
-    .where(and(OPEN(organizationId), eq(invitations.id, invitationId)))
-    .returning({ id: invitations.id });
-  return row;
+export async function revoke(organizationId: string, invitationId: string, actorId: string) {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(invitations)
+      .set({ revokedAt: new Date() })
+      .where(and(OPEN(organizationId), eq(invitations.id, invitationId)))
+      .returning({ id: invitations.id, email: invitations.email, role: invitations.role });
+    if (row) {
+      await auditRepository.record(tx, {
+        organizationId,
+        actorId,
+        action: "invitation.revoked",
+        targetType: "member",
+        targetLabel: row.email,
+        details: { role: row.role },
+      });
+    }
+    return row ? { id: row.id } : undefined;
+  });
 }
 
 /** An invitation by the hash of its token, with the names the accept page shows. */
@@ -139,6 +160,16 @@ export async function accept(input: {
       userId: user.id,
       role: input.role,
     });
+    // The person who just joined is the actor of this row (member.joined).
+    await auditRepository.record(tx, {
+      organizationId: input.organizationId,
+      actorId: user.id,
+      action: "member.joined",
+      targetType: "member",
+      targetId: user.id,
+      targetLabel: user.name,
+      details: { email: user.email, role: input.role },
+    });
 
     const [organization] = await tx
       .select({ id: organizations.id, name: organizations.name, slug: organizations.slug })
@@ -182,6 +213,14 @@ export async function resend(input: {
       })
       .returning();
     if (!row) throw new Error("Failed to create invitation");
+    await auditRepository.record(tx, {
+      organizationId: input.organizationId,
+      actorId: input.invitedBy,
+      action: "invitation.resent",
+      targetType: "member",
+      targetLabel: row.email,
+      details: { role: row.role },
+    });
     return row;
   });
 }
@@ -217,6 +256,17 @@ export async function acceptForExistingUser(input: {
     });
 
     const [user] = await tx.select().from(users).where(eq(users.id, input.userId)).limit(1);
+    if (user) {
+      await auditRepository.record(tx, {
+        organizationId: input.organizationId,
+        actorId: user.id,
+        action: "member.joined",
+        targetType: "member",
+        targetId: user.id,
+        targetLabel: user.name,
+        details: { email: user.email, role: input.role, returning: true },
+      });
+    }
     const [organization] = await tx
       .select({ id: organizations.id, name: organizations.name, slug: organizations.slug })
       .from(organizations)

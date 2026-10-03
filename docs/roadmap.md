@@ -2137,6 +2137,30 @@ The original plan for this slice, kept for the record:
    address from the live path and query (either alone fixes it; the test fails only without both).
    **Not done:** "Lowest priority first" (the API supports it; "none" would come first), sorting the
    board or the sprints backlog, a choosable secondary sort.
+   **Audit log: DONE 2026-10-03 (ADR 0027).** An organization-wide, append-only record of who did what,
+   for owners and admins at `/audit-log` (sidebar link, filters by person and kind in the URL, Load
+   more). 16 actions: project created / renamed / deleted; label updated / deleted; sprint renamed /
+   started / completed / deleted; issue deleted; member invited / re-sent / revoked / joined / role
+   changed / removed. Each row keeps SNAPSHOTS (the actor's name and the thing's name, title or email
+   at the time, plus before/after values), so it still reads after the thing is deleted, and is
+   written in the same transaction as the action (before a delete, with the name and size at that
+   moment). New table `audit_events` (migration 0021), permission `view_audit_log`, module `audit`,
+   `entities/audit` and `pages/audit-log`. Not recorded on purpose: creating labels or sprints, issue
+   edits and comments (already on the issue timeline), security events. **Verified:** 13 new API tests
+   (each action writes exactly one row with the right stored values; no-ops write none; a deleted project
+   and issue are still described; atomic in BOTH directions, using database triggers to force a failure
+   before and after the row is written; refused or failed actions leave no row; owner/admin only, members
+   and viewers 403; another organization never sees the log; keyset paging newest first with nothing
+   skipped or repeated, filters by person and kind, bad cursor and bad kind refused; reading writes
+   nothing) and 5 e2e tests (sentences newest first including a deleted project and issue; filters in the
+   URL and after a reload; Load more across 30 rows; members have no link and get an explanation; phone
+   width). Mutations caught: a row not written, the list not scoped by organization, members given the
+   permission, a row written outside the transaction (this one first SURVIVED: the test only forced the audit
+   insert to fail, so a second test forces the action to fail after its row was written), the sidebar link
+   shown to everyone. Existing tests that called repository functions directly now pass a real user as the
+   actor (the type system found all 14). **Not done:** retention or export, security events, a link from a row
+   to the thing (it may be gone), rows for actions before this slice, live refresh of an open log, dark mode and
+   a phone view looked at by eye.
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

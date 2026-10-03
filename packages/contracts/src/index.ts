@@ -12,3 +12,4 @@ export * from "./notification.js";
 export * from "./attachment.js";
 export * from "./analytics.js";
 export * from "./invitation.js";
+export * from "./audit.js";

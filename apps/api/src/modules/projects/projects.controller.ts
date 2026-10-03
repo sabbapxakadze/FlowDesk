@@ -53,6 +53,7 @@ export async function createProject(req: Request, res: Response) {
     organizationId: req.ctx.organizationId,
     name: parsed.data.name,
     key: parsed.data.key,
+    actorId: req.ctx.userId,
   });
 
   const body = createProjectResponseSchema.parse({ data: toWireFormat(project) });
@@ -78,6 +79,7 @@ export async function updateProject(req: Request, res: Response) {
     organizationId: req.ctx.organizationId,
     projectId: req.ctx.projectId,
     name: parsed.data.name,
+    actorId: req.ctx.userId,
   });
   if (!project) {
     throw new AppError("project_not_found", 404, "Project not found.");
@@ -105,6 +107,7 @@ export async function deleteProject(req: Request, res: Response) {
     organizationId: req.ctx.organizationId,
     projectId: req.ctx.projectId,
     confirmName: parsed.data.confirmName,
+    actorId: req.ctx.userId,
   });
 
   if (result.status === "not_found") {

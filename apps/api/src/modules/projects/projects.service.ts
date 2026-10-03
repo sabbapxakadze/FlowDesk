@@ -35,7 +35,7 @@ function isUniqueViolation(err: unknown, constraint: string): boolean {
   );
 }
 
-export async function createProject(input: { organizationId: string; name: string; key: string }) {
+export async function createProject(input: { organizationId: string; name: string; key: string; actorId: string }) {
   try {
     // Uppercased here, not in the contract schema — the contract's job is
     // shape (2-10 alphanumeric chars), casing is a business rule.
@@ -52,8 +52,18 @@ export async function createProject(input: { organizationId: string; name: strin
   }
 }
 
-export async function renameProject(input: { organizationId: string; projectId: string; name: string }) {
-  const project = await projectsRepository.updateName(input.organizationId, input.projectId, input.name);
+export async function renameProject(input: {
+  organizationId: string;
+  projectId: string;
+  name: string;
+  actorId: string;
+}) {
+  const project = await projectsRepository.updateName(
+    input.organizationId,
+    input.projectId,
+    input.name,
+    input.actorId,
+  );
   // Open tabs (the sidebar, titles) refetch the project list.
   if (project) broadcastOrganizationChanged(input.organizationId, { kind: "project" });
   return project;
@@ -67,12 +77,21 @@ export async function renameProject(input: { organizationId: string; projectId: 
  * drop the project, and everyone who had notifications for its issues refetches
  * their bell (those notifications went with the issues).
  */
-export async function deleteProject(input: { organizationId: string; projectId: string; confirmName: string }) {
+export async function deleteProject(input: {
+  organizationId: string;
+  projectId: string;
+  confirmName: string;
+  actorId: string;
+}) {
   const project = await projectsRepository.findById(input.organizationId, input.projectId);
   if (!project) return { status: "not_found" } as const;
   if (input.confirmName !== project.name) return { status: "confirmation_mismatch" } as const;
 
-  const result = await projectsRepository.remove(input);
+  const result = await projectsRepository.remove({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    actorId: input.actorId,
+  });
   if (result.status === "not_found") return result;
 
   for (const storageKey of result.storageKeys) {

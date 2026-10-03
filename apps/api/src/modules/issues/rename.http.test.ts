@@ -24,6 +24,7 @@ async function registerOwner(email: string, organizationName: string) {
   return {
     token: login.body.accessToken as string,
     organizationId: login.body.organization.id as string,
+    userId: login.body.user.id as string,
   };
 }
 
@@ -111,7 +112,12 @@ describe("rename project (HTTP)", () => {
     const { projectId } = await setup();
     const outsider = await registerOwner("outsider@example.com", "Org B");
 
-    const result = await projectsRepository.updateName(outsider.organizationId, projectId, "Hijacked");
+    const result = await projectsRepository.updateName(
+      outsider.organizationId,
+      projectId,
+      "Hijacked",
+      outsider.userId,
+    );
     expect(result).toBeUndefined();
     const [row] = await db.select().from(projects).where(eq(projects.id, projectId));
     expect(row?.name).toBe("Website");

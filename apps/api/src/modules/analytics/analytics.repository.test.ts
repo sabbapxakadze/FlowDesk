@@ -348,6 +348,7 @@ async function startedSprint(s: Seeded, name: string) {
     projectId: s.project.id,
     sprintId: sprint.id,
     expectedVersion: sprint.version,
+    actorId: s.user.id,
   });
   return sprint;
 }
@@ -556,6 +557,7 @@ describe("analytics repository — sprint velocity", () => {
       projectId: otherProject!.id,
       sprintId: elsewhere.id,
       expectedVersion: elsewhere.version,
+      actorId: a.user.id,
     });
     await sprintsRepository.complete({
       organizationId: a.org.id,

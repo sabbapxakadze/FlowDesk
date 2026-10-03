@@ -13,3 +13,4 @@ export * from "./sprints.js";
 export * from "./notifications.js";
 export * from "./attachments.js";
 export * from "./invitations.js";
+export * from "./audit-events.js";

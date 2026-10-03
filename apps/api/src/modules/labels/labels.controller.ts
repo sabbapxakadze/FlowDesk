@@ -73,6 +73,7 @@ export async function updateLabel(req: Request, res: Response) {
     organizationId: req.ctx.organizationId,
     labelId: labelId.data,
     changes: parsed.data,
+    actorId: req.ctx.userId,
   });
   if (!label) {
     throw new AppError("label_not_found", 404, "Label not found.");
@@ -94,6 +95,7 @@ export async function deleteLabel(req: Request, res: Response) {
   const deleted = await labelsService.deleteLabel({
     organizationId: req.ctx.organizationId,
     labelId: labelId.data,
+    actorId: req.ctx.userId,
   });
   if (!deleted) {
     throw new AppError("label_not_found", 404, "Label not found.");

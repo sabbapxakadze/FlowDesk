@@ -35,6 +35,7 @@ export async function startSprint(input: {
   projectId: string;
   sprintId: string;
   expectedVersion: number;
+  actorId: string;
 }) {
   try {
     return await sprintsRepository.start(input);
@@ -70,6 +71,7 @@ export async function renameSprint(input: {
   sprintId: string;
   expectedVersion: number;
   name: string;
+  actorId: string;
 }) {
   const result = await sprintsRepository.rename(input);
   if (result.status === "renamed") {
@@ -78,7 +80,12 @@ export async function renameSprint(input: {
   return result;
 }
 
-export async function deleteSprint(input: { organizationId: string; projectId: string; sprintId: string }) {
+export async function deleteSprint(input: {
+  organizationId: string;
+  projectId: string;
+  sprintId: string;
+  actorId: string;
+}) {
   const result = await sprintsRepository.remove(input);
   if (result.status === "deleted") {
     broadcastOrganizationChanged(input.organizationId, { kind: "sprint", projectId: input.projectId });
