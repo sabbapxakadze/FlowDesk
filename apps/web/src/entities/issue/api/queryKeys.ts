@@ -6,6 +6,8 @@ export type IssueListFilters = {
   priority?: IssuePriority;
   // A user id or "unassigned".
   assignee?: string;
+  /** Omitted means by creation time. */
+  sort?: "priority";
   order?: "asc" | "desc";
 };
 

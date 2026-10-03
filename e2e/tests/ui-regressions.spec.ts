@@ -23,7 +23,7 @@ test("the issues list does not scroll sideways on a narrow screen", async ({
   }));
   expect(widths.scroll).toBeLessThanOrEqual(widths.client);
   // The last control in the row is reachable (inside the window), not cut off.
-  const sort = page.getByRole("button", { name: /first$/ });
+  const sort = page.getByLabel("Sort");
   const box = (await sort.boundingBox())!;
   expect(box.x + box.width).toBeLessThanOrEqual(widths.client);
 });

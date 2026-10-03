@@ -72,7 +72,11 @@ export function ProjectDetailPage() {
   // matches nobody simply returns an empty list, and the API rejects a non-uuid.
   const assigneeParam = searchParams.get("assignee");
   const assignee = assigneeParam && assigneeParam !== "" ? assigneeParam : undefined;
+  const sort = searchParams.get("sort") === "priority" ? "priority" : undefined;
   const order = searchParams.get("order") === "asc" ? "asc" : undefined;
+  // The three choices the dropdown offers: newest first (the default, nothing in the URL),
+  // oldest first (?order=asc) and highest priority first (?sort=priority).
+  const sortChoice = sort === "priority" ? "priority" : order === "asc" ? "oldest" : "newest";
 
   const {
     data,
@@ -82,7 +86,7 @@ export function ProjectDetailPage() {
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useIssues(organization!.id, projectId!, { status, priority, assignee, order });
+  } = useIssues(organization!.id, projectId!, { status, priority, assignee, sort, order });
   const { data: members } = useMembers(organization!.id);
   const nameOf = useMemberNames(organization!.id);
   useLiveIssueUpdates(projectId!);
@@ -136,14 +140,13 @@ export function ProjectDetailPage() {
     });
   }
 
-  function toggleOrder() {
+  function setSortChoice(value: string) {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      if (next.get("order") === "asc") {
-        next.delete("order");
-      } else {
-        next.set("order", "asc");
-      }
+      next.delete("sort");
+      next.delete("order");
+      if (value === "oldest") next.set("order", "asc");
+      if (value === "priority") next.set("sort", "priority");
       return next;
     });
   }
@@ -215,9 +218,16 @@ export function ProjectDetailPage() {
               </option>
             ))}
         </Select>
-        <Button variant="secondary" size="sm" onClick={toggleOrder}>
-          {order === "asc" ? "Oldest first" : "Newest first"}
-        </Button>
+        <Select
+          value={sortChoice}
+          onChange={(e) => setSortChoice(e.target.value)}
+          className="w-auto"
+          aria-label="Sort"
+        >
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="priority">Highest priority first</option>
+        </Select>
       </div>
 
       {showConflictNotice && (

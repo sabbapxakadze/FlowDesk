@@ -43,8 +43,11 @@ export type ListIssuesResponse = z.infer<typeof listIssuesResponseSchema>;
 // (server-generated, see issues.repository.ts) — the client never
 // constructs one, only passes back what a previous response gave it.
 // limit is capped, not just defaulted, so a client can't request an
-// unbounded page. order is direction-only (created_at is the only
-// sortable column today, see the Phase 4 slice 2 plan's "Decisions").
+// unbounded page. sort picks the column ("created" is the default,
+// "priority" orders by the priority enum's own order: urgent > high > medium
+// > low > none) and order is the direction of the WHOLE sort key, so
+// sort=priority&order=desc is urgent first and, within one priority, newest
+// first (ADR 0026).
 export const listIssuesQuerySchema = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),
@@ -52,6 +55,7 @@ export const listIssuesQuerySchema = z.object({
   priority: issuePrioritySchema.optional(),
   // A user id, or "unassigned". ("Assigned to me" is the client sending its own id.)
   assignee: z.union([z.uuid(), z.literal("unassigned")]).optional(),
+  sort: z.enum(["created", "priority"]).default("created"),
   order: z.enum(["asc", "desc"]).default("desc"),
 });
 

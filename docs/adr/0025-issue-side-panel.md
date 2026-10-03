@@ -62,3 +62,14 @@ header strip with the issue key, "Open full page" and a close button.
   defeats a quick look.
 - **A route per panel (`/issues/:id` rendered over the list):** a nested layout route would work
   but ties the panel to one page's layout; the query parameter works on any page.
+
+## Amendment (2026-10-03)
+
+- A click on a link outside the panel (a sidebar link) must navigate. Closing on `click` ran after
+  the link's own navigation and, resolving its address from a stale path, sent the page back. The
+  panel now ignores a click a link already handled (`defaultPrevented`), and `open()`/`close()`
+  build their address from the live path and query. Found by an e2e test.
+- The sidebar wrapper got `z-30` so the notifications dropdown is not painted under later
+  positioned page content (the charts); the panel stays above it at `z-40`.
+- The panel body uses the page background so the cards inside (attachments, comments) stand out in
+  dark mode, as on the full page.

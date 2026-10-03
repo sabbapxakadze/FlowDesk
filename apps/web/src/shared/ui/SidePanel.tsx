@@ -7,7 +7,9 @@ import { useEffect, useRef, type ReactNode } from "react";
  *
  * - Esc closes it (unless a native <dialog> is open on top of it: that dialog gets the
  *   Esc first, so closing an image preview does not also close the panel).
- * - A click anywhere outside closes it, except on an element marked `data-panel-trigger`
+ * - A click anywhere outside closes it, except a click a link already handled (its router
+ *   handler called preventDefault and is navigating: closing too would send the page back to
+ *   where it was; the panel goes away by itself when the page changes), on an element marked `data-panel-trigger`
  *   (the cards that open or swap it) and inside any open <dialog> (the command palette,
  *   an image preview). The click is not swallowed: if it landed on a button, that button
  *   still acts, and the panel closes after it. It listens for `click`, not `pointerdown`, on
@@ -45,6 +47,7 @@ export function SidePanel({
       const target = event.target;
       if (!(target instanceof Element)) return;
       if (target === document.documentElement) return; // the page scrollbar
+      if (event.defaultPrevented) return; // a link is already navigating
       const path = event.composedPath();
       if (ref.current && path.includes(ref.current)) return;
       const ignored = path.some(

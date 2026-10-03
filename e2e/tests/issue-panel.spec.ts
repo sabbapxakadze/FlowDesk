@@ -89,25 +89,26 @@ test("pressing the empty page closes the panel; pressing inside it, or typing in
   await expect(panel).toHaveCount(0);
 });
 
-test("a click that lands on a page button closes the panel AND still works; the other list filters survive opening and closing", async ({
+test("a click outside that lands on a link still works while the panel closes; changing the sort with the panel open keeps it open and in the URL", async ({
   loggedInPage: page,
 }) => {
-  // Why: the outside press must not be swallowed (the owner clicks a button and expects it
-  // to act), and the panel's ?issue= must not wipe the other query parameters.
-  const { listUrl } = await setup(page);
-  await page.goto(`${listUrl}?status=todo&order=asc`);
+  // Why: (1) the outside click must not be swallowed: a sidebar link must still navigate.
+  // (2) The panel's ?issue= and the list's own parameters must not wipe each other.
+  const { listUrl, issueIds } = await setup(page);
+  await page.goto(`${listUrl}?status=todo`);
   await cardLink(page, "Alpha issue").click();
   await expect(panelOf(page)).toBeVisible();
-  await expect(page).toHaveURL(/status=todo/);
-  await expect(page).toHaveURL(/order=asc/);
 
-  // A real mouse press on the "Oldest first" button (it toggles back to newest first).
-  await page.getByRole("button", { name: "Oldest first" }).click();
-  await expect(panelOf(page)).toHaveCount(0);
-  await expect(page).not.toHaveURL(/order=asc/); // the button worked
-  await expect(page).toHaveURL(/status=todo/); // the other filter survived
-  await expect(page).not.toHaveURL(/issue=/);
-  await expect(page.getByRole("button", { name: "Newest first" })).toBeVisible();
+  await page.getByLabel("Sort").selectOption({ label: "Highest priority first" });
+  await expect(page).toHaveURL(/sort=priority/);
+  await expect(page).toHaveURL(/status=todo/);
+  await expect(page).toHaveURL(new RegExp(`issue=${issueIds[0]}`)); // still open
+  await expect(panelOf(page)).toBeVisible();
+
+  // A real click on a sidebar link, outside the panel.
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Board" }).click();
+  await expect(page).toHaveURL(/\/board$/); // the link worked
+  await expect(panelOf(page)).toHaveCount(0); // and the panel is gone
 });
 
 test("a reload keeps the panel open, and the full-page link and a Ctrl+click still go to the issue page", async ({

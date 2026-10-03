@@ -109,6 +109,16 @@ export const issues = pgTable(
       table.createdAt,
       table.id,
     ),
+    // Serves the list sorted by priority (ADR 0026): ORDER BY priority, created_at, id
+    // under WHERE project_id = ?, including its keyset cursor condition
+    // (priority, created_at, id) < (...). Measured at 20,000 issues in one project: the first
+    // page went from 7.6 ms (scan and sort every row) to 0.05 ms (26 rows read).
+    index("issues_project_id_priority_created_at_id_idx").on(
+      table.projectId,
+      table.priority,
+      table.createdAt,
+      table.id,
+    ),
     // Matches the board query's WHERE project_id = ? ORDER BY status,
     // board_rank, id exactly — index-only ordering, no sort step. As a
     // prefix, also serves a future per-column neighbor lookup (WHERE

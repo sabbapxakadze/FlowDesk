@@ -6,9 +6,9 @@ import { useNavigate, useSearchParams } from "react-router";
  * a reload keeps it open and the link can be shared. Other query parameters (the issue list
  * filters) are preserved.
  *
- * open() and close() build the new query from the LIVE address bar, not from the render's
- * copy: a page control clicked a moment earlier (a filter, the sort button) may have already
- * changed the URL, and updating from a stale copy would silently undo it.
+ * open() and close() build the new address from the LIVE address bar (path and query), not
+ * from the render's copy: something clicked a moment earlier (a sidebar link, a filter) may
+ * have already changed the URL, and updating from a stale copy would silently undo it.
  *
  * - open(): the first open adds a history entry (so Back closes the panel); opening a
  *   different issue while it is already open replaces the entry, so Back does not walk
@@ -27,7 +27,7 @@ export function useIssuePanel() {
       const next = new URLSearchParams(window.location.search);
       const alreadyOpen = next.has("issue");
       next.set("issue", id);
-      navigate({ search: next.toString() }, { replace: alreadyOpen });
+      navigate({ pathname: window.location.pathname, search: next.toString() }, { replace: alreadyOpen });
     },
     [navigate],
   );
@@ -36,7 +36,10 @@ export function useIssuePanel() {
     (notice?: string) => {
       const next = new URLSearchParams(window.location.search);
       next.delete("issue");
-      navigate({ search: next.toString() }, { replace: true, state: notice ? { notice } : null });
+      navigate(
+        { pathname: window.location.pathname, search: next.toString() },
+        { replace: true, state: notice ? { notice } : null },
+      );
     },
     [navigate],
   );

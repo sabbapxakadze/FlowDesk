@@ -12,7 +12,7 @@ import {
   users,
 } from "../../db/schema/index.js";
 import * as notificationsRepository from "../notifications/notifications.repository.js";
-import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
+import { issuePrioritySchema, type IssuePriority, type IssueStatus } from "@flowdesk/contracts";
 
 type IssueRow = typeof issues.$inferSelect;
 
@@ -20,13 +20,23 @@ type IssueRow = typeof issues.$inferSelect;
  * a createdAt millisecond (rare but real, e.g. a seed script). Opaque to
  * the client: base64 JSON, generated only from a row this server just
  * returned, never accepted as hand-built input beyond round-tripping it. */
-function encodeCursor(row: Pick<IssueRow, "createdAt" | "id">): string {
-  return Buffer.from(JSON.stringify({ createdAt: row.createdAt.toISOString(), id: row.id })).toString(
-    "base64url",
-  );
+type ListSort = "created" | "priority";
+
+/** A priority-sorted cursor also carries the last row's priority; a created-sorted one does
+ * not. decodeCursor insists on the shape that matches the requested sort, so a cursor from
+ * one sort can never be replayed against another (it would skip or repeat rows). */
+function encodeCursor(row: Pick<IssueRow, "createdAt" | "id" | "priority">, sort: ListSort): string {
+  const payload =
+    sort === "priority"
+      ? { createdAt: row.createdAt.toISOString(), id: row.id, priority: row.priority }
+      : { createdAt: row.createdAt.toISOString(), id: row.id };
+  return Buffer.from(JSON.stringify(payload)).toString("base64url");
 }
 
-function decodeCursor(cursor: string): { createdAt: Date; id: string } | null {
+function decodeCursor(
+  cursor: string,
+  sort: ListSort,
+): { createdAt: Date; id: string; priority?: IssuePriority } | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
@@ -43,7 +53,13 @@ function decodeCursor(cursor: string): { createdAt: Date; id: string } | null {
   }
   const createdAt = new Date((parsed as { createdAt: string }).createdAt);
   if (Number.isNaN(createdAt.getTime())) return null;
-  return { createdAt, id: (parsed as { id: string }).id };
+  const id = (parsed as { id: string }).id;
+  const priority = (parsed as { priority?: unknown }).priority;
+  if (sort === "priority") {
+    const valid = issuePrioritySchema.safeParse(priority);
+    return valid.success ? { createdAt, id, priority: valid.data } : null;
+  }
+  return priority === undefined ? { createdAt, id } : null;
 }
 
 /**
@@ -87,9 +103,12 @@ export async function listByProject(
     priority?: IssuePriority;
     // A user id, or "unassigned".
     assignee?: string;
+    /** Defaults to "created" (newest or oldest first by creation time). */
+    sort?: ListSort;
     order: "asc" | "desc";
   },
 ): Promise<{ status: "ok"; items: IssueRow[]; nextCursor: string | null } | { status: "invalid_cursor" }> {
+  const sort: ListSort = options.sort ?? "created";
   const conditions = [eq(issues.organizationId, organizationId), eq(issues.projectId, projectId)];
 
   if (options.status) {
@@ -109,11 +128,15 @@ export async function listByProject(
   }
 
   if (options.cursor) {
-    const decoded = decodeCursor(options.cursor);
+    const decoded = decodeCursor(options.cursor, sort);
     if (!decoded) return { status: "invalid_cursor" };
     const comparator = options.order === "asc" ? sql.raw(">") : sql.raw("<");
+    // The whole key moves in one direction, so one row-constructor comparison is exact.
+    // Postgres compares enum values in their declared order (none < low < ... < urgent).
     conditions.push(
-      sql`(${issues.createdAt}, ${issues.id}) ${comparator} (${decoded.createdAt.toISOString()}, ${decoded.id})`,
+      decoded.priority
+        ? sql`(${issues.priority}, ${issues.createdAt}, ${issues.id}) ${comparator} (${decoded.priority}::issue_priority, ${decoded.createdAt.toISOString()}, ${decoded.id})`
+        : sql`(${issues.createdAt}, ${issues.id}) ${comparator} (${decoded.createdAt.toISOString()}, ${decoded.id})`,
     );
   }
 
@@ -122,13 +145,17 @@ export async function listByProject(
     .select()
     .from(issues)
     .where(and(...conditions))
-    .orderBy(orderFn(issues.createdAt), orderFn(issues.id))
+    .orderBy(
+      ...(sort === "priority"
+        ? [orderFn(issues.priority), orderFn(issues.createdAt), orderFn(issues.id)]
+        : [orderFn(issues.createdAt), orderFn(issues.id)]),
+    )
     .limit(options.limit + 1);
 
   const hasMore = rows.length > options.limit;
   const items = hasMore ? rows.slice(0, options.limit) : rows;
   const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? encodeCursor(lastItem) : null;
+  const nextCursor = hasMore && lastItem ? encodeCursor(lastItem, sort) : null;
 
   return { status: "ok", items, nextCursor };
 }

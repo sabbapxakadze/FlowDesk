@@ -35,6 +35,7 @@ export async function listIssues(
     status?: IssueStatus;
     priority?: IssuePriority;
     assignee?: string;
+    sort?: "created" | "priority";
     order: "asc" | "desc";
   },
 ) {

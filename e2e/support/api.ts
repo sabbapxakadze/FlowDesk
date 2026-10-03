@@ -70,3 +70,18 @@ export async function createSprintViaApi(
   });
   expect(res.status()).toBe(201);
 }
+
+/** Sets an issue's priority through the API. The issue must be untouched (version 1). */
+export async function setIssuePriorityViaApi(
+  request: APIRequestContext,
+  projectId: string,
+  issueId: string,
+  priority: "none" | "low" | "medium" | "high" | "urgent",
+) {
+  const { headers, base } = await apiSession(request);
+  const res = await request.patch(`${base}/projects/${projectId}/issues/${issueId}`, {
+    headers,
+    data: { version: 1, priority },
+  });
+  expect(res.status()).toBe(200);
+}

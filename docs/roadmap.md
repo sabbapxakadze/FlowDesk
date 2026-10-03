@@ -2119,6 +2119,24 @@ The original plan for this slice, kept for the record:
    **Not verified / not done:** a draft comment is lost when the panel closes, no focus trap (non-modal on purpose),
    no slide animation, the board is covered on narrow laptops, search results still open the
    full page.
+   **Priority sorting: DONE 2026-10-03 (ADR 0026).** The project issue list has a Sort dropdown (Newest
+   first, Oldest first, Highest priority first) in place of the old button; the choice is in the URL
+   (`?sort=priority`, `?order=asc`). Urgent first, newest first within a priority, paged by the same
+   kind of keyset cursor (now `(priority, created_at, id)`), refused if replayed against the other sort.
+   New migration 0020 index `(project_id, priority, created_at, id)`, added after measuring 20,000
+   issues in one project: first page 7.6 ms without it, 0.05 ms with it. **Verified:** 7 new API tests
+   (the expected order computed independently in JS, 23 issues over 4-row pages, ascending, page
+   boundaries inside groups of equal priorities with limits 1 to 7, filters combined, default sort
+   unchanged, cursor from the other sort refused, bad sort value and forged priority refused, tenant
+   isolation) and 2 e2e tests (the list in the real UI in all three orders with the URL and a reload; 32
+   issues over two pages with Load more, nothing skipped or repeated, plus a priority filter); mutations
+   caught (cursor ignoring priority, ORDER BY missing priority, mismatched cursors accepted). **A real
+   bug found by a test on the way and fixed:** with the side panel open, a click on a sidebar link did
+   not navigate: the panel's close ran after the link's navigation and sent the page back (it resolved
+   its address from a stale path). The panel now ignores clicks a link already handled AND builds its
+   address from the live path and query (either alone fixes it; the test fails only without both).
+   **Not done:** "Lowest priority first" (the API supports it; "none" would come first), sorting the
+   board or the sprints backlog, a choosable secondary sort.
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

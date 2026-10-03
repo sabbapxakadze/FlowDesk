@@ -9,13 +9,14 @@ import type { IssueListFilters } from "./queryKeys";
 export function fetchIssues(
   organizationId: string,
   projectId: string,
-  { cursor, status, priority, assignee, order }: IssueListFilters & { cursor?: string } = {},
+  { cursor, status, priority, assignee, sort, order }: IssueListFilters & { cursor?: string } = {},
 ) {
   const params = new URLSearchParams();
   if (cursor) params.set("cursor", cursor);
   if (status) params.set("status", status);
   if (priority) params.set("priority", priority);
   if (assignee) params.set("assignee", assignee);
+  if (sort) params.set("sort", sort);
   if (order) params.set("order", order);
   const query = params.size > 0 ? `?${params.toString()}` : "";
 

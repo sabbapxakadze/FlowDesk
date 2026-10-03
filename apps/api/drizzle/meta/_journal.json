@@ -141,6 +141,13 @@
       "when": 1790970586563,
       "tag": "0019_freezing_sway",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791039066982,
+      "tag": "0020_dizzy_bastion",
+      "breakpoints": true
     }
   ]
 }

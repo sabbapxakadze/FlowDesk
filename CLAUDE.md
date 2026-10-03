@@ -109,6 +109,7 @@ role, through a one-time link; a Members page lists people and pending invitatio
 (membership only; their issues are unassigned; they can be invited back) and re-sending an invitation.
 Issues open in a floating side panel (`?issue=<id>`, ADR 0025) from the list, board and sprints pages; the
 issue page body is the shared `widgets/issue-detail` used by both the page and the panel.
+The project issue list can be sorted by priority (`?sort=priority`, ADR 0026), paged by a keyset cursor with its own index.
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,
