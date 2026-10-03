@@ -49,7 +49,7 @@ test("an activity line has an icon circle, the sentence and the time at the righ
   expect(Math.round(box.width)).toBe(28);
   expect(Math.round(box.height)).toBe(28);
 
-  const sentence = (await assignLine.getByRole("button", { name: "E2E User" }).boundingBox())!;
+  const sentence = (await assignLine.getByRole("link", { name: "E2E User" }).boundingBox())!;
   const time = (await assignLine.locator("time").boundingBox())!;
   expect(time.x).toBeGreaterThan(sentence.x + sentence.width);
   const line = (await assignLine.boundingBox())!;
@@ -87,7 +87,7 @@ test("hovering the actor, or the person who was assigned, opens that person's ca
   const { assignLine } = await openIssueWithAssignment(page);
   await expect(visibleCard(page)).toHaveCount(0);
 
-  await assignLine.getByRole("button", { name: "E2E User" }).hover();
+  await assignLine.getByRole("link", { name: "E2E User" }).hover();
   await expect(visibleCard(page)).toHaveCount(1);
   await expect(visibleCard(page)).toContainText("E2E User");
   await expect(visibleCard(page)).toContainText("Owner");
@@ -96,7 +96,7 @@ test("hovering the actor, or the person who was assigned, opens that person's ca
   await page.mouse.move(5, 5);
   await expect(visibleCard(page)).toHaveCount(0);
 
-  await assignLine.getByRole("button", { name: "Second Person" }).hover();
+  await assignLine.getByRole("link", { name: "Second Person" }).hover();
   await expect(visibleCard(page)).toHaveCount(1);
   await expect(visibleCard(page)).toContainText("Second Person");
   await expect(visibleCard(page)).toContainText("Member");
@@ -112,7 +112,8 @@ test("the card also opens from the keyboard and is described to assistive tech",
   // Why: hover alone would exclude keyboard users. Focus must open the card, and the
   // button must point at it with aria-describedby.
   const { assignLine } = await openIssueWithAssignment(page);
-  const name = assignLine.getByRole("button", { name: "Second Person" });
+  // .first(): the card also holds a link with the same name, and it is visible once open.
+  const name = assignLine.getByRole("link", { name: "Second Person" }).first();
   await name.focus();
   await expect(visibleCard(page)).toHaveCount(1);
   await expect(visibleCard(page)).toContainText("e2e-second@example.com");
@@ -120,7 +121,7 @@ test("the card also opens from the keyboard and is described to assistive tech",
   expect(describedBy).toBeTruthy();
   await expect(page.locator(`[id="${describedBy}"]`)).toContainText("Second Person");
 
-  await assignLine.getByRole("button", { name: "E2E User" }).focus();
+  await assignLine.getByRole("link", { name: "E2E User" }).first().focus();
   await expect(visibleCard(page)).toHaveCount(1);
   await expect(visibleCard(page)).toContainText("E2E User");
 });
@@ -130,7 +131,7 @@ test("on a phone-sized screen nothing scrolls sideways and the card stays inside
 }) => {
   const { assignLine } = await openIssueWithAssignment(page);
   await page.setViewportSize({ width: 400, height: 760 });
-  await assignLine.getByRole("button", { name: "Second Person" }).hover();
+  await assignLine.getByRole("link", { name: "Second Person" }).hover();
   await expect(visibleCard(page)).toHaveCount(1);
   const card = (await visibleCard(page).boundingBox())!;
   expect(card.x).toBeGreaterThanOrEqual(0);

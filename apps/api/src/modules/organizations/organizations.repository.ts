@@ -60,6 +60,8 @@ export async function listMembers(organizationId: string) {
       userId: users.id,
       name: users.name,
       email: users.email,
+      jobTitle: users.jobTitle,
+      avatarKey: users.avatarKey,
       role: organizationMembers.role,
       joinedAt: organizationMembers.createdAt,
     })

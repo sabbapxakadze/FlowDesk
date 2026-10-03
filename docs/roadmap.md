@@ -2161,6 +2161,27 @@ The original plan for this slice, kept for the record:
    actor (the type system found all 14). **Not done:** retention or export, security events, a link from a row
    to the thing (it may be gone), rows for actions before this slice, live refresh of an open log, dark mode and
    a phone view looked at by eye.
+   **Profiles: DONE 2026-10-03 (ADR 0028; slices 1 and 2 merged at the owner's request).** A job title, a
+   bio (300 characters) and a photo on every person; `/profile` to edit your own, `/people/:userId` to see
+   anyone in the organization (design P2: identity card left; About and Recent activity right); the hover
+   card shows the photo and job title and links to the profile; the sidebar name opens your own. Photos are
+   re-made on upload (decoded, rotated, centre-cropped to 256x256, WebP, metadata dropped; 5 MB in) and served
+   from a public random-key URL with `immutable` caching. Migration 0022, new module `profiles`, `sharp`.
+   Recent activity is the person's `issue_events` in this organization, ten at a time with Load more, each issue
+   a link that opens the side panel on its project page; comment and description text is stripped from it.
+   **Verified:** 18 new API tests (edit and blank-to-null, limits, login needed; the photo is a 256x256 WebP with
+   the right headers, a text file named .png is refused, wrong type and over 5 MB refused, replace deletes the
+   old file and URL, remove clears all three, unknown, malformed and orphaned keys 404; visibility for every role,
+   other organization and removed members 404, malformed id 404; activity only that person's, newest first,
+   paged, scoped to the organization, deleted issues gone, no comment or description text) and 7 e2e tests
+   (edit shows on the profile, members list and sidebar; form errors; upload, load and remove a photo; wrong file
+   refused client-side; another member reaches the profile from the hover card and opens an activity issue in the
+   panel; unknown person; phone width). Mutations caught: profile lookup ignoring the organization, photo served
+   without checking the key, old file not deleted on replace and on remove, activity returning everyone's events,
+   activity ignoring the organization, comment text served. The phone test found a real bug (a long name or bio
+   widened the page; fixed with `minmax(0, 1fr)` columns and `overflow-wrap: anywhere`, also on the page title).
+   **Not done:** the sign-up "Finish your profile" nudge (slice 3), photos on the small assignee circles, a crop
+   tool, changing your email, timezone or other fields.
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

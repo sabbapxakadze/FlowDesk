@@ -19,7 +19,7 @@ export function describeEvent(event: IssueEvent): string {
     case "issue.updated": {
       const parts: string[] = [];
       if ("title" in event.payload) parts.push(`changed the title to "${String(event.payload.title)}"`);
-      if ("status" in event.payload) parts.push(`changed status to ${String(event.payload.status)}`);
+      if ("status" in event.payload) parts.push(`changed status to ${STATUS_LABELS[event.payload.status as keyof typeof STATUS_LABELS] ?? String(event.payload.status)}`);
       if ("description" in event.payload) parts.push("updated the description");
       if ("assigneeId" in event.payload) {
         parts.push(

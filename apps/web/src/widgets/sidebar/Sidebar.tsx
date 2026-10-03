@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 import { Search } from "lucide-react";
 import { Link, NavLink, useMatch } from "react-router";
 import { useProjects } from "../../entities/project";
-import { useMyRole } from "../../entities/member";
+import { useMembers, useMyRole } from "../../entities/member";
 import { useAuth } from "../../shared/auth/useAuth";
 import { useSearchPalette } from "../../shared/search-palette/useSearchPalette";
-import { cn, Skeleton, ThemeSwitch } from "../../shared/ui";
+import { Avatar, cn, Skeleton, ThemeSwitch } from "../../shared/ui";
 
 const LINK =
   "flex items-center rounded-[var(--radius-control)] px-2.5 py-1.5 text-sm text-[var(--color-text-sidebar)] hover:bg-[var(--color-bg-sidebar-active)] hover:text-[var(--color-text-sidebar-active)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-text-sidebar-active)]";
@@ -69,6 +69,9 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
   const onIssuePage = useMatch("/projects/:projectId/issues/*") !== null;
   const { setOpen: setSearchOpen } = useSearchPalette();
   const role = useMyRole(organization?.id ?? "");
+  // Name and photo come from the member list, so an edit shows here without logging in again.
+  const { data: members } = useMembers(organization?.id ?? "");
+  const me = members?.find((member) => member.userId === user?.id);
   const canManageProject = role === "owner" || role === "admin";
   const onProjectList = useMatch({ path: "/projects/:projectId", end: true }) !== null;
 
@@ -144,7 +147,13 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
         </div>
         {user && (
           <div className="flex items-center justify-between gap-2 px-2.5 pt-2 text-sm">
-            <span className="truncate text-[var(--color-text-sidebar-active)]">{user.name}</span>
+            <NavLink
+              to={`/people/${user.id}`}
+              className="flex min-w-0 items-center gap-2 rounded-sm text-[var(--color-text-sidebar-active)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text-sidebar-active)]"
+            >
+              <Avatar name={me?.name ?? user.name} src={me?.avatarUrl} size="md" />
+              <span className="truncate">{me?.name ?? user.name}</span>
+            </NavLink>
             <button
               type="button"
               onClick={logout}

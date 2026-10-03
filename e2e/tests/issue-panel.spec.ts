@@ -319,7 +319,7 @@ test("the panel never scrolls sideways, and an uploader's hover card opens insid
   const body = panel.locator("div.overflow-y-auto");
   expect(await body.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
 
-  await row.getByRole("button", { name: "E2E User" }).hover();
+  await row.getByRole("link", { name: "E2E User" }).hover();
   const card = page.locator('[role="tooltip"]:visible');
   await expect(card).toHaveCount(1);
   const cardBox = (await card.boundingBox())!;

@@ -112,6 +112,8 @@ issue page body is the shared `widgets/issue-detail` used by both the page and t
 The project issue list can be sorted by priority (`?sort=priority`, ADR 0026), paged by a keyset cursor with its own index.
 The organization audit log (ADR 0027) records 16 actions (deletes, renames, membership) with name snapshots, in the
 same transaction as the action; owners and admins read it at `/audit-log`.
+Profiles (ADR 0028) add a job title, bio and photo: `/profile` to edit, `/people/:userId` to view, a "View profile"
+link on the hover card; photos are re-made on upload (256x256 WebP) and served from a public random-key URL.
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,

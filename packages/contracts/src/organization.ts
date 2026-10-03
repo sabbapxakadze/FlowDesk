@@ -18,6 +18,9 @@ export const organizationMemberSchema = z.object({
   userId: z.uuid(),
   name: z.string(),
   email: z.string(),
+  /** Profile (ADR 0028): shown on cards and the hover card. */
+  jobTitle: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
   role: z.enum(["owner", "admin", "member", "viewer"]),
   /** When they joined the organization. */
   joinedAt: z.iso.datetime(),

@@ -39,7 +39,7 @@ export interface EventStyle {
  * added, red for something removed, the status colour for a status change, the
  * accent for any other change, muted for a pure reorder.
  */
-export function eventStyle(event: IssueEvent): EventStyle {
+export function eventStyle(event: Pick<IssueEvent, "type" | "payload">): EventStyle {
   const p = event.payload;
   switch (event.type) {
     case "issue.created":

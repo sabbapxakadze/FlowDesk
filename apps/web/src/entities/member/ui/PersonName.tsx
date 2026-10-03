@@ -16,6 +16,7 @@ export function PersonName({
   userId,
   name,
   withAvatar = false,
+  avatarOnly = false,
   avatarSize = "sm",
   align,
 }: {
@@ -23,6 +24,8 @@ export function PersonName({
   userId: string;
   name: string;
   withAvatar?: boolean;
+  /** Just the picture (for a list row that writes the name separately); same card, same link. */
+  avatarOnly?: boolean;
   avatarSize?: "sm" | "md";
   /** "right" for a name at the right end of a row, so its card opens leftwards. */
   align?: "left" | "right";
@@ -36,11 +39,17 @@ export function PersonName({
       name={shownName}
       roleLabel={member ? ROLE_LABELS[member.role] : undefined}
       email={member?.email}
+      avatarUrl={member?.avatarUrl}
+      jobTitle={member?.jobTitle}
+      // Only people still in the organization have a profile to open.
+      profileHref={member ? `/people/${member.userId}` : undefined}
       align={align}
     >
-      {withAvatar ? (
+      {avatarOnly ? (
+        <Avatar name={shownName} src={member?.avatarUrl} size={avatarSize} />
+      ) : withAvatar ? (
         <>
-          <Avatar name={shownName} size={avatarSize} />
+          <Avatar name={shownName} src={member?.avatarUrl} size={avatarSize} />
           {shownName}
         </>
       ) : undefined}

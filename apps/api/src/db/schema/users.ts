@@ -11,6 +11,11 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
+  // Profile (ADR 0028). All optional. avatarKey is the random part of the photo's public URL
+  // (a new one on every upload); null means "show initials".
+  jobTitle: varchar("job_title", { length: 100 }),
+  bio: varchar("bio", { length: 300 }),
+  avatarKey: varchar("avatar_key", { length: 64 }),
   // Null until a verify-email token is confirmed. Login is not gated on
   // this — see docs/adr and Phase 2 Slice 4's decisions. Tracked, not enforced.
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),

@@ -68,15 +68,20 @@ export async function apiGet<T>(path: string, schema: z.ZodType<T>): Promise<T> 
  * itself and needs to set the header to include it; setting it by hand
  * would omit the boundary and break parsing server-side. First use:
  * attachment uploads (Phase 7 slice 4). */
-export async function apiUpload<T>(path: string, formData: FormData, schema: z.ZodType<T>): Promise<T> {
+export async function apiUpload<T>(
+  path: string,
+  formData: FormData,
+  schema: z.ZodType<T>,
+  method: "POST" | "PUT" = "POST",
+): Promise<T> {
   const res = await fetch(`/api${path}`, {
-    method: "POST",
+    method,
     headers: authHeaders(),
     body: formData,
   });
 
   if (!res.ok) {
-    throw await toApiError(res, path, "POST");
+    throw await toApiError(res, path, method);
   }
 
   return schema.parse(await res.json());

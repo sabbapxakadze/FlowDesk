@@ -48,7 +48,7 @@ test("a comment card shows who, when, the text and its files, and 'edited' after
 
   const card = page.locator("li", { hasText: "Here is the screenshot" });
   await expect(card).toBeVisible();
-  await expect(card.getByRole("button", { name: "E2E User" })).toBeVisible();
+  await expect(card.getByRole("link", { name: "E2E User" })).toBeVisible();
   await expect(card.getByRole("img", { name: "E2E User" })).toHaveText("EU");
 
   const time = card.locator("time");

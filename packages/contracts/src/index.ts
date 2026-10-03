@@ -13,3 +13,4 @@ export * from "./attachment.js";
 export * from "./analytics.js";
 export * from "./invitation.js";
 export * from "./audit.js";
+export * from "./profile.js";

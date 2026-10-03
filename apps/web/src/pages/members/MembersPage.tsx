@@ -1,10 +1,9 @@
 import { useInvitations, useRevokeInvitation } from "../../entities/invitation";
-import { ROLE_LABELS, useMembers, useMyRole } from "../../entities/member";
+import { PersonName, ROLE_LABELS, useMembers, useMyRole } from "../../entities/member";
 import { InviteMemberForm, ResendInvitation } from "../../features/invite-member";
 import { MemberControls } from "../../features/manage-member";
 import { useAuth } from "../../shared/auth/useAuth";
 import {
-  Avatar,
   Button,
   Card,
   EmptyState,
@@ -46,10 +45,10 @@ export function MembersPage() {
         <ul aria-label="Members" className="flex flex-col gap-2">
           {members.data.map((member) => (
             <Card key={member.userId} as="li" className="flex flex-wrap items-center gap-3">
-              <Avatar name={member.name} size="md" />
+              <PersonName organizationId={organizationId} userId={member.userId} name={member.name} avatarOnly avatarSize="md" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
-                  {member.name}
+                  <PersonName organizationId={organizationId} userId={member.userId} name={member.name} />
                   {member.userId === user?.id && (
                     <span className="ml-2 text-xs font-normal text-[var(--color-text-muted)]">(you)</span>
                   )}

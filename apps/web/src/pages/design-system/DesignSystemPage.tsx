@@ -3,6 +3,7 @@ import { Pencil, Trash2, X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { IssueStatus } from "@flowdesk/contracts";
 import {
+  Avatar,
   Button,
   buttonVariants,
   Card,
@@ -412,6 +413,21 @@ export function DesignSystemPage() {
             The elevated container used for list items and boxed content: a surface and a soft shadow, no border.
           </p>
         </Card>
+      </Section>
+
+      <Section title="Avatar" note="A photo when there is one, initials otherwise (or when the picture fails to load).">
+        <div className="flex flex-wrap items-end gap-6">
+          {(["sm", "md", "lg", "xl"] as const).map((size) => (
+            <div key={size} className="flex flex-col items-center gap-2">
+              <Avatar name="Second Member" size={size} />
+              <span className="text-xs text-[var(--color-text-muted)]">{size}</span>
+            </div>
+          ))}
+          <div className="flex flex-col items-center gap-2">
+            <Avatar name="Second Member" src="/nonexistent.png" size="lg" />
+            <span className="text-xs text-[var(--color-text-muted)]">broken photo</span>
+          </div>
+        </div>
       </Section>
 
       <Section title="Status and column headers">

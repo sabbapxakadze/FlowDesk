@@ -62,7 +62,7 @@ export function PageHeader({
         </Link>
       )}
       {eyebrow && <p className="text-sm text-[var(--color-text-muted)]">{eyebrow}</p>}
-      <h1 className="font-display text-3xl font-normal">{title}</h1>
+      <h1 className="font-display text-3xl font-normal [overflow-wrap:anywhere]">{title}</h1>
       {children && <div className="mt-2">{children}</div>}
     </header>
   );

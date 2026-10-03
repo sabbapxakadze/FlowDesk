@@ -1,10 +1,15 @@
+import { avatarUrlFor } from "../../lib/avatar-url.js";
 import { AppError } from "../../shared/errors.js";
 import { broadcastIssueChanged, broadcastOrganizationChanged } from "../../realtime/socket-server.js";
 import * as organizationsRepository from "./organizations.repository.js";
 
 export async function listMembers(organizationId: string) {
   const rows = await organizationsRepository.listMembers(organizationId);
-  return rows.map((row) => ({ ...row, joinedAt: row.joinedAt.toISOString() }));
+  return rows.map(({ avatarKey, ...row }) => ({
+    ...row,
+    avatarUrl: avatarUrlFor(avatarKey),
+    joinedAt: row.joinedAt.toISOString(),
+  }));
 }
 
 type Actor = { userId: string; role: "owner" | "admin" | "member" | "viewer" };

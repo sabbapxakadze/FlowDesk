@@ -5,6 +5,7 @@ import { invitationKeys } from "../entities/invitation";
 import { issueKeys } from "../entities/issue";
 import { labelKeys } from "../entities/label";
 import { memberKeys } from "../entities/member";
+import { profileKeys } from "../entities/profile";
 import { projectKeys } from "../entities/project";
 import { sprintKeys } from "../entities/sprint";
 import { getSocket } from "../shared/socket/socket-client";
@@ -44,6 +45,8 @@ export function useLiveOrganizationUpdates(organizationId: string): void {
         // Someone was invited, an invitation was revoked, or someone joined.
         void queryClient.invalidateQueries({ queryKey: memberKeys.list(organizationId) });
         void queryClient.invalidateQueries({ queryKey: invitationKeys.list(organizationId) });
+        // A profile or photo changed: open profile pages show the same people.
+        void queryClient.invalidateQueries({ queryKey: profileKeys.all });
       } else if (change.kind === "label") {
         void queryClient.invalidateQueries({ queryKey: labelKeys.list(organizationId) });
         // Issues cache their own label lists under issueKeys.all.

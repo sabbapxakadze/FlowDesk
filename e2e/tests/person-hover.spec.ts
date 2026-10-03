@@ -41,7 +41,7 @@ test("the card opens after a short pause, not instantly, and stays open while th
   // shows nothing, and it must not vanish when the cursor travels onto the card.
   await openIssue(page);
   const header = page.locator("li", { hasText: "A comment to hover" });
-  const name = header.getByRole("button", { name: "E2E User" });
+  const name = header.getByRole("link", { name: "E2E User" });
 
   await name.hover();
   await page.waitForTimeout(120);
@@ -74,14 +74,14 @@ test("a person's name opens the same card in a comment header, the assignee line
 
   // Comment header: the author.
   const comment = page.locator("li", { hasText: "A comment to hover" });
-  await comment.getByRole("button", { name: "E2E User" }).hover();
+  await comment.getByRole("link", { name: "E2E User" }).hover();
   await expect(visibleCard(page)).toContainText("Owner");
   await expect(visibleCard(page)).toContainText("e2e-user@example.com");
   await page.mouse.move(5, 5);
   await expect(visibleCard(page)).toHaveCount(0);
 
   // The issue header's assignee (avatar and name in one button).
-  const assignee = page.getByRole("button", { name: /^SP\s*Second Person$|Second Person/ }).first();
+  const assignee = page.getByRole("link", { name: /^SP\s*Second Person$|Second Person/ }).first();
   await assignee.hover();
   await expect(visibleCard(page)).toContainText("Member");
   await expect(visibleCard(page)).toContainText("e2e-second@example.com");
@@ -105,7 +105,7 @@ test("a person's name opens the same card in a comment header, the assignee line
     .filter({ hasText: "direct.txt" })
     .filter({ has: page.getByRole("button", { name: "Remove" }) });
   await expect(row).toBeVisible();
-  await row.getByRole("button", { name: "E2E User" }).hover();
+  await row.getByRole("link", { name: "E2E User" }).hover();
   await expect(visibleCard(page)).toContainText("e2e-user@example.com");
 });
 
@@ -123,7 +123,7 @@ test("who else is viewing the issue is shown as hoverable names", async ({
 
   const line = page.getByText(/is also viewing/);
   await expect(line).toBeVisible();
-  await page.getByRole("button", { name: "Second Person" }).last().hover();
+  await page.getByRole("link", { name: "Second Person" }).last().hover();
   await expect(visibleCard(page)).toContainText("e2e-second@example.com");
   await contextB.close();
 });
@@ -161,6 +161,6 @@ test("hovering anywhere else on a comment opens nothing; only the name and the p
   await expect(visibleCard(page)).toContainText("e2e-user@example.com");
   await page.mouse.move(5, 5);
   await expect(visibleCard(page)).toHaveCount(0);
-  await comment.getByRole("button", { name: "E2E User" }).hover();
+  await comment.getByRole("link", { name: "E2E User" }).hover();
   await expect(visibleCard(page)).toContainText("e2e-user@example.com");
 });

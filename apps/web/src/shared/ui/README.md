@@ -22,3 +22,7 @@ Buttons (Button cleanup slice, 2026-10-02): text that acts is `<Button variant="
 (or `buttonVariants({ variant: "link" })` on a `Link` or `a`); an icon-only button is
 `IconButton` (its `label` is required). Lint fails on a hand-written link style and on a raw
 `<button>` outside the short list in `eslint.config.js`.
+
+`Avatar` shows a photo (`src`) or the person's initials; it falls back to initials when the picture is missing
+or fails to load. Sizes: `sm` 20px, `md` 28px, `lg` 96px, `xl` 128px (profile pages). `PersonHover` shows
+photo, job title, role, email and an optional "View profile" link, all passed in as plain props.
