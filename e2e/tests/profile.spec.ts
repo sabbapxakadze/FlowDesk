@@ -180,3 +180,30 @@ test("the card's own picture and name lead to the profile, and so do the Members
   await card.getByRole("img", { name: "E2E User" }).click();
   await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
 });
+
+test('the "Finish your profile" card shows to a new person, "Not now" hides it for good, and it survives a reload', async ({
+  loggedInPage: page,
+}) => {
+  // Why: dismissal is stored on the account, not the page, so a reload (a fresh load of
+  // everything) must still not show it.
+  await page.goto("/projects");
+  const card = page.getByRole("region", { name: "Finish your profile" });
+  await expect(card).toBeVisible();
+  await card.getByRole("button", { name: "Not now" }).click();
+  await expect(card).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
+  await expect(card).toHaveCount(0);
+});
+
+test('"Add photo" opens the edit page, and a photo makes the card go away', async ({ loggedInPage: page }) => {
+  await page.goto("/projects");
+  const card = page.getByRole("region", { name: "Finish your profile" });
+  await card.getByRole("link", { name: "Add photo" }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await page.getByLabel("Photo file").setInputFiles({ name: "me.png", mimeType: "image/png", buffer: PNG_1X1 });
+  await expect(page.getByRole("button", { name: "Change photo" })).toBeVisible();
+  await page.goto("/projects");
+  await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
+  await expect(card).toHaveCount(0);
+});

@@ -112,3 +112,18 @@ export async function openAvatar(key: string): Promise<string> {
   if (!owner) throw new AppError("avatar_not_found", 404, "Not found.");
   return avatarStorageKey(key);
 }
+
+/**
+ * Show the card only to someone whose profile is still bare (no photo, no job title, no bio) and
+ * who has not pressed "Not now". It disappears by itself once any of the three is filled in; it
+ * comes back if they are all cleared again, unless they dismissed it.
+ */
+export async function shouldShowNudge(userId: string): Promise<boolean> {
+  const state = await profilesRepository.findNudgeState(userId);
+  if (!state || state.dismissedAt) return false;
+  return !state.avatarKey && !state.jobTitle && !state.bio;
+}
+
+export async function dismissNudge(userId: string): Promise<void> {
+  await profilesRepository.dismissNudge(userId);
+}

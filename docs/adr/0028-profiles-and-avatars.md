@@ -58,7 +58,7 @@ which is wrong for a picture shown in every list), and what an activity list may
 - No cleanup of a user's photo when a user is deleted: nothing deletes users yet.
 - Live updates cover the member list and open profile pages; a stale hover card refreshes on its
   next fetch.
-- The sign-up nudge ("Finish your profile") is a later slice, not part of this one.
+- The sign-up nudge is slice 3, below.
 
 ## Alternatives rejected
 
@@ -66,3 +66,15 @@ which is wrong for a picture shown in every list), and what an activity list may
 - **Storing the original and resizing on read:** more storage, a resize on every request, and the
   original (with its metadata) kept for no reason.
 - **A required profile step at sign-up:** friction at the most fragile moment, and people type filler.
+
+## Amendment 2026-10-04: the "Finish your profile" card (slice 3)
+
+- Sign-up and invitation-accept stay as short as they were. A small dismissible card at the top of
+  Projects (the owner's mock N) invites the person to add a photo and a line about themselves.
+- The server decides: `GET /users/me/profile-nudge` answers `{ show }`, true only while there is no
+  photo, no job title and no bio, and the person has not pressed "Not now". Filling in any of the
+  three hides it by itself; clearing them all brings it back unless it was dismissed.
+- "Not now" (`POST /users/me/profile-nudge/dismiss`, idempotent) is stored on the account in
+  `users.profile_nudge_dismissed_at` (migration 0023), not in the browser, so it holds across
+  devices and reloads and never returns. Rejected: localStorage (per browser, lost on clearing).
+- Invited people who join through an invitation see it too, like everyone with a bare profile.

@@ -75,3 +75,6 @@ export const profileActivityResponseSchema = z.object({
 });
 
 export type ProfileActivityResponse = z.infer<typeof profileActivityResponseSchema>;
+
+/** Whether to show the "Finish your profile" card to the signed-in person (ADR 0028). */
+export const profileNudgeResponseSchema = z.object({ show: z.boolean() });

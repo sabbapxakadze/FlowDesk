@@ -140,3 +140,25 @@ export async function listActivity(
   const last = items[items.length - 1];
   return { status: "ok", items, nextCursor: hasMore && last ? encodeCursor(last) : null };
 }
+
+export async function findNudgeState(userId: string) {
+  const [row] = await db
+    .select({
+      jobTitle: users.jobTitle,
+      bio: users.bio,
+      avatarKey: users.avatarKey,
+      dismissedAt: users.profileNudgeDismissedAt,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return row;
+}
+
+/** Idempotent: pressing "Not now" twice keeps the first time. */
+export async function dismissNudge(userId: string): Promise<void> {
+  await db
+    .update(users)
+    .set({ profileNudgeDismissedAt: sql`COALESCE(${users.profileNudgeDismissedAt}, now())` })
+    .where(eq(users.id, userId));
+}

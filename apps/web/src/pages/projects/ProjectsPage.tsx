@@ -1,5 +1,6 @@
 import { ProjectCard, useProjects } from "../../entities/project";
 import { CreateProjectForm } from "../../features/create-project";
+import { ProfileNudgeCard } from "../../features/profile-nudge";
 import { useAuth } from "../../shared/auth/useAuth";
 import { Card, EmptyState, ErrorText, Page, PageHeader, Skeleton } from "../../shared/ui";
 
@@ -31,6 +32,8 @@ export function ProjectsPage() {
   return (
     <Page>
       <PageHeader title="Projects" />
+
+      <ProfileNudgeCard />
 
       <CreateProjectForm organizationId={organization!.id} />
 

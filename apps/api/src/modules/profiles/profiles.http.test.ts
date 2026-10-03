@@ -293,3 +293,46 @@ describe("recent activity", () => {
     expect((await activityOf(owner, owner).expect(200)).body.data).toHaveLength(0);
   });
 });
+
+describe('the "Finish your profile" card', () => {
+  const nudge = (s: Session) => request(app).get("/api/v1/users/me/profile-nudge").set(as(s));
+  const dismiss = (s: Session) => request(app).post("/api/v1/users/me/profile-nudge/dismiss").set(as(s));
+  const edit = (s: Session, body: { name: string; jobTitle: string | null; bio: string | null }) =>
+    request(app).patch("/api/v1/users/me/profile").set(as(s)).send(body).expect(204);
+
+  it("is shown to someone with a bare profile, and goes away once a title, a bio or a photo is added", async () => {
+    // Why: the card is only useful while the profile is empty; each of the three fields counts.
+    const owner = await registerAndLogIn("owner@example.com", "Org A", "Olivia Owner");
+    expect((await nudge(owner).expect(200)).body).toEqual({ show: true });
+
+    await edit(owner, { name: "Olivia Owner", jobTitle: "Lead", bio: null });
+    expect((await nudge(owner).expect(200)).body.show).toBe(false);
+    await edit(owner, { name: "Olivia Owner", jobTitle: null, bio: null });
+    expect((await nudge(owner).expect(200)).body.show).toBe(true); // empty again, not dismissed
+
+    await edit(owner, { name: "Olivia Owner", jobTitle: null, bio: "Hi" });
+    expect((await nudge(owner).expect(200)).body.show).toBe(false);
+    await edit(owner, { name: "Olivia Owner", jobTitle: null, bio: null });
+
+    await upload(owner, await picture()).expect(200);
+    expect((await nudge(owner).expect(200)).body.show).toBe(false);
+  });
+
+  it("stays hidden for good after Not now, for that person only, and pressing it twice is fine", async () => {
+    // Why: dismissal is stored on the account (not the browser) and must not leak to others.
+    const owner = await registerAndLogIn("owner@example.com", "Org A");
+    const member = await addPerson(owner, "m@example.com", "member", "Max Member");
+    await dismiss(owner).expect(204);
+    await dismiss(owner).expect(204);
+    expect((await nudge(owner).expect(200)).body.show).toBe(false);
+    expect((await nudge(member).expect(200)).body.show).toBe(true);
+    // Even with an empty profile, it does not come back.
+    const again = await logIn("owner@example.com");
+    expect((await nudge(again).expect(200)).body.show).toBe(false);
+  });
+
+  it("needs a login", async () => {
+    await request(app).get("/api/v1/users/me/profile-nudge").expect(401);
+    await request(app).post("/api/v1/users/me/profile-nudge/dismiss").expect(401);
+  });
+});

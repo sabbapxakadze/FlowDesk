@@ -43,6 +43,8 @@ function parseAvatarUpload(req: Request, res: Response, next: NextFunction) {
 profilesRouter.patch("/users/me/profile", requireAuth, profilesController.updateMine);
 profilesRouter.put("/users/me/avatar", requireAuth, parseAvatarUpload, profilesController.uploadAvatar);
 profilesRouter.delete("/users/me/avatar", requireAuth, profilesController.removeAvatar);
+profilesRouter.get("/users/me/profile-nudge", requireAuth, profilesController.getNudge);
+profilesRouter.post("/users/me/profile-nudge/dismiss", requireAuth, profilesController.dismissNudge);
 
 profilesRouter.get(
   "/organizations/:organizationId/members/:userId/profile",

@@ -3,6 +3,7 @@ import {
   avatarResponseSchema,
   profileActivityQuerySchema,
   profileActivityResponseSchema,
+  profileNudgeResponseSchema,
   profileResponseSchema,
   updateProfileRequestSchema,
 } from "@flowdesk/contracts";
@@ -82,4 +83,13 @@ export async function serveAvatar(req: Request, res: Response) {
     else res.destroy();
   });
   stream.pipe(res);
+}
+
+export async function getNudge(req: Request, res: Response) {
+  res.json(profileNudgeResponseSchema.parse({ show: await profilesService.shouldShowNudge(requireUser(req)) }));
+}
+
+export async function dismissNudge(req: Request, res: Response) {
+  await profilesService.dismissNudge(requireUser(req));
+  res.status(204).end();
 }

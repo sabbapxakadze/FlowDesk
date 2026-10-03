@@ -162,6 +162,13 @@
       "when": 1791044780181,
       "tag": "0022_sloppy_doctor_faustus",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791059232151,
+      "tag": "0023_perfect_hairball",
+      "breakpoints": true
     }
   ]
 }

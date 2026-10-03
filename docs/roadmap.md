@@ -2180,8 +2180,14 @@ The original plan for this slice, kept for the record:
    without checking the key, old file not deleted on replace and on remove, activity returning everyone's events,
    activity ignoring the organization, comment text served. The phone test found a real bug (a long name or bio
    widened the page; fixed with `minmax(0, 1fr)` columns and `overflow-wrap: anywhere`, also on the page title).
-   **Not done:** the sign-up "Finish your profile" nudge (slice 3), photos on the small assignee circles, a crop
-   tool, changing your email, timezone or other fields.
+   **Not done:** photos on the small assignee circles, a crop tool, changing your email, timezone or other fields.
+   **Slice 3 DONE 2026-10-04:** the "Finish your profile" card on Projects (photo, title or bio missing and not
+   dismissed), "Add photo" goes to `/profile`, "Not now" is stored on the account (migration 0023, ADR 0028
+   amendment). 3 API tests (each of photo, title and bio hides it; clearing them brings it back; dismissal is
+   permanent, idempotent and per person; login needed) and 2 e2e (dismiss survives a reload; Add photo then a photo
+   hides it). Mutations caught: bio ignored, photo ignored, dismissal ignored, dismissal not saved. One
+   unexplained single failure of `members-manage` (removed person invited back) in one full e2e run; it passed
+   alone 3 times and in the next full run (96/96), so it is recorded as a possible flake, cause not found.
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

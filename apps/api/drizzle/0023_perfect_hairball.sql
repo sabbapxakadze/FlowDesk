@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "profile_nudge_dismissed_at" timestamp with time zone;
