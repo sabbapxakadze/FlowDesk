@@ -2063,6 +2063,31 @@ The original plan for this slice, kept for the record:
    account (needs an organization switcher); showing the join date on the hover card; showing
    invitation history; an invitation email that really arrives was not checked (the email
    provider refuses test addresses in dev).
+   **Collaborators, slice B (roles, removal, re-send): DONE 2026-10-03 (ADR 0024, "Slice B").**
+   On the Members page owners and admins get a role dropdown (admin, member, viewer) and Remove
+   (inline confirmation that says the issues become unassigned and history stays) on every row
+   except their own and the owner's; pending invitations get Re-send (new link shown once, old
+   one dies). Rules in the service, not only the UI: not yourself, never the owner, a 404 for
+   anyone not in this organization. Removal deletes only the membership, unassigns their issues
+   in the same transaction with a quiet `issue.updated` event (the timeline says "their assignee was
+   removed from the organization"), and a removed person who logs in is told to ask for a new
+   invitation (403 `no_organization`, no session row created). A removed person can be invited
+   back: the account already exists, so the accept page needs no password. Also fixed the register
+   race (`isUniqueViolation` read `err.code` instead of `err.cause.code`, so a simultaneous duplicate
+   registration was a 500, now a 409). **Verified:** 16 new API tests (roles actually changing
+   what the person may do, admin vs owner vs self, owner not assignable, members/viewers refused,
+   tenant isolation over HTTP and at the repository, removal keeping the user and their reported
+   issues, the unassign event with its payload and the bumped version, access cut at once, the login
+   message, re-invite and join-only accept, new accounts still needing name and password, re-send
+   leaving exactly one open invitation, re-send of an expired one, re-send permissions) plus
+   1 for the register race; 5 e2e tests (role sticks after reload, controls absent on owner and
+   self, cancel then remove, unassigned issue and timeline wording, the removed person's login
+   message, invited back and logging in, re-send link surviving the refetch); API suite
+   322 of 322. Mutations caught: owner unprotected, self allowed, issues not unassigned, remove
+   ignoring the organization (needed an extra repository-level test: the service guard hid it),
+   orgless account not rejoining, the row key that keeps the re-sent link. **Not done:** closing
+   a removed person's open tab or socket, ownership transfer, leaving by yourself, showing the
+   join date on the hover card, history of who removed whom beyond the issue events.
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

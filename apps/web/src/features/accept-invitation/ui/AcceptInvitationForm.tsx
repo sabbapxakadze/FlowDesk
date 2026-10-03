@@ -3,14 +3,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { z } from "zod";
-import { acceptInvitationRequestSchema } from "@flowdesk/contracts";
 import { ApiError } from "../../../shared/api/client";
 import { Button, buttonVariants, ErrorText, Field, Input, Skeleton } from "../../../shared/ui";
 import { acceptInvitation } from "../api/acceptInvitation";
 import { previewInvitation } from "../api/previewInvitation";
 
-// The token comes from the URL, not from the form.
-const formSchema = acceptInvitationRequestSchema.omit({ token: true });
+// The token comes from the URL, not from the form. Strict here (the contract makes name and
+// password optional only because a returning member sends neither).
+const formSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
 type FormValues = z.infer<typeof formSchema>;
 
 /**
@@ -36,7 +39,7 @@ export function AcceptInvitationForm({ token }: { token: string }) {
   } = useForm<FormValues>({ resolver: zodResolver(formSchema) });
 
   const mutation = useMutation({
-    mutationFn: (data: FormValues) => acceptInvitation({ token, ...data }),
+    mutationFn: (data?: FormValues) => acceptInvitation({ token, ...data }),
     onError: (err) => {
       if (err instanceof ApiError && err.details) {
         for (const [field, messages] of Object.entries(err.details)) {
@@ -59,7 +62,7 @@ export function AcceptInvitationForm({ token }: { token: string }) {
     );
   }
 
-  const { organizationName, inviterName, email, role } = preview.data;
+  const { organizationName, inviterName, email, role, hasAccount } = preview.data;
 
   if (mutation.isSuccess) {
     return (
@@ -74,6 +77,22 @@ export function AcceptInvitationForm({ token }: { token: string }) {
 
   const showGeneralError =
     mutation.isError && !(mutation.error instanceof ApiError && mutation.error.details);
+
+  if (hasAccount) {
+    // A removed member invited back: the account exists, so there is nothing to fill in.
+    return (
+      <>
+        <p className="mb-5 text-sm">
+          <strong>{inviterName}</strong> invited you back to <strong>{organizationName}</strong> as a {role}. Your
+          account for {email} already exists.
+        </p>
+        {mutation.isError && <ErrorText>{mutation.error.message}</ErrorText>}
+        <Button type="button" fullWidth disabled={mutation.isPending} onClick={() => mutation.mutate(undefined)}>
+          {mutation.isPending ? "Joining…" : "Join"}
+        </Button>
+      </>
+    );
+  }
 
   return (
     <>

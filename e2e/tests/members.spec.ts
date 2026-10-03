@@ -7,7 +7,7 @@ const pendingList = (page: Page) => page.getByRole("list", { name: "Pending invi
 
 async function invite(page: Page, email: string, role: "Member" | "Admin" | "Viewer" = "Member") {
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Role").selectOption({ label: role });
+  await page.locator(`select[name="role"]`).selectOption({ label: role });
   await page.getByRole("button", { name: "Send invitation" }).click();
 }
 

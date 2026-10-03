@@ -73,3 +73,17 @@ export async function accept(req: Request, res: Response) {
     }),
   );
 }
+
+export async function resend(req: Request, res: Response) {
+  const ctx = requireCtx(req);
+  const invitationId = z.uuid().safeParse(req.params.invitationId);
+  if (!invitationId.success) {
+    throw new AppError("invalid_invitation_id", 400, "invitationId must be a UUID.");
+  }
+  const result = await invitationsService.resendInvitation({
+    organizationId: ctx.organizationId,
+    actorId: ctx.userId,
+    invitationId: invitationId.data,
+  });
+  res.status(201).json(createInvitationResponseSchema.parse(result));
+}

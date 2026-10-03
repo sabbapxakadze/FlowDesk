@@ -38,12 +38,16 @@ async function generateUniqueSlug(organizationName: string): Promise<string> {
   throw new Error("Could not generate a unique organization slug");
 }
 
+// code and constraint live on err.cause (drizzle wraps the driver error), not on the
+// top-level error; same helper shape as labels.service.ts and invitations.service.ts.
 function isUniqueViolation(err: unknown, constraint: string): boolean {
+  const cause =
+    typeof err === "object" && err !== null ? (err as { cause?: unknown }).cause : undefined;
   return (
-    typeof err === "object" &&
-    err !== null &&
-    (err as { code?: unknown }).code === "23505" &&
-    (err as { constraint?: unknown }).constraint === constraint
+    typeof cause === "object" &&
+    cause !== null &&
+    (cause as { code?: unknown }).code === "23505" &&
+    (cause as { constraint?: unknown }).constraint === constraint
   );
 }
 
@@ -151,16 +155,18 @@ async function issueSession(userId: string, familyId: string) {
 }
 
 /**
- * Every user has exactly one organization today (see
- * organizations.repository.ts) — this just surfaces that assumption at
- * the one place it could ever legitimately fail (data corruption, not a
- * real user-facing case), rather than letting a missing org silently
- * become `undefined` in the response.
+ * Every user has at most one organization today (see organizations.repository.ts).
+ * A person removed from their organization has none: that is a real, user-facing case
+ * (ADR 0024), answered with a clear 403 that tells them what to do, not a 500.
  */
 async function getPrimaryOrganization(userId: string) {
   const organization = await organizationsRepository.findPrimaryOrganizationForUser(userId);
   if (!organization) {
-    throw new Error(`User ${userId} has no organization — this should be impossible`);
+    throw new AppError(
+      "no_organization",
+      403,
+      "You are not a member of any organization. Ask an owner to invite you again.",
+    );
   }
   return organization;
 }
@@ -180,11 +186,10 @@ export async function login(input: { email: string; password: string }) {
     throw INVALID_CREDENTIALS_ERROR();
   }
 
+  // Before the session is created: someone with no organization gets no session row.
+  const organization = await getPrimaryOrganization(user.id);
   const familyId = randomUUID();
-  const [{ accessToken, refreshToken }, organization] = await Promise.all([
-    issueSession(user.id, familyId),
-    getPrimaryOrganization(user.id),
-  ]);
+  const { accessToken, refreshToken } = await issueSession(user.id, familyId);
 
   return {
     accessToken,
@@ -218,15 +223,17 @@ export async function refresh(refreshToken: string) {
   // same family.
   await authRepository.revokeSession(session.id);
 
-  const [{ accessToken, refreshToken: newRefreshToken }, user, organization] = await Promise.all([
-    issueSession(session.userId, session.familyId),
+  const [user, organization] = await Promise.all([
     authRepository.findUserById(session.userId),
     getPrimaryOrganization(session.userId),
   ]);
-
   if (!user) {
     throw INVALID_REFRESH_ERROR();
   }
+  const { accessToken, refreshToken: newRefreshToken } = await issueSession(
+    session.userId,
+    session.familyId,
+  );
 
   return {
     accessToken,

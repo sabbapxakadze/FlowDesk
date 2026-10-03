@@ -93,7 +93,12 @@ function partsOf(event: IssueEvent, organizationId: string): Part[] {
                   />
                 ),
               }
-            : { verb: "unassigned this issue" },
+            : {
+                verb:
+                  p.reason === "member_removed"
+                    ? "unassigned this issue (their assignee was removed from the organization)"
+                    : "unassigned this issue",
+              },
         );
       }
       if ("priority" in p)

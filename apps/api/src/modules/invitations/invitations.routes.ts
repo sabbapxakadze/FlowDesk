@@ -19,6 +19,12 @@ invitationsRouter.delete(
   invitationsController.revoke,
 );
 
+invitationsRouter.post(
+  "/organizations/:organizationId/invitations/:invitationId/resend",
+  ...manage,
+  invitationsController.resend,
+);
+
 // Public: the invited person has no account yet. The token in the body is the
 // authorization. Rate limited like registering, because accepting creates an account.
 invitationsRouter.post("/invitations/preview", registerRateLimiter, invitationsController.preview);

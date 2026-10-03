@@ -219,6 +219,7 @@ describe("invitations: preview and accept (public)", () => {
       .send({ token: tokenFromUrl(created.body.inviteUrl) })
       .expect(200);
     expect(res.body).toEqual({
+      hasAccount: false,
       organizationName: "Org A",
       inviterName: "Owner Person",
       email: "new@example.com",

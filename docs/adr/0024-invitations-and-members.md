@@ -1,8 +1,8 @@
 # 0024 — Inviting people to an organization
 
-Status: Accepted — 2026-10-03. Slice A (invite, accept, members list) is built.
-Slice B (change a role, remove a member, re-send an invitation) is next and will
-amend this ADR.
+Status: Accepted — 2026-10-03. Slice A (invite, accept, members list) and slice B
+(change a role, remove a member, re-send an invitation, invite a removed person back)
+are built; slice B is described under "Slice B" at the end.
 
 ## Context
 
@@ -78,3 +78,44 @@ Facts that shaped the design (read in the code, not assumed):
 - **Put the token in the URL of the public calls:** it would end up in access logs.
 - **Auto-login after accepting:** inconsistent with registering and with the existing
   session flow.
+
+## Slice B (built 2026-10-03)
+
+- **Roles and rules** (`PATCH` and `DELETE /organizations/:id/members/:userId`, owner or
+  admin through `manage_members`): the new role is admin, member or viewer (never owner);
+  you cannot change or remove yourself; nobody can change or remove the owner (there is
+  exactly one; ownership transfer is its own feature); a user who is not a member of THIS
+  organization is a 404, which is also what another organization's id gets. An admin may
+  change or remove other admins and members.
+- **Removing deletes the membership, never the user.** The user row owns their comments,
+  events, attachments and reported issues (all cascade from it), so deleting it would erase
+  history. In the same transaction every issue of this organization assigned to them becomes
+  unassigned (version bumped) with an `issue.updated` event, payload
+  `{ assigneeId: null, reason: "member_removed" }`, actor = the remover, written quietly
+  (`notify: false`): a bulk, system-caused change should not ping everyone who ever touched
+  those issues. Open boards refresh after the commit.
+- **What a removed person sees** (chosen by the owner over creating them a new personal
+  organization): their access token stops opening the organization at once (membership is
+  checked on every request), and logging in answers 403 `no_organization` ("You are not a member
+  of any organization. Ask an owner to invite you again.") instead of the 500 the old
+  "this should be impossible" error would have given. The organization check now happens
+  before a session row is created, so a refused login leaves nothing behind.
+- **Inviting a removed person back:** an email can be invited if it has no account, or an
+  account that belongs to no organization. The accept page then says "invited you back" and
+  needs no name or password; accepting only adds the membership to the existing account
+  (`hasAccount` in the preview). The contract makes name and password optional and the
+  service demands them when the account is new. Someone who belongs to another organization is
+  still refused.
+- **Re-send:** `POST .../invitations/:id/resend` revokes the open invitation and inserts a
+  fresh one (new token, new 7 days) for the same email and role in one transaction, emails it
+  and returns the link once. It also rescues expired invitations.
+- **Fixed on the way:** `auth.service.ts`'s duplicate-key check read the error code from the
+  wrong place (drizzle puts it on `err.cause`), so two simultaneous registrations of one email
+  gave a 500 for the second; it now gives the intended 409.
+
+### Still open
+
+- A removed person's open browser tab and socket stay connected until they reload (their
+  requests fail with 403; the pushes they receive only say "go refetch").
+- No ownership transfer, no leaving an organization by yourself, no remembered history of who
+  removed whom beyond the issue events (the audit log slice can surface it).

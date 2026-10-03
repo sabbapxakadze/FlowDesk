@@ -150,3 +150,79 @@ export async function accept(input: {
     return { user, organization };
   });
 }
+
+/**
+ * Re-send: revoke the open invitation and insert a fresh one (new token, new expiry) for
+ * the same email and role, in one transaction, so there is never a moment with two open
+ * invitations or none. Undefined when there is no open invitation with that id here.
+ */
+export async function resend(input: {
+  organizationId: string;
+  invitationId: string;
+  tokenHash: string;
+  invitedBy: string;
+  expiresAt: Date;
+}) {
+  return db.transaction(async (tx) => {
+    const [old] = await tx
+      .update(invitations)
+      .set({ revokedAt: new Date() })
+      .where(and(OPEN(input.organizationId), eq(invitations.id, input.invitationId)))
+      .returning({ email: invitations.email, role: invitations.role });
+    if (!old) return undefined;
+    const [row] = await tx
+      .insert(invitations)
+      .values({
+        organizationId: input.organizationId,
+        email: old.email,
+        role: old.role,
+        tokenHash: input.tokenHash,
+        invitedBy: input.invitedBy,
+        expiresAt: input.expiresAt,
+      })
+      .returning();
+    if (!row) throw new Error("Failed to create invitation");
+    return row;
+  });
+}
+
+/**
+ * Accepting for an email that already has an account with no organization (a removed
+ * member invited back): claim the invitation and add the membership; no new user.
+ */
+export async function acceptForExistingUser(input: {
+  invitationId: string;
+  organizationId: string;
+  role: InvitableRole;
+  userId: string;
+}) {
+  return db.transaction(async (tx) => {
+    const [claimed] = await tx
+      .update(invitations)
+      .set({ acceptedAt: new Date() })
+      .where(
+        and(
+          eq(invitations.id, input.invitationId),
+          isNull(invitations.acceptedAt),
+          isNull(invitations.revokedAt),
+        ),
+      )
+      .returning({ id: invitations.id });
+    if (!claimed) return undefined;
+
+    await tx.insert(organizationMembers).values({
+      organizationId: input.organizationId,
+      userId: input.userId,
+      role: input.role,
+    });
+
+    const [user] = await tx.select().from(users).where(eq(users.id, input.userId)).limit(1);
+    const [organization] = await tx
+      .select({ id: organizations.id, name: organizations.name, slug: organizations.slug })
+      .from(organizations)
+      .where(eq(organizations.id, input.organizationId))
+      .limit(1);
+    if (!user || !organization) throw new Error("User or organization vanished");
+    return { user, organization };
+  });
+}

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { invitableRoleSchema } from "./invitation.js";
 
 export const organizationSchema = z.object({
   id: z.uuid(),
@@ -27,5 +28,9 @@ export type OrganizationMember = z.infer<typeof organizationMemberSchema>;
 export const listOrganizationMembersResponseSchema = z.object({
   data: z.array(organizationMemberSchema),
 });
+
+// Owner is never assignable: there is one owner per organization (ADR 0024).
+export const updateMemberRoleRequestSchema = z.object({ role: invitableRoleSchema });
+export type UpdateMemberRoleRequest = z.infer<typeof updateMemberRoleRequestSchema>;
 
 export type ListOrganizationMembersResponse = z.infer<typeof listOrganizationMembersResponseSchema>;

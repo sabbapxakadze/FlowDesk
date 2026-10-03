@@ -1,6 +1,7 @@
 import { useInvitations, useRevokeInvitation } from "../../entities/invitation";
 import { ROLE_LABELS, useMembers, useMyRole } from "../../entities/member";
-import { InviteMemberForm } from "../../features/invite-member";
+import { InviteMemberForm, ResendInvitation } from "../../features/invite-member";
+import { MemberControls } from "../../features/manage-member";
 import { useAuth } from "../../shared/auth/useAuth";
 import {
   Avatar,
@@ -44,7 +45,7 @@ export function MembersPage() {
       ) : (
         <ul aria-label="Members" className="flex flex-col gap-2">
           {members.data.map((member) => (
-            <Card key={member.userId} as="li" className="flex items-center gap-3">
+            <Card key={member.userId} as="li" className="flex flex-wrap items-center gap-3">
               <Avatar name={member.name} size="md" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
@@ -59,6 +60,12 @@ export function MembersPage() {
               <span className="hidden shrink-0 text-xs text-[var(--color-text-muted)] sm:inline">
                 Joined <Time iso={member.joinedAt} />
               </span>
+              {/* Not for yourself and never for the owner: the API refuses both (ADR 0024). */}
+              {canManage && member.userId !== user?.id && member.role !== "owner" && (
+                <div className="w-full">
+                  <MemberControls organizationId={organizationId} member={member} />
+                </div>
+              )}
             </Card>
           ))}
         </ul>
@@ -76,7 +83,9 @@ export function MembersPage() {
           ) : (
             <ul aria-label="Pending invitations" className="flex flex-col gap-2">
               {invitations.data.map((invitation) => (
-                <Card key={invitation.id} as="li" className="flex flex-wrap items-center gap-3">
+                // Keyed by email, not id: a re-send replaces the row with a new id, and the
+                // new link it shows must survive that refetch.
+                <Card key={invitation.email} as="li" className="flex flex-wrap items-center gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{invitation.email}</p>
                     <p className="text-xs text-[var(--color-text-muted)]">
@@ -87,6 +96,11 @@ export function MembersPage() {
                     </p>
                   </div>
                   <span className="shrink-0 text-xs font-medium">{ROLE_LABELS[invitation.role]}</span>
+                  <ResendInvitation
+                    organizationId={organizationId}
+                    invitationId={invitation.id}
+                    email={invitation.email}
+                  />
                   <Button
                     type="button"
                     variant="link"

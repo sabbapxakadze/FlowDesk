@@ -1,6 +1,7 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { organizationMembers, organizations, users } from "../../db/schema/index.js";
+import { issues, organizationMembers, organizations, users } from "../../db/schema/index.js";
+import { writeIssueEvent } from "../issues/issues.repository.js";
 
 /**
  * The extraction point Slice 1's decisions flagged: "if organizations ever
@@ -79,4 +80,63 @@ export async function findMember(organizationId: string, userId: string) {
     .where(and(eq(organizationMembers.organizationId, organizationId), eq(organizationMembers.userId, userId)))
     .limit(1);
   return row;
+}
+
+type Role = "owner" | "admin" | "member" | "viewer";
+
+/** Sets a member's role in THIS organization; undefined when they are not a member. */
+export async function updateMemberRole(organizationId: string, userId: string, role: Role) {
+  const [row] = await db
+    .update(organizationMembers)
+    .set({ role })
+    .where(and(eq(organizationMembers.organizationId, organizationId), eq(organizationMembers.userId, userId)))
+    .returning({ userId: organizationMembers.userId });
+  return row;
+}
+
+/**
+ * Removes the MEMBERSHIP, never the user: their comments, events, attachments and the
+ * issues they reported belong to the user row and must stay. In the same transaction every
+ * issue of this organization assigned to them becomes unassigned (version bumped, so an
+ * open edit form is told it is stale) with an "issue.updated" event whose payload says why.
+ * Quiet on purpose (notify: false): a bulk, system-caused change should not ping everyone
+ * who ever touched those issues. Returns undefined when they were not a member, else the
+ * affected issues so the caller can broadcast after the commit.
+ */
+export async function removeMember(input: { organizationId: string; userId: string; actorId: string }) {
+  return db.transaction(async (tx) => {
+    const [deleted] = await tx
+      .delete(organizationMembers)
+      .where(
+        and(
+          eq(organizationMembers.organizationId, input.organizationId),
+          eq(organizationMembers.userId, input.userId),
+        ),
+      )
+      .returning({ userId: organizationMembers.userId });
+    if (!deleted) return undefined;
+
+    const assigned = await tx
+      .select({ id: issues.id, projectId: issues.projectId })
+      .from(issues)
+      .where(and(eq(issues.organizationId, input.organizationId), eq(issues.assigneeId, input.userId)));
+
+    for (const issue of assigned) {
+      await tx
+        .update(issues)
+        .set({ assigneeId: null, version: sql`${issues.version} + 1`, updatedAt: new Date() })
+        .where(eq(issues.id, issue.id));
+      await writeIssueEvent(
+        tx,
+        {
+          issueId: issue.id,
+          actorId: input.actorId,
+          type: "issue.updated",
+          payload: { assigneeId: null, reason: "member_removed" },
+        },
+        { notify: false },
+      );
+    }
+    return { unassigned: assigned };
+  });
 }

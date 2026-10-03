@@ -105,7 +105,8 @@ Issue activity lines are icon rows colored by event kind, and a person's name op
 Buttons are standardised (Button cleanup, 2026-10-02): `Button` has a `link` variant, there is an `IconButton`,
 and lint fails on hand-written link styles and unlisted raw `<button>`s.
 Collaborators slice A is done (ADR 0024): owners and admins invite people without an account by email with a
-role, through a one-time link; a Members page lists people and pending invitations. Role changes and removal are slice B.
+role, through a one-time link; a Members page lists people and pending invitations. Slice B adds role changes, removal
+(membership only; their issues are unassigned; they can be invited back) and re-sending an invitation.
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,

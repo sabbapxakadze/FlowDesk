@@ -56,6 +56,11 @@ export const previewInvitationRequestSchema = z.object({
 export type PreviewInvitationRequest = z.infer<typeof previewInvitationRequestSchema>;
 
 export const previewInvitationResponseSchema = z.object({
+  /**
+   * True when the email already has an account that belongs to no organization (a
+   * removed member being invited back): accepting then only joins, no name or password.
+   */
+  hasAccount: z.boolean(),
   organizationName: z.string(),
   inviterName: z.string(),
   email: z.string(),
@@ -63,10 +68,13 @@ export const previewInvitationResponseSchema = z.object({
 });
 export type PreviewInvitationResponse = z.infer<typeof previewInvitationResponseSchema>;
 
+// name and password are required to create a NEW account and ignored when the invited
+// email already has an account without an organization; the server enforces which case
+// applies. Optional here, strict in the new-account form (see AcceptInvitationForm).
 export const acceptInvitationRequestSchema = z.object({
   token: z.string().min(1, "Token is required"),
-  name: z.string().min(1, "Name is required"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(1, "Name is required").optional(),
+  password: z.string().min(8, "Password must be at least 8 characters").optional(),
 });
 export type AcceptInvitationRequest = z.infer<typeof acceptInvitationRequestSchema>;
 

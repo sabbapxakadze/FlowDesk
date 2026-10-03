@@ -67,6 +67,26 @@ describe("auth service — register", () => {
     expect(allOrgs).toHaveLength(1);
   });
 
+  it("two simultaneous registrations of one email: one succeeds, the other is a clean 409, not a 500", async () => {
+    // Why: both can pass the "email taken?" pre-check; only the unique index stops the
+    // second. That error must be recognised (drizzle puts the Postgres code on err.cause)
+    // and turned into email_already_registered.
+    const attempt = (name: string) =>
+      authService.register({
+        email: "race@example.com",
+        password: "password123",
+        name,
+        organizationName: `${name} Org`,
+      });
+    const results = await Promise.allSettled([attempt("A"), attempt("B")]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const rejected = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    expect(rejected.reason).toBeInstanceOf(AppError);
+    expect((rejected.reason as AppError).code).toBe("email_already_registered");
+    expect((rejected.reason as AppError).status).toBe(409);
+    expect(await db.select().from(users)).toHaveLength(1);
+  });
+
   it("gives two organizations with the same name different slugs", async () => {
     const first = await authService.register({
       email: "a@example.com",
