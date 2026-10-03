@@ -84,7 +84,7 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
         {actions}
       </div>
 
-      <nav aria-label="Main" className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
+      <nav aria-label="Main" className="scrollbar-sidebar flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
         <SideLink to="/projects" end>
           Projects
         </SideLink>
