@@ -153,6 +153,51 @@ body {
     color calc(200ms) ease,
     border-color calc(200ms) ease !important;
 }
+/* Native <dialog> (the search palette, the image preview): fades and grows on open, and back on close, with
+   its backdrop fading too. Done with transitions plus @starting-style and `allow-discrete` on display and
+   overlay, which is what lets a dialog animate OUT (it stays displayed, in the top layer, until the
+   transition ends). The backdrop colour comes from --dialog-backdrop, set per dialog. A browser without
+   these features shows and hides the dialog instantly, as before. */
+dialog.motion-dialog {
+  opacity: 0;
+  transform: scale(0.96);
+  transition:
+    opacity var(--motion-duration-base) var(--motion-ease-out),
+    transform var(--motion-duration-base) var(--motion-ease-out),
+    overlay var(--motion-duration-base) allow-discrete,
+    display var(--motion-duration-base) allow-discrete;
+}
+dialog.motion-dialog[open] {
+  opacity: 1;
+  transform: none;
+}
+@starting-style {
+  dialog.motion-dialog[open] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+dialog.motion-dialog::backdrop {
+  background-color: transparent;
+  transition:
+    background-color var(--motion-duration-base) var(--motion-ease-out),
+    overlay var(--motion-duration-base) allow-discrete,
+    display var(--motion-duration-base) allow-discrete;
+}
+dialog.motion-dialog[open]::backdrop {
+  background-color: var(--dialog-backdrop, rgb(0 0 0 / 0.4));
+}
+@starting-style {
+  dialog.motion-dialog[open]::backdrop {
+    background-color: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.motion-dialog,
+  dialog.motion-dialog::backdrop {
+    transition: none !important;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .motion-fade-in, .motion-fade-out, .motion-rise-in, .motion-drop-in, .motion-pop-in, .motion-slide-in-right,
   .motion-slide-out-right, .motion-expand, .motion-collapse, .motion-flash { animation: none !important; }

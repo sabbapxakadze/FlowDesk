@@ -1,5 +1,6 @@
 export { Button, type ButtonProps } from "./Button";
 export { useSuccessFlash } from "./useSuccessFlash";
+export { useExitPresence } from "./useExitPresence";
 export { buttonVariants } from "./buttonVariants";
 export { IconButton } from "./IconButton";
 export { Input } from "./Input";

@@ -177,7 +177,7 @@ export function CommandPalette() {
   return (
     <dialog
       ref={dialogRef}
-      className="mx-auto mt-24 mb-auto w-full max-w-lg rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-0 text-[var(--color-text-default)] shadow-lg backdrop:bg-black/40"
+      className="mx-auto mt-24 mb-auto w-full max-w-lg rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-0 text-[var(--color-text-default)] shadow-lg motion-dialog [--dialog-backdrop:rgb(0_0_0/0.4)]"
       aria-label="Command palette"
       // The dimmed backdrop belongs to the <dialog> itself, so a click on it has
       // the dialog as its target; clicks on the content inside have a child as

@@ -99,7 +99,7 @@ export function MediaPreviewDialog({
         else if (e.key === "-") zoomBy(1 / STEP);
         else if (e.key === "0") setScale(null);
       }}
-      className="m-auto flex max-h-[92vh] w-[min(94vw,1100px)] flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-bg-surface)] p-0 text-[var(--color-text-default)] shadow-lg backdrop:bg-black/60"
+      className="m-auto flex max-h-[92vh] w-[min(94vw,1100px)] flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-bg-surface)] p-0 text-[var(--color-text-default)] shadow-lg motion-dialog [--dialog-backdrop:rgb(0_0_0/0.6)]"
     >
       <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border-default)] px-4 py-2">
         <p className="min-w-0 truncate text-sm">

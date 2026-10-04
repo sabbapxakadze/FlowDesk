@@ -11,7 +11,7 @@ import {
 } from "../../entities/notification";
 import { describeEvent } from "../../entities/issue";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Button, EmptyState, Skeleton } from "../../shared/ui";
+import { Button, EmptyState, Skeleton, useExitPresence } from "../../shared/ui";
 
 function NotificationRow({ notification, onSelect }: { notification: Notification; onSelect: () => void }) {
   const unread = notification.readAt === null;
@@ -55,6 +55,8 @@ export function NotificationBell({ panelAlign = "left" }: { panelAlign?: "left" 
   const { organization } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  // The dropdown fades out on close (it stays mounted for that); closing itself is immediate.
+  const dropdown = useExitPresence(isOpen, 120);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const organizationId = organization?.id ?? "";
@@ -114,8 +116,8 @@ export function NotificationBell({ panelAlign = "left" }: { panelAlign?: "left" 
         )}
       </button>
 
-      {isOpen && (
-        <div className={`absolute top-11 ${panelAlign === "left" ? "left-0" : "right-0"} z-50 flex max-h-96 w-80 flex-col gap-2 overflow-y-auto rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-3 text-[var(--color-text-default)] shadow-lg`}>
+      {dropdown.rendered && (
+        <div className={`${dropdown.closing ? "motion-fade-out" : "motion-drop-in"} absolute top-11 ${panelAlign === "left" ? "left-0" : "right-0"} z-50 flex max-h-96 w-80 flex-col gap-2 overflow-y-auto rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-3 text-[var(--color-text-default)] shadow-lg`}>
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">Notifications</p>
             {count > 0 && (

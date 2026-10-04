@@ -22,14 +22,22 @@ import { useEffect, useRef, type ReactNode } from "react";
  * - Focus moves into the panel when it opens and returns to whatever opened it on close.
  *
  * It is non-modal on purpose (aria-modal is false, nothing behind is made inert).
+ *
+ * Motion (owner's design pass, 2026-10-04): it slides in from the right while fading, and the page behind
+ * dims a little (a fixed layer that does not catch clicks, so the page stays usable). `closing` is true
+ * while the exit animation plays (the caller keeps the panel mounted for that long, see useExitPresence):
+ * the panel is `inert`, its listeners are off and focus has ALREADY gone back to what opened it, because
+ * closing is never delayed, only the unmount.
  */
 export function SidePanel({
   label,
   onClose,
+  closing = false,
   children,
 }: {
   label: string;
   onClose: () => void;
+  closing?: boolean;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLElement>(null);
@@ -41,6 +49,8 @@ export function SidePanel({
   });
 
   useEffect(() => {
+    // Closing: nothing to set up, and the previous run's cleanup has just restored the focus.
+    if (closing) return;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     ref.current?.focus({ preventScroll: true });
 
@@ -70,18 +80,28 @@ export function SidePanel({
       document.removeEventListener("keydown", onKeyDown);
       if (opener?.isConnected && opener !== document.body) opener.focus({ preventScroll: true });
     };
-  }, []);
+  }, [closing]);
 
   return (
-    <section
-      ref={ref}
-      role="dialog"
-      aria-modal="false"
-      aria-label={label}
-      tabIndex={-1}
-      className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-[var(--color-bg-surface)] text-[var(--color-text-default)] shadow-xl focus:outline-none sm:inset-y-3 sm:right-3 sm:left-auto sm:w-[480px] sm:rounded-[var(--radius-card)] sm:border sm:border-[var(--color-border-default)]"
-    >
-      {children}
-    </section>
+    <>
+      {/* The dim: above the sidebar (z-30), below the panel (z-40), and it never catches a click. */}
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none fixed inset-0 z-[39] bg-black/15 ${closing ? "motion-fade-out" : "motion-fade-in"}`}
+      />
+      <section
+        ref={ref}
+        role="dialog"
+        aria-modal="false"
+        aria-label={label}
+        tabIndex={-1}
+        inert={closing}
+        className={`fixed inset-0 z-40 flex flex-col overflow-hidden bg-[var(--color-bg-surface)] text-[var(--color-text-default)] shadow-xl focus:outline-none sm:inset-y-3 sm:right-3 sm:left-auto sm:w-[480px] sm:rounded-[var(--radius-card)] sm:border sm:border-[var(--color-border-default)] ${
+          closing ? "motion-slide-out-right" : "motion-slide-in-right"
+        }`}
+      >
+        {children}
+      </section>
+    </>
   );
 }
