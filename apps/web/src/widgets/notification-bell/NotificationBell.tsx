@@ -11,6 +11,7 @@ import {
 } from "../../entities/notification";
 import { describeEvent } from "../../entities/issue";
 import { useAuth } from "../../shared/auth/useAuth";
+import { issuePath } from "../../shared/lib/paths";
 import { Button, EmptyState, Skeleton, useAnimatedList, useExitPresence, useRowMotionProps, type RowState } from "../../shared/ui";
 
 function NotificationRow({
@@ -107,7 +108,7 @@ export function NotificationBell({ panelAlign = "left" }: { panelAlign?: "left" 
   function select(notification: Notification) {
     setIsOpen(false);
     if (notification.readAt === null) markRead.mutate(notification.id);
-    navigate(`/projects/${notification.projectId}/issues/${notification.issueId}`);
+    navigate(issuePath(notification.projectKey, notification.issueNumber));
   }
 
   const count = unreadCount ?? 0;

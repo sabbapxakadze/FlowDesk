@@ -182,6 +182,25 @@ export async function findById(organizationId: string, projectId: string, issueI
 }
 
 /**
+ * One issue by its per-project number (the "12" of WEB-12), for readable addresses (ADR 0030). Scoped by
+ * organization AND project like findById, so another project's number, or another organization's project, finds
+ * nothing. A deleted issue's number finds nothing and is never reused (projects.next_issue_number only grows).
+ */
+export async function findByNumber(organizationId: string, projectId: string, number: number) {
+  const [issue] = await db
+    .select()
+    .from(issues)
+    .where(
+      and(
+        eq(issues.organizationId, organizationId),
+        eq(issues.projectId, projectId),
+        eq(issues.number, number),
+      ),
+    );
+  return issue;
+}
+
+/**
  * An ordered list of issues whose order is a fractional rank (ADR 0007): which rank column it uses and
  * which rows belong to it. There are two kinds. A BOARD column is (project, status) ordered by
  * board_rank; a SPRINTS-PAGE list is (project, sprint or the backlog) ordered by backlog_rank (ADR 0008,

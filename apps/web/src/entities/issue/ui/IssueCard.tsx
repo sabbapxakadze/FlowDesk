@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { issueKey, issuePath } from "../../../shared/lib/paths";
 import { Button, Card, StatusBadge, type RowState } from "../../../shared/ui";
 import type { Issue } from "../model";
 import { openIssueOnClick } from "../lib/issueLinkClick";
@@ -37,9 +38,9 @@ export function IssueCard({
   return (
     <Card as="li" hoverable rowState={rowState} rowIndex={rowIndex} className="flex items-start justify-between gap-2">
       <Link
-        to={`/projects/${issue.projectId}/issues/${issue.id}`}
+        to={issuePath(projectKey, issue.number)}
         data-panel-trigger
-        onClick={(event) => openIssueOnClick(event, onOpen, issue.id)}
+        onClick={(event) => openIssueOnClick(event, onOpen, issueKey(projectKey, issue.number))}
         className="block min-w-0 flex-1"
       >
         <IssueSummary issue={issue} projectKey={projectKey} assigneeName={assigneeName}>

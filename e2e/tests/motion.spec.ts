@@ -158,6 +158,7 @@ test.describe("with animations on", () => {
     await page.goto(`/projects/${projectId}`);
     const sort = page.getByLabel("Sort");
     await expect(sort).toBeVisible();
+    await page.waitForTimeout(400); // let the page's own fade-and-rise settle: it moves things by a few pixels
     const before = (await sort.boundingBox())!;
     await page.getByRole("link", { name: /Alpha/ }).first().click();
     await expect(page.locator('section[aria-label="Issue"]')).toBeVisible();

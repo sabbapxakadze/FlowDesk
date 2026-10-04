@@ -97,6 +97,24 @@ export async function getIssue(req: Request, res: Response) {
   res.json(body);
 }
 
+/**
+ * The same issue as getIssue, found by its per-project number (ADR 0030): this is how a readable address
+ * (/projects/WEB/issues/WEB-12) becomes an issue. A number that is not a positive whole number, or does not fit
+ * the database column, is simply "not found" (404), never a 500.
+ */
+export async function getIssueByNumber(req: Request, res: Response) {
+  if (!req.ctx?.projectId) {
+    throw new Error("getIssueByNumber requires requireProject to have run first");
+  }
+  const raw = String(req.params.number);
+  const number = /^[0-9]{1,9}$/.test(raw) ? Number(raw) : 0;
+  const issue = number > 0 ? await issuesService.getIssueByNumber(req.ctx.organizationId, req.ctx.projectId, number) : undefined;
+  if (!issue) {
+    throw new AppError("issue_not_found", 404, "Issue not found.");
+  }
+  res.json(getIssueResponseSchema.parse({ data: toWireFormat(issue) }));
+}
+
 export async function createIssue(req: Request, res: Response) {
   if (!req.ctx?.projectId) {
     throw new Error("createIssue requires requireProject to have run first");

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useProjects } from "../../entities/project";
 import { IssueSummary, useSearch, type Issue } from "../../entities/issue";
 import { Input, StatusBadge } from "../../shared/ui";
+import { issuePath } from "../../shared/lib/paths";
 import { useAuth } from "../../shared/auth/useAuth";
 import { useSearchPalette } from "../../shared/search-palette/useSearchPalette";
 import { useDebouncedValue } from "./useDebouncedValue";
@@ -87,7 +88,9 @@ export function CommandPalette() {
 
   function select(issue: Issue) {
     close();
-    navigate(`/projects/${issue.projectId}/issues/${issue.id}`);
+    const key = projects?.find((p) => p.id === issue.projectId)?.key;
+    // The project list is loaded before results show (their keys come from it); the id form is only a fallback.
+    navigate(key ? issuePath(key, issue.number) : `/projects/${issue.projectId}/issues/${issue.id}`);
   }
 
   function showAll() {

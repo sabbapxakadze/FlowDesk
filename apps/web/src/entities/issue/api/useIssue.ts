@@ -8,9 +8,15 @@ import { issueKeys } from "./queryKeys";
  * stopped being correct once that list only ever returns its first page.
  * See docs/roadmap.md's Phase 4 slice 1 entry.
  */
-export function useIssue(organizationId: string, projectId: string, issueId: string) {
+export function useIssue(
+  organizationId: string,
+  projectId: string,
+  issueId: string,
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: issueKeys.detail(issueId),
     queryFn: () => fetchIssue(organizationId, projectId, issueId),
+    enabled: options.enabled ?? true,
   });
 }

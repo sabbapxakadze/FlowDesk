@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useParams } from "react-router";
 import {
   DndContext,
   DragOverlay,
@@ -20,7 +19,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import type { Issue, IssueStatus } from "@flowdesk/contracts";
-import { useProjects } from "../../entities/project";
+import { useCurrentProject } from "../../entities/project";
 import { useMemberNames } from "../../entities/member";
 import { SortableIssueCard, IssueSummary, useBoard, useLiveIssueUpdates } from "../../entities/issue";
 import { useMoveIssue } from "../../features/move-issue";
@@ -129,15 +128,14 @@ function BoardColumn({
  */
 export function ProjectBoardPage() {
   const { organization } = useAuth();
-  const { projectId } = useParams<{ projectId: string }>();
   const panel = useIssuePanel();
-  const { data: projects, isPending: projectsPending } = useProjects(organization!.id);
   const nameOf = useMemberNames(organization!.id);
-  const project = projects?.find((p) => p.id === projectId);
+  const project = useCurrentProject();
+  const projectId = project.id;
 
-  const { data: issues, isPending: issuesPending, isError, error } = useBoard(organization!.id, projectId!);
-  const moveMutation = useMoveIssue(organization!.id, projectId!);
-  useLiveIssueUpdates(projectId!);
+  const { data: issues, isPending: issuesPending, isError, error } = useBoard(organization!.id, projectId);
+  const moveMutation = useMoveIssue(organization!.id, projectId);
+  useLiveIssueUpdates(projectId);
 
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -251,22 +249,6 @@ export function ProjectBoardPage() {
     resetGuards();
   }
 
-  if (projectsPending) {
-    return (
-      <Page>
-        <p className="text-[var(--color-text-muted)]">Loading…</p>
-      </Page>
-    );
-  }
-
-  if (!project) {
-    return (
-      <Page>
-        <p className="text-[var(--color-text-danger)]">Project not found.</p>
-      </Page>
-    );
-  }
-
   const activeContainer = activeIssue ? findContainer(columns, activeIssue.id) : undefined;
 
   return (
@@ -339,7 +321,7 @@ export function ProjectBoardPage() {
         </DndContext>
       )}
       </div>
-      <IssuePanel projectId={project.id} />
+      <IssuePanel project={project} />
     </Page>
   );
 }

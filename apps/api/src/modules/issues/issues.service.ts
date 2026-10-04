@@ -46,6 +46,10 @@ export async function getIssue(organizationId: string, projectId: string, issueI
   return issuesRepository.findById(organizationId, projectId, issueId);
 }
 
+export async function getIssueByNumber(organizationId: string, projectId: string, number: number) {
+  return issuesRepository.findByNumber(organizationId, projectId, number);
+}
+
 export async function createIssue(input: {
   organizationId: string;
   projectId: string;

@@ -106,6 +106,17 @@ issuesRouter.get(
   issuesController.search,
 );
 
+// By per-project number (ADR 0030), for readable addresses. Registered before the ":issueId" read so the literal
+// segment is never taken for an id.
+issuesRouter.get(
+  "/organizations/:organizationId/projects/:projectId/issues/by-number/:number",
+  requireAuth,
+  requireOrgMembership,
+  requireProject,
+  requirePermission("view_issue"),
+  issuesController.getIssueByNumber,
+);
+
 issuesRouter.get(
   "/organizations/:organizationId/projects/:projectId/issues/:issueId",
   requireAuth,

@@ -6,6 +6,7 @@ import { ROLE_LABELS } from "../../entities/member";
 import { useProfile, useProfileActivity } from "../../entities/profile";
 import { ApiError } from "../../shared/api/client";
 import { useAuth } from "../../shared/auth/useAuth";
+import { projectPath } from "../../shared/lib/paths";
 import {
   Avatar,
   Button,
@@ -57,7 +58,7 @@ function ActivityRow({ item, person }: { item: ProfileActivityItem; person: Prof
   const sentence = describeEvent(event);
   const link = (
     <Link
-      to={`/projects/${item.projectId}?issue=${item.issueId}`}
+      to={`${projectPath(item.issueKey.slice(0, item.issueKey.lastIndexOf("-")))}?issue=${item.issueKey}`}
       className={buttonVariants({ variant: "link" })}
     >
       {item.issueKey} {item.issueTitle}

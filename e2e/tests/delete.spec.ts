@@ -46,19 +46,19 @@ test("deleting an issue asks first, removes it, and sends another viewer away li
     .getByRole("alertdialog")
     .getByRole("button", { name: "Delete issue" })
     .click();
-  await expect(pageA).toHaveURL(new RegExp(`/projects/${projectId}$`));
+  await expect(pageA).toHaveURL(/\/projects\/WEB$/);
   await expect(
     pageA.getByRole("listitem").filter({ hasText: "Doomed issue" }),
   ).toHaveCount(0);
   await expect(pageA.getByRole("listitem").filter({ hasText: "Survivor" })).toBeVisible();
 
   // B, who was looking at it, is sent to the project's list without a reload.
-  await expect(pageB).toHaveURL(new RegExp(`/projects/${projectId}$`));
+  await expect(pageB).toHaveURL(/\/projects\/WEB$/);
   // ...with a notice saying why, which can be dismissed.
   await expect(pageB.getByRole("status")).toContainText("This issue was deleted.");
   await pageB.getByRole("button", { name: "Dismiss" }).click();
   await expect(pageB.getByRole("status")).toHaveCount(0);
-  await expect(pageB).toHaveURL(new RegExp(`/projects/${projectId}$`));
+  await expect(pageB).toHaveURL(/\/projects\/WEB$/);
 
   // A deleted issue's URL no longer works, and says so promptly: a 404 is not
   // retried, so there is no seven-second skeleton first (default timeout).

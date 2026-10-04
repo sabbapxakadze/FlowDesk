@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useParams, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
-import { useProjects } from "../../entities/project";
+import { useCurrentProject } from "../../entities/project";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
 import { useMembers, useMemberNames } from "../../entities/member";
 import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
@@ -56,9 +56,9 @@ function IssueListSkeleton() {
  */
 export function ProjectDetailPage() {
   const { organization, user } = useAuth();
-  const { projectId } = useParams<{ projectId: string }>();
-  const { data: projects, isPending: projectsPending } = useProjects(organization!.id);
-  const project = projects?.find((p) => p.id === projectId);
+  // The project comes from the address (ProjectRoute resolves the key once; never null here).
+  const project = useCurrentProject();
+  const projectId = project.id;
 
   // The URL is the source of truth for filter/sort state, not component
   // state — a bookmarked or reloaded ?status=...&order=... URL reproduces
@@ -87,10 +87,10 @@ export function ProjectDetailPage() {
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useIssues(organization!.id, projectId!, { status, priority, assignee, sort, order });
+  } = useIssues(organization!.id, projectId, { status, priority, assignee, sort, order });
   const { data: members } = useMembers(organization!.id);
   const nameOf = useMemberNames(organization!.id);
-  useLiveIssueUpdates(projectId!);
+  useLiveIssueUpdates(projectId);
   // useInfiniteQuery's data is { pages: Page[], pageParams }, not a flat
   // list — flatten once here so the rest of this page (and IssueCard)
   // doesn't need to know pagination happened at all. The ?? [] is only
@@ -158,22 +158,6 @@ export function ProjectDetailPage() {
     });
   }
 
-  if (projectsPending) {
-    return (
-      <Page>
-        <p className="text-[var(--color-text-muted)]">Loading…</p>
-      </Page>
-    );
-  }
-
-  if (!project) {
-    return (
-      <Page>
-        <p className="text-[var(--color-text-danger)]">Project not found.</p>
-      </Page>
-    );
-  }
-
   return (
     <Page>
       <PageHeader eyebrow={project.name} title="Issues" />
@@ -187,7 +171,7 @@ export function ProjectDetailPage() {
           1560px: on a wider window nothing is covered, so nothing may move. */}
       <div
         data-panel-trigger
-        className={`mt-4 mb-3 flex flex-wrap items-center gap-2 ${panel.issueId ? "sm:max-[1559px]:pr-[31rem]" : ""}`}
+        className={`mt-4 mb-3 flex flex-wrap items-center gap-2 ${panel.issueRef ? "sm:max-[1559px]:pr-[31rem]" : ""}`}
       >
         <Select
           value={status ?? ""}
@@ -303,7 +287,7 @@ export function ProjectDetailPage() {
           {isFetchingNextPage ? "Loading…" : "Load more"}
         </Button>
       )}
-      <IssuePanel projectId={project.id} />
+      <IssuePanel project={project} />
     </Page>
   );
 }

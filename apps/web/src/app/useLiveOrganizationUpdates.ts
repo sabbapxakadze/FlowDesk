@@ -6,7 +6,8 @@ import { issueKeys } from "../entities/issue";
 import { labelKeys } from "../entities/label";
 import { memberKeys } from "../entities/member";
 import { profileKeys } from "../entities/profile";
-import { projectKeys } from "../entities/project";
+import { projectKeys, type Project } from "../entities/project";
+import { isUuid } from "../shared/lib/paths";
 import { sprintKeys } from "../entities/sprint";
 import { getSocket } from "../shared/socket/socket-client";
 
@@ -32,7 +33,7 @@ type OrganizationChange =
 export function useLiveOrganizationUpdates(organizationId: string): void {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const currentProjectId = useMatch("/projects/:projectId/*")?.params.projectId;
+  const currentProjectRef = useMatch("/projects/:projectKey/*")?.params.projectKey;
 
   useEffect(() => {
     const socket = getSocket();
@@ -58,6 +59,11 @@ export function useLiveOrganizationUpdates(organizationId: string): void {
     }
 
     function handleProjectDeleted(payload: { projectId: string }) {
+      // Which project is on screen is read from the cache BEFORE it is refetched without the deleted one.
+      const cached = queryClient.getQueryData<Project[]>(projectKeys.list(organizationId));
+      const currentProjectId = cached?.find((p) =>
+        currentProjectRef === undefined ? false : isUuid(currentProjectRef) ? p.id === currentProjectRef : p.key.toLowerCase() === currentProjectRef.toLowerCase(),
+      )?.id;
       void queryClient.invalidateQueries({ queryKey: projectKeys.list(organizationId) });
       if (payload.projectId === currentProjectId) {
         navigate("/projects", { replace: true, state: { notice: "This project was deleted." } });
@@ -70,5 +76,5 @@ export function useLiveOrganizationUpdates(organizationId: string): void {
       socket.off("org:changed", handleChanged);
       socket.off("project:deleted", handleProjectDeleted);
     };
-  }, [organizationId, currentProjectId, queryClient, navigate]);
+  }, [organizationId, currentProjectRef, queryClient, navigate]);
 }

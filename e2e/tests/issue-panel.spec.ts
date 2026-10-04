@@ -21,7 +21,7 @@ test("clicking an issue opens it in a panel with the key, a full-page link and a
 }) => {
   // Why: the heart of the feature. The panel must show the real issue, put it in the URL
   // (?issue=), offer the full page, and close cleanly with focus back on the card.
-  const { listUrl, issueIds, projectId } = await setup(page);
+  const { listUrl } = await setup(page);
   await page.goto(listUrl);
   const link = cardLink(page, "Alpha issue");
   await link.click();
@@ -30,17 +30,17 @@ test("clicking an issue opens it in a panel with the key, a full-page link and a
   await expect(panel).toBeVisible();
   await expect(panel).toContainText("WEB-1");
   await expect(panel.getByRole("heading", { level: 2, name: "Alpha issue" })).toBeVisible();
-  await expect(page).toHaveURL(new RegExp(`\\?issue=${issueIds[0]}$`));
+  await expect(page).toHaveURL(/\?issue=WEB-1$/);
   await expect(page.getByRole("link", { name: /Alpha issue/ }).first()).toBeVisible(); // the list is still there
   await expect(panel.getByRole("link", { name: /Open full page/ })).toHaveAttribute(
     "href",
-    `/projects/${projectId}/issues/${issueIds[0]}`,
+    "/projects/WEB/issues/WEB-1",
   );
   await expect(panel.getByRole("button", { name: "Close panel" })).toBeVisible();
 
   await page.keyboard.press("Escape");
   await expect(panel).toHaveCount(0);
-  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}$`));
+  await expect(page).toHaveURL(/\/projects\/WEB$/);
   await expect(link).toBeFocused();
 });
 
@@ -49,14 +49,14 @@ test("clicking another issue swaps the panel; Back closes it instead of walking 
 }) => {
   // Why: the owner asked that another card swaps the panel. History: the first open adds
   // an entry, a swap replaces it, so one Back returns to the list.
-  const { listUrl, issueIds } = await setup(page);
+  const { listUrl } = await setup(page);
   await page.goto(listUrl);
   await cardLink(page, "Alpha issue").click();
   await expect(panelOf(page).getByRole("heading", { level: 2, name: "Alpha issue" })).toBeVisible();
 
   await cardLink(page, "Beta issue").click();
   await expect(panelOf(page).getByRole("heading", { level: 2, name: "Beta issue" })).toBeVisible();
-  await expect(page).toHaveURL(new RegExp(`\\?issue=${issueIds[1]}$`));
+  await expect(page).toHaveURL(/\?issue=WEB-2$/);
   await expect(panelOf(page)).toHaveCount(1);
 
   await page.goBack();
@@ -94,7 +94,7 @@ test("a click outside that lands on a link still works while the panel closes; c
 }) => {
   // Why: (1) the outside click must not be swallowed: a sidebar link must still navigate.
   // (2) The panel's ?issue= and the list's own parameters must not wipe each other.
-  const { listUrl, issueIds } = await setup(page);
+  const { listUrl } = await setup(page);
   await page.goto(`${listUrl}?status=todo`);
   await cardLink(page, "Alpha issue").click();
   await expect(panelOf(page)).toBeVisible();
@@ -113,7 +113,7 @@ test("a click outside that lands on a link still works while the panel closes; c
   await page.getByLabel("Sort").selectOption({ label: "Highest priority first" });
   await expect(page).toHaveURL(/sort=priority/);
   await expect(page).toHaveURL(/status=todo/);
-  await expect(page).toHaveURL(new RegExp(`issue=${issueIds[0]}`)); // still open
+  await expect(page).toHaveURL(/issue=WEB-1/); // still open
   await expect(panelOf(page)).toBeVisible();
 
   // A real click on a sidebar link, outside the panel.
@@ -127,7 +127,7 @@ test("a reload keeps the panel open, and the full-page link and a Ctrl+click sti
   context,
 }) => {
   // Why: the URL is the source of truth, and a modified click must keep its normal meaning.
-  const { listUrl, issueIds, projectId } = await setup(page);
+  const { listUrl } = await setup(page);
   await page.goto(listUrl);
   await cardLink(page, "Alpha issue").click();
   await expect(panelOf(page)).toBeVisible();
@@ -135,7 +135,7 @@ test("a reload keeps the panel open, and the full-page link and a Ctrl+click sti
   await expect(panelOf(page).getByRole("heading", { level: 2, name: "Alpha issue" })).toBeVisible();
 
   await panelOf(page).getByRole("link", { name: /Open full page/ }).click();
-  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/issues/${issueIds[0]}$`));
+  await expect(page).toHaveURL(/\/projects\/WEB\/issues\/WEB-1$/);
   await expect(page.getByRole("heading", { level: 1, name: "Alpha issue" })).toBeVisible();
   await expect(panelOf(page)).toHaveCount(0);
 
@@ -143,7 +143,7 @@ test("a reload keeps the panel open, and the full-page link and a Ctrl+click sti
   const newTab = context.waitForEvent("page");
   await cardLink(page, "Beta issue").click({ modifiers: ["Control"] });
   const tab = await newTab;
-  expect(tab.url()).toContain(`/issues/${issueIds[1]}`);
+  expect(tab.url()).toContain("/issues/WEB-2");
   await expect(panelOf(page)).toHaveCount(0);
 });
 

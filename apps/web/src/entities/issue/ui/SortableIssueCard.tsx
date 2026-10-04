@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Issue } from "@flowdesk/contracts";
+import { issueKey, issuePath } from "../../../shared/lib/paths";
 import { Card } from "../../../shared/ui";
 import { pointerListeners, useDragClickGuard } from "../lib/dragHelpers";
 import { openIssueOnClick } from "../lib/issueLinkClick";
@@ -56,12 +57,12 @@ export function SortableIssueCard({
       <Card hoverable className="flex items-start gap-2 select-none">
         <DragHandle aria-label={dragLabel} {...attributes} {...listeners} />
         <Link
-          to={`/projects/${issue.projectId}/issues/${issue.id}`}
+          to={issuePath(projectKey, issue.number)}
           draggable={false}
           data-panel-trigger
           onClick={(event) => {
             guardClick(event);
-            openIssueOnClick(event, onOpen, issue.id);
+            openIssueOnClick(event, onOpen, issueKey(projectKey, issue.number));
           }}
           className="block min-w-0 flex-1"
         >

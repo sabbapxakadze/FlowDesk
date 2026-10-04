@@ -1,10 +1,10 @@
-import { useNavigate, useParams } from "react-router";
-import { useProjects } from "../../entities/project";
+import { useNavigate } from "react-router";
+import { useCurrentProject } from "../../entities/project";
 import { useMyRole } from "../../entities/member";
 import { DeleteProjectForm } from "../../features/delete-project";
 import { RenameProjectForm } from "../../features/rename-project";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Page, PageHeader, Skeleton } from "../../shared/ui";
+import { Page, PageHeader } from "../../shared/ui";
 
 /**
  * Project settings: rename today (delete arrives in Phase 8.5 slice 3C). The
@@ -14,28 +14,9 @@ import { Page, PageHeader, Skeleton } from "../../shared/ui";
  */
 export function ProjectSettingsPage() {
   const { organization } = useAuth();
-  const { projectId } = useParams<{ projectId: string }>();
-  const { data: projects, isPending } = useProjects(organization!.id);
   const role = useMyRole(organization!.id);
   const navigate = useNavigate();
-  const project = projects?.find((p) => p.id === projectId);
-
-  if (isPending) {
-    return (
-      <Page>
-        <Skeleton className="mb-4 h-8 w-64" />
-        <Skeleton className="h-10 w-full max-w-md" />
-      </Page>
-    );
-  }
-
-  if (!project) {
-    return (
-      <Page>
-        <p className="text-[var(--color-text-danger)]">Project not found.</p>
-      </Page>
-    );
-  }
+  const project = useCurrentProject();
 
   const canManage = role === "owner" || role === "admin";
 

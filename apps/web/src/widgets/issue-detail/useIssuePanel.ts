@@ -2,7 +2,8 @@ import { useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
 /**
- * Which issue is open in the side panel, kept in the URL as `?issue=<id>` so Back closes it,
+ * Which issue is open in the side panel, kept in the URL as `?issue=WEB-12` (an old `?issue=<id>` still
+ * works) so Back closes it,
  * a reload keeps it open and the link can be shared. Other query parameters (the issue list
  * filters) are preserved.
  *
@@ -20,13 +21,13 @@ import { useNavigate, useSearchParams } from "react-router";
 export function useIssuePanel() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const issueId = searchParams.get("issue") || null;
+  const issueRef = searchParams.get("issue") || null;
 
   const open = useCallback(
-    (id: string) => {
+    (ref: string) => {
       const next = new URLSearchParams(window.location.search);
       const alreadyOpen = next.has("issue");
-      next.set("issue", id);
+      next.set("issue", ref);
       navigate({ pathname: window.location.pathname, search: next.toString() }, { replace: alreadyOpen });
     },
     [navigate],
@@ -44,5 +45,15 @@ export function useIssuePanel() {
     [navigate],
   );
 
-  return { issueId, open, close };
+  /** Rewrites `?issue=` in place (an old id or a lowercase key becomes the readable key), without a history entry. */
+  const rewrite = useCallback(
+    (ref: string) => {
+      const next = new URLSearchParams(window.location.search);
+      next.set("issue", ref);
+      navigate({ pathname: window.location.pathname, search: next.toString() }, { replace: true });
+    },
+    [navigate],
+  );
+
+  return { issueRef, open, close, rewrite };
 }

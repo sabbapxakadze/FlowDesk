@@ -14,6 +14,7 @@ import { ProfilePage } from "../pages/profile/ProfilePage";
 import { ProfileEditPage } from "../pages/profile-edit/ProfileEditPage";
 import { AcceptInvitePage } from "../pages/accept-invite/AcceptInvitePage";
 import { ProjectSettingsPage } from "../pages/project-settings/ProjectSettingsPage";
+import { ProjectRoute } from "../pages/project-route/ProjectRoute";
 import { RegisterPage } from "../pages/register/RegisterPage";
 import { LoginPage } from "../pages/login/LoginPage";
 import { VerifyEmailPage } from "../pages/verify-email/VerifyEmailPage";
@@ -43,27 +44,22 @@ export function App() {
               }
             >
               <Route path="/projects" element={<ProjectsPage />} />
-              <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-              <Route path="/projects/:projectId/board" element={<ProjectBoardPage />} />
-              <Route
-                path="/projects/:projectId/sprints"
-                element={<ProjectSprintsPage />}
-              />
-              <Route
-                path="/projects/:projectId/analytics"
-                element={<ProjectAnalyticsPage />}
-              />
-              <Route
-                path="/projects/:projectId/issues/:issueId"
-                element={<IssueDetailPage />}
-              />
+              {/* Every project page lives under the project's KEY (ADR 0030): ProjectRoute turns the key
+                  (or an old id) into the project once and shows these pages only when it exists. */}
+              <Route path="/projects/:projectKey" element={<ProjectRoute />}>
+                <Route index element={<ProjectDetailPage />} />
+                <Route path="board" element={<ProjectBoardPage />} />
+                <Route path="sprints" element={<ProjectSprintsPage />} />
+                <Route path="analytics" element={<ProjectAnalyticsPage />} />
+                <Route path="settings" element={<ProjectSettingsPage />} />
+                <Route path="issues/:issueKey" element={<IssueDetailPage />} />
+              </Route>
               <Route path="/search" element={<SearchPage />} />
             <Route path="/labels" element={<LabelsPage />} />
             <Route path="/members" element={<MembersPage />} />
             <Route path="/audit-log" element={<AuditLogPage />} />
             <Route path="/people/:userId" element={<ProfilePage />} />
             <Route path="/profile" element={<ProfileEditPage />} />
-            <Route path="/projects/:projectId/settings" element={<ProjectSettingsPage />} />
             </Route>
             <Route element={<AuthLayout />}>
               <Route path="/register" element={<RegisterPage />} />

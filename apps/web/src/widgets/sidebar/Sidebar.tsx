@@ -4,6 +4,7 @@ import { Link, NavLink, useMatch } from "react-router";
 import { useProjects } from "../../entities/project";
 import { useMembers, useMyRole } from "../../entities/member";
 import { useAuth } from "../../shared/auth/useAuth";
+import { isUuid, projectPath } from "../../shared/lib/paths";
 import { useSearchPalette } from "../../shared/search-palette/useSearchPalette";
 import { Avatar, cn, Skeleton, ThemeSwitch } from "../../shared/ui";
 
@@ -65,15 +66,16 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
   const { data: projects, isPending, isError } = useProjects(organization?.id ?? "", {
     enabled: Boolean(organization),
   });
-  const currentProject = useMatch("/projects/:projectId/*")?.params.projectId;
-  const onIssuePage = useMatch("/projects/:projectId/issues/*") !== null;
+  // The address names the project by KEY (ADR 0030); an old address may still carry its id for a moment.
+  const currentProjectRef = useMatch("/projects/:projectKey/*")?.params.projectKey;
+  const onIssuePage = useMatch("/projects/:projectKey/issues/*") !== null;
   const { setOpen: setSearchOpen } = useSearchPalette();
   const role = useMyRole(organization?.id ?? "");
   // Name and photo come from the member list, so an edit shows here without logging in again.
   const { data: members } = useMembers(organization?.id ?? "");
   const me = members?.find((member) => member.userId === user?.id);
   const canManageProject = role === "owner" || role === "admin";
-  const onProjectList = useMatch({ path: "/projects/:projectId", end: true }) !== null;
+  const onProjectList = useMatch({ path: "/projects/:projectKey", end: true }) !== null;
 
   return (
     <div className="flex h-full flex-col gap-1 border-r border-[var(--color-border-sidebar)] bg-[var(--color-bg-sidebar)] p-3">
@@ -119,19 +121,20 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
         ) : (
           projects.map((project) => (
             <div key={project.id} className="flex flex-col gap-0.5">
-              <SideLink to={`/projects/${project.id}`} current={false}>
+              <SideLink to={projectPath(project.key)} current={false}>
                 <span className="truncate">{project.name}</span>
               </SideLink>
-              {project.id === currentProject && (
+              {currentProjectRef !== undefined &&
+                (isUuid(currentProjectRef) ? project.id === currentProjectRef : project.key.toLowerCase() === currentProjectRef.toLowerCase()) && (
                 <div className="ml-3 flex flex-col gap-0.5 border-l border-[var(--color-border-sidebar)] pl-2">
-                  <SideLink to={`/projects/${project.id}`} current={onProjectList || onIssuePage}>
+                  <SideLink to={projectPath(project.key)} current={onProjectList || onIssuePage}>
                     Issues
                   </SideLink>
-                  <SideLink to={`/projects/${project.id}/board`}>Board</SideLink>
-                  <SideLink to={`/projects/${project.id}/sprints`}>Sprints</SideLink>
-                  <SideLink to={`/projects/${project.id}/analytics`}>Analytics</SideLink>
+                  <SideLink to={projectPath(project.key, "board")}>Board</SideLink>
+                  <SideLink to={projectPath(project.key, "sprints")}>Sprints</SideLink>
+                  <SideLink to={projectPath(project.key, "analytics")}>Analytics</SideLink>
                   {canManageProject && (
-                    <SideLink to={`/projects/${project.id}/settings`}>Settings</SideLink>
+                    <SideLink to={projectPath(project.key, "settings")}>Settings</SideLink>
                   )}
                 </div>
               )}

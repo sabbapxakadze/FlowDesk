@@ -2203,7 +2203,7 @@ The original plan for this slice, kept for the record:
    other back links were checked and left: the issue page's link to its project and Edit profile's link to your
    profile are parents, not history. 1 e2e test; it fails with the option removed.
    **Owner's open list, added 2026-10-04 (in the order we plan to take them, nothing started):**
-   - **Readable URLs (decided, a big slice, ADR 0030 to write):** keys instead of UUIDs: `/projects/WEB`,
+   - **Readable URLs: DONE 2026-10-04 (ADR 0030; see the entry after this list).** keys instead of UUIDs: `/projects/WEB`,
      `/projects/WEB?issue=WEB-1` and the full issue page at `/projects/WEB/issues/WEB-1`. The API resolves a
      project or issue by key or by ID (organization-scoped), old ID links keep working and are rewritten, case is
      ignored, a deleted issue's number is never reused. One shared URL-builder function replaces the scattered
@@ -2243,6 +2243,22 @@ The original plan for this slice, kept for the record:
    pages (needs React Router data mode), animating the board and sprints lanes, the search results.
    **Also 2026-10-04:** the Sort control no longer drops a line when the issue panel opens on a wide window (the
    filter row reserves room for the panel only below 1560px).
+   - **Idea noted 2026-10-04 (owner), not planned yet: newest first on an issue.** The Activity timeline (comments and
+     events together) would read newest at the TOP, oldest at the bottom ("created this issue" last), and the comment
+     box would move to the top, above the list, so a new comment lands right under where you typed it. Open questions:
+     whether the activity lines turn over with the comments or only the comments do (they share one timeline today),
+     and what a long issue shows first on the page and in the side panel. Touches `widgets/issue-detail`, the live
+     comment arrival (the new row would open at the top), and the e2e tests that read the order.
+   **Readable URLs DONE 2026-10-04 (ADR 0030).** Projects and issues are named by their keys in the address:
+   `/projects/WEB`, `/projects/WEB/issues/WEB-12`, `/projects/WEB?issue=WEB-12`. New endpoint
+   `GET .../issues/by-number/:number`; a `ProjectRoute` layout resolves the key once from the cached project list and the
+   project pages lost their own id, loading and not-found code; `IssueByKey` resolves an issue before `IssueDetail`
+   (which still works on ids); one set of address builders (`shared/lib/paths.ts`); old addresses with ids and lowercase
+   keys still open and are rewritten. **Verified:** 6 API tests (by number, deleted numbers never reused, per-project
+   scope, tenant isolation, junk input is 404, viewer may read; 2 mutations caught), 6 new e2e tests (every project page
+   by key, the panel and Open full page, old addresses rewritten, not-found for project, number and wrong prefix in page
+   and panel, no link on the main pages carries an id, the palette; 2 mutations caught) and the 10 existing e2e tests
+   that asserted ids were updated. **Not done:** nothing planned; the sockets, query keys and API still use ids.
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

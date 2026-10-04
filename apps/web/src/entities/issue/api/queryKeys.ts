@@ -42,6 +42,8 @@ export const issueKeys = {
   // calls already invalidate this too.
   backlog: (projectId: string) => [...issueKeys.all, projectId, "backlog"] as const,
   detail: (issueId: string) => [...issueKeys.all, issueId] as const,
+  // By per-project number (readable addresses, ADR 0030): under the project like list(), so the same invalidations reach it.
+  byNumber: (projectId: string, number: number) => [...issueKeys.all, projectId, "number", number] as const,
   labels: (issueId: string) => [...issueKeys.all, issueId, "labels"] as const,
   events: (issueId: string) => [...issueKeys.all, issueId, "events"] as const,
   attachments: (issueId: string) => [...issueKeys.all, issueId, "attachments"] as const,

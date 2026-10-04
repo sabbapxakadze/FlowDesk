@@ -116,7 +116,7 @@ test("another member finds the profile from the hover card and sees the title an
   const row = second.getByRole("list", { name: "Recent activity" }).getByRole("listitem").first();
   await expect(row).toContainText("created WEB-1 Login page");
   await row.getByRole("link", { name: "WEB-1 Login page" }).click();
-  await expect(second).toHaveURL(new RegExp(`/projects/${projectId}\\?issue=${issueIds[0]}`));
+  await expect(second).toHaveURL(/\/projects\/WEB\?issue=WEB-1/);
   await expect(second.getByRole("dialog", { name: "Issue" })).toBeVisible();
   await ctx.close();
 });
@@ -212,12 +212,12 @@ test("the back link on a profile goes back to where you came from, and to Member
   loggedInPage: page,
 }) => {
   // Why: it always went to Members, a page you may never have visited (say you came from a comment).
-  const { projectId, issueIds } = await createIssueViaApi(page.request, {
+  await createIssueViaApi(page.request, {
     projectName: "Website",
     projectKey: "WEB",
     titles: ["Where was I"],
   });
-  const issueUrl = `/projects/${projectId}/issues/${issueIds[0]}`;
+  const issueUrl = "/projects/WEB/issues/WEB-1"; // the readable address (an address with ids is rewritten to it)
   await page.goto(issueUrl);
   await page.getByPlaceholder("Add a comment…").fill("Hello");
   await page.getByRole("button", { name: "Comment", exact: true }).click();

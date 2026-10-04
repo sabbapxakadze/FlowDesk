@@ -17,6 +17,7 @@ import { CommentCard, CommentForm } from "../../features/post-comment";
 import { UploadAttachmentForm } from "../../features/upload-attachment";
 import { ActivityLine } from "../activity-line";
 import { useAuth } from "../../shared/auth/useAuth";
+import { issuePath, projectPath } from "../../shared/lib/paths";
 import {
   Button,
   buttonVariants,
@@ -31,7 +32,7 @@ import {
   type RowState,
 } from "../../shared/ui";
 
-function IssueDetailSkeleton() {
+export function IssueDetailSkeleton() {
   return (
     <>
       <Skeleton className="h-4 w-32" />
@@ -81,6 +82,37 @@ function PanelStrip({
         </IconButton>
       )}
     </div>
+  );
+}
+
+/**
+ * What surrounds an issue: in the side panel, the strip (key, "Open full page", close) over a scrolling
+ * body; on the full page, the page frame. Exported so the address resolver (IssueByKey) can show the same
+ * frame while it looks the issue up and when there is no such issue.
+ */
+export function IssueFrame({
+  variant,
+  keyLabel,
+  fullPageHref,
+  onClose,
+  children,
+}: {
+  variant: "page" | "panel";
+  keyLabel?: string;
+  fullPageHref: string;
+  onClose?: () => void;
+  children: ReactNode;
+}) {
+  return variant === "panel" ? (
+    <>
+      <PanelStrip keyLabel={keyLabel} fullPageHref={fullPageHref} onClose={onClose} />
+      {/* The page background, not the panel surface: the cards inside (attachments, comments)
+          are surface-coloured, and on the same colour they only showed up in light mode, thanks
+          to their shadow. This is also how the full page is built. */}
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--color-bg-page)] p-4">{children}</div>
+    </>
+  ) : (
+    <Page>{children}</Page>
   );
 }
 
@@ -213,24 +245,13 @@ export function IssueDetail({
   const [showConflictNotice, setShowConflictNotice] = useState(false);
 
   const panel = variant === "panel";
-  // The page wraps everything in <Page> (the one <main>); the panel puts the strip on top and
-  // lets the content scroll below it.
-  const frame = (children: ReactNode, keyLabel?: string) =>
-    panel ? (
-      <>
-        <PanelStrip
-          keyLabel={keyLabel}
-          fullPageHref={`/projects/${projectId}/issues/${issueId}`}
-          onClose={onClose}
-        />
-        {/* The page background, not the panel surface: the cards inside (attachments, comments)
-            are surface-coloured, and on the same colour they only showed up in light mode, thanks
-            to their shadow. This is also how the full page is built. */}
-        <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--color-bg-page)] p-4">{children}</div>
-      </>
-    ) : (
-      <Page>{children}</Page>
-    );
+  // "Open full page" goes to the readable address once the issue is known (its number is part of it).
+  const fullPageHref = project ? (issue ? issuePath(project.key, issue.number) : projectPath(project.key)) : "/projects";
+  const frame = (children: ReactNode, keyLabel?: string) => (
+    <IssueFrame variant={variant} keyLabel={keyLabel} fullPageHref={fullPageHref} onClose={onClose}>
+      {children}
+    </IssueFrame>
+  );
   // Sections sit one level under the title: h2 on the page (h1 title), h3 in the panel (h2 title).
   const Heading = panel ? "h3" : "h2";
 
@@ -250,7 +271,7 @@ export function IssueDetail({
       </header>
     ) : (
       <PageHeader
-        back={{ to: `/projects/${project.id}`, label: project.name }}
+        back={{ to: projectPath(project.key), label: project.name }}
         eyebrow={`${project.key}-${issue.number}`}
         title={title}
       >

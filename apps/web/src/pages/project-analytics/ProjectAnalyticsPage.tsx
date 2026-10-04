@@ -1,8 +1,8 @@
-import { useParams, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { useVelocity } from "../../entities/analytics";
-import { useProjects } from "../../entities/project";
+import { useCurrentProject } from "../../entities/project";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, Page, PageHeader, Select, Skeleton } from "../../shared/ui";
+import { Card, Page, PageHeader, Select } from "../../shared/ui";
 import { BreakdownCharts } from "../../widgets/breakdown-charts";
 import { CycleTimeChart } from "../../widgets/cycle-time-chart";
 import { ThroughputChart } from "../../widgets/throughput-chart";
@@ -33,9 +33,8 @@ function parseChoice(raw: string | null, allowed: readonly number[], fallback: n
 
 export function ProjectAnalyticsPage() {
   const { organization } = useAuth();
-  const { projectId } = useParams<{ projectId: string }>();
-  const { data: projects, isPending } = useProjects(organization!.id);
-  const project = projects?.find((p) => p.id === projectId);
+  const project = useCurrentProject();
+  const projectId = project.id;
   const [searchParams, setSearchParams] = useSearchParams();
 
   const weeks = parseChoice(searchParams.get("weeks"), WEEKS_CHOICES, DEFAULT_WEEKS);
@@ -45,7 +44,7 @@ export function ProjectAnalyticsPage() {
   // exist; the velocity widget then fetches its own (smaller) window.
   const { data: allVelocity } = useVelocity(
     organization!.id,
-    projectId!,
+    projectId,
     SPRINT_CHOICES[SPRINT_CHOICES.length - 1]!,
   );
   const sprintChoices = visibleSprintChoices(allVelocity?.data.length);
@@ -64,22 +63,6 @@ export function ProjectAnalyticsPage() {
       }
       return next;
     });
-  }
-
-  if (isPending) {
-    return (
-      <Page width="wide">
-        <Skeleton className="h-64 w-full" />
-      </Page>
-    );
-  }
-
-  if (!project) {
-    return (
-      <Page>
-        <p className="text-[var(--color-text-danger)]">Project not found.</p>
-      </Page>
-    );
   }
 
   return (
