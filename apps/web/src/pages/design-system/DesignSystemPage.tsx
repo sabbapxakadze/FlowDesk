@@ -10,6 +10,7 @@ import {
   ColumnHeader,
   EmptyState,
   ErrorText,
+  Dialog,
   Field,
   IconButton,
   Input,
@@ -18,6 +19,7 @@ import {
   PageHeader,
   ScrollPanel,
   Select,
+  SidePanel,
   Skeleton,
   StatusBadge,
   Textarea,
@@ -246,6 +248,81 @@ function ScrollPanelDemo() {
           </ScrollPanel>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function DemoEditForm({ onCancel }: { onCancel: () => void }) {
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onCancel();
+      }}
+    >
+      <Field label="Title">
+        <Input defaultValue="Fix the footer layout" />
+      </Field>
+      <Field label="Description">
+        <Textarea rows={3} defaultValue="The footer overlaps the content on narrow screens." />
+      </Field>
+      <div className="grid grid-cols-3 gap-3">
+        <Field label="Status">
+          <Select defaultValue="todo">
+            <option value="todo">Todo</option>
+            <option value="in_progress">In progress</option>
+          </Select>
+        </Field>
+        <Field label="Priority">
+          <Select defaultValue="high">
+            <option value="high">High</option>
+            <option value="low">Low</option>
+          </Select>
+        </Field>
+        <Field label="Assignee">
+          <Select defaultValue="me">
+            <option value="me">Assigned to me</option>
+          </Select>
+        </Field>
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">Save</Button>
+      </div>
+    </form>
+  );
+}
+
+function DialogDemo() {
+  const [open, setOpen] = useState(false);
+  const [panel, setPanel] = useState(false);
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <Button type="button" onClick={() => setOpen(true)}>
+        Open a dialog
+      </Button>
+      <Button type="button" variant="secondary" data-panel-trigger onClick={() => setPanel(true)}>
+        Open a side panel, then Edit (the dialog opens on top)
+      </Button>
+      {open && (
+        <Dialog title="Edit WEB-1" onClose={() => setOpen(false)}>
+          <DemoEditForm onCancel={() => setOpen(false)} />
+        </Dialog>
+      )}
+      {panel && (
+        <SidePanel label="Issue" onClose={() => setPanel(false)}>
+          <div className="p-5">
+            <h3 className="font-display text-xl">Fix the footer layout</h3>
+            <p className="mt-2 text-sm text-[var(--color-text-muted)]">WEB-1, Todo, High, assigned to me.</p>
+            <Button type="button" variant="link" className="mt-3" onClick={() => setOpen(true)}>
+              Edit
+            </Button>
+          </div>
+        </SidePanel>
+      )}
     </div>
   );
 }
@@ -542,6 +619,13 @@ export function DesignSystemPage() {
       </Section>
 
       <Section
+        title="Dialog"
+        note="The modal every popup form uses (the issue editor, opened from the issue list, the issue page and the side panel). A native dialog opened with showModal(): it sits above everything, so with the side panel open it simply appears on top; the page behind is inert, Esc closes only the dialog, focus goes to the first data-autofocus field and back to the opener on close. Fades and grows in. A click on the dimmed area closes it unless dismissOnBackdrop is false (the editor sets that while there is unsaved text)."
+      >
+        <DialogDemo />
+      </Section>
+
+      <Section
         title="Motion"
         note="How the app moves (owner's design pass, 2026-10-04). Durations 120 to 220ms with one easing (--motion-duration-fast / -base / -slow, --motion-ease-out in app/index.css). Only opacity and transform change, except a row expanding or collapsing, which animates a grid row. Nothing ever delays an action: closing, saving and navigating happen at once and the animation is cosmetic. Everything is off when the system asks for reduced motion."
       >
@@ -552,7 +636,7 @@ export function DesignSystemPage() {
           <li>Dialogs: fade and grow from 96%, the backdrop fades; dropdowns fade and drop 4px.</li>
           <li>Rows: a new row expands open with an accent flash, a removed row collapses.</li>
           <li>Buttons: sink slightly while pressed; a running request shows a spinner, a saved one a tick.</li>
-          <li>Edit or confirm opening in place: fade and rise. Light/dark: colours cross-fade over about 200ms.</li>
+          <li>Confirm opening in place: fade and rise; the issue editor is a dialog (fades and grows). Light/dark: colours cross-fade over about 200ms.</li>
         </ul>
       </Section>
 

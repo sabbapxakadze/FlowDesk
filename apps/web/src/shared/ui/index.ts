@@ -21,6 +21,7 @@ export { anchoredTooltipProps } from "./anchoredTooltipProps";
 export { WrappingTick } from "./WrappingTick";
 export { Page, PageHeader } from "./Page";
 export { ColumnHeader } from "./ColumnHeader";
+export { Dialog } from "./Dialog";
 export { Lane } from "./Lane";
 export { ScrollPanel } from "./ScrollPanel";
 export { ThemeSwitch } from "./ThemeSwitch";

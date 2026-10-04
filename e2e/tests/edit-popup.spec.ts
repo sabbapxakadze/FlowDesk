@@ -1,0 +1,143 @@
+import type { Page } from "@playwright/test";
+import { test, expect } from "../support/fixtures";
+import { apiSession, createIssueViaApi } from "../support/api";
+
+/**
+ * Editing an issue happens in a popup (a native modal dialog) from the issue list, the issue page and the side
+ * panel. With the side panel open the popup appears on top of it.
+ */
+
+const dialogOf = (page: Page, key = "WEB-1") => page.getByRole("dialog", { name: `Edit ${key}` });
+const panelOf = (page: Page) => page.locator('section[aria-label="Issue"]');
+const row = (page: Page, title: string) => page.getByRole("listitem").filter({ hasText: title });
+
+async function setup(page: Page, titles = ["Alpha", "Beta"]) {
+  return createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles });
+}
+
+test("Edit on a list row opens a popup, Save updates the row, and focus goes back to the Edit button", async ({
+  loggedInPage: page,
+}) => {
+  // Why: the main flow. The row used to turn into a form inside the list.
+  await setup(page);
+  await page.goto("/projects/WEB");
+  const edit = row(page, "Alpha").getByRole("button", { name: "Edit" });
+  await edit.click();
+  const dialog = dialogOf(page);
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("Title")).toBeFocused(); // starts in the first field
+  await dialog.getByLabel("Title").fill("Alpha renamed");
+  await dialog.getByLabel("Priority").selectOption("high");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(row(page, "Alpha renamed")).toContainText("High");
+  await expect(edit).toBeFocused();
+});
+
+test("with the side panel open, the popup appears on top and Esc closes only the popup", async ({
+  loggedInPage: page,
+}) => {
+  // Why: the owner asked what happens with a second issue already open. A native modal dialog sits above the
+  // panel; the panel stays open and keeps its issue.
+  await setup(page);
+  await page.goto("/projects/WEB?issue=WEB-2");
+  const panel = panelOf(page);
+  await expect(panel.getByRole("heading", { level: 2, name: "Beta" })).toBeVisible();
+
+  await panel.getByRole("button", { name: "Edit", exact: true }).click();
+  const dialog = dialogOf(page, "WEB-2");
+  await expect(dialog).toBeVisible();
+  // The dialog is the modal one, so the panel behind cannot be clicked.
+  expect(await dialog.evaluate((el) => el.matches(":modal"))).toBe(true);
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(panel).toBeVisible(); // Esc went to the popup, not the panel
+  await expect(page).toHaveURL(/issue=WEB-2/);
+});
+
+test("the issue page edits in the same popup, and a description keeps its line breaks", async ({
+  loggedInPage: page,
+}) => {
+  // Why: one editor everywhere; the description is a multi-line box now, so the page must show its lines.
+  await setup(page);
+  await page.goto("/projects/WEB/issues/WEB-1");
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  const dialog = dialogOf(page);
+  await dialog.getByLabel("Description").fill("Line one\nLine two");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(dialog).toHaveCount(0);
+  const text = page.getByText("Line one");
+  await expect(text).toBeVisible();
+  expect(await text.evaluate((el) => getComputedStyle(el).whiteSpace)).toBe("pre-wrap");
+});
+
+test("a click on the dimmed area closes the popup, unless there is unsaved text; Esc always closes it", async ({
+  loggedInPage: page,
+}) => {
+  // Why: a stray click must not throw a half-written edit away.
+  await setup(page);
+  await page.goto("/projects/WEB");
+  const open = () => row(page, "Alpha").getByRole("button", { name: "Edit" }).click();
+  const dialog = dialogOf(page);
+  const clickBackdrop = () => page.mouse.click(5, 5);
+
+  await open();
+  await expect(dialog).toBeVisible();
+  await clickBackdrop();
+  await expect(dialog).toHaveCount(0); // nothing typed: it closes
+
+  await open();
+  await dialog.getByLabel("Title").fill("Half written");
+  await clickBackdrop();
+  await expect(dialog).toBeVisible(); // typed: it stays
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(row(page, "Alpha")).toBeVisible(); // nothing was saved
+});
+
+test("saving over a change made elsewhere closes the popup and says the issue was updated", async ({
+  loggedInPage: page,
+}) => {
+  // Why: the version check (409) must still end in the existing notice, now from inside a popup.
+  const { projectId, issueIds } = await setup(page);
+  await page.goto("/projects/WEB");
+  await row(page, "Alpha").getByRole("button", { name: "Edit" }).click();
+  const dialog = dialogOf(page);
+  await expect(dialog).toBeVisible();
+
+  const { headers, base } = await apiSession(page.request);
+  const other = await page.request.patch(`${base}/projects/${projectId}/issues/${issueIds[0]}`, {
+    headers,
+    data: { version: 1, title: "Changed elsewhere" },
+  });
+  expect(other.status()).toBe(200);
+  // The live update would normally hand the form the new version before Save; send the stale one on purpose,
+  // as a person whose screen has not caught up yet would.
+  await page.route("**/issues/*", async (route) => {
+    const request = route.request();
+    if (request.method() !== "PATCH") return route.fallback();
+    const body = JSON.parse(request.postData() ?? "{}");
+    await route.continue({ postData: JSON.stringify({ ...body, version: 1 }) });
+  });
+
+  await dialog.getByLabel("Title").fill("My version");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText(/updated by someone else/)).toBeVisible();
+});
+
+test("the description box can only be resized vertically, between a minimum and a maximum height", async ({
+  loggedInPage: page,
+}) => {
+  // Why: the corner handle used to let the box shrink to nothing or grow without limit (and sideways).
+  await setup(page);
+  await page.goto("/projects/WEB");
+  await row(page, "Alpha").getByRole("button", { name: "Edit" }).click();
+  const box = dialogOf(page).getByLabel("Description");
+  const style = await box.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { resize: s.resize, min: s.minHeight, max: s.maxHeight };
+  });
+  expect(style).toEqual({ resize: "vertical", min: "72px", max: "256px" });
+});

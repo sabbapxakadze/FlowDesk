@@ -12,7 +12,7 @@ import {
   useLiveIssueDetailUpdates,
 } from "../../entities/issue";
 import { DeleteIssueButton } from "../../features/delete-issue";
-import { EditIssueForm } from "../../features/edit-issue";
+import { EditIssueDialog } from "../../features/edit-issue";
 import { CommentCard, CommentForm } from "../../features/post-comment";
 import { UploadAttachmentForm } from "../../features/upload-attachment";
 import { ActivityLine } from "../activity-line";
@@ -294,66 +294,56 @@ export function IssueDetail({
 
   return frame(
     <>
-      {isEditing ? (
-        <>
-          {header("Edit issue")}
-          {showConflictNotice && (
-            <p className="mb-4 text-sm text-[var(--color-text-warning)]">
-              This issue was updated by someone else — showing the latest version.
-            </p>
-          )}
-          <EditIssueForm
-            issue={issue}
-            organizationId={organization!.id}
-            projectId={project.id}
-            onDone={() => setIsEditing(false)}
-            onConflict={() => setShowConflictNotice(true)}
-          />
-        </>
-      ) : (
-        <>
-          {header(
-            issue.title,
-            <>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={issue.status} />
-                <PriorityBadge priority={issue.priority} />
-                {nameOf(issue.assigneeId) && (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
-                    <PersonName
-                      organizationId={organization!.id}
-                      userId={issue.assigneeId!}
-                      name={nameOf(issue.assigneeId)!}
-                      withAvatar
-                    />
-                  </span>
-                )}
-                <Button
-                  type="button"
-                  variant="link"
-                  onClick={() => {
-                    setShowConflictNotice(false);
-                    setIsEditing(true);
-                  }}
-                >
-                  Edit
-                </Button>
-              </div>
-              {otherViewers.length > 0 && (
-                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  <Viewers viewers={otherViewers} organizationId={organization!.id} />
-                </p>
-              )}
-            </>,
-          )}
-          {showConflictNotice && (
-            <p className="mb-4 text-sm text-[var(--color-text-warning)]">
-              This issue was updated by someone else — showing the latest version.
-            </p>
-          )}
-          {issue.description && <p className="mb-4">{issue.description}</p>}
-        </>
+      {isEditing && (
+        <EditIssueDialog
+          issue={issue}
+          issueKey={`${project.key}-${issue.number}`}
+          organizationId={organization!.id}
+          projectId={project.id}
+          onClose={() => setIsEditing(false)}
+          onConflict={() => setShowConflictNotice(true)}
+        />
       )}
+      {header(
+        issue.title,
+        <>
+          <div className="flex items-center gap-3">
+            <StatusBadge status={issue.status} />
+            <PriorityBadge priority={issue.priority} />
+            {nameOf(issue.assigneeId) && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+                <PersonName
+                  organizationId={organization!.id}
+                  userId={issue.assigneeId!}
+                  name={nameOf(issue.assigneeId)!}
+                  withAvatar
+                />
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="link"
+              onClick={() => {
+                setShowConflictNotice(false);
+                setIsEditing(true);
+              }}
+            >
+              Edit
+            </Button>
+          </div>
+          {otherViewers.length > 0 && (
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              <Viewers viewers={otherViewers} organizationId={organization!.id} />
+            </p>
+          )}
+        </>,
+      )}
+      {showConflictNotice && (
+        <p className="mb-4 text-sm text-[var(--color-text-warning)]">
+          This issue was updated by someone else — showing the latest version.
+        </p>
+      )}
+      {issue.description && <p className="mb-4 whitespace-pre-wrap [overflow-wrap:anywhere]">{issue.description}</p>}
 
       <Heading className="mt-6 mb-2 text-lg font-semibold">Attachments</Heading>
       <AttachmentList

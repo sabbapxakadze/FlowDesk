@@ -2260,6 +2260,15 @@ The original plan for this slice, kept for the record:
    window (`fitWindow`), and Load more is a footer pinned inside the profile box. 7 e2e tests (`scroll-panels.spec.ts`); the cap, the fill-the-window
    page and the fixed card were each removed to see the tests fail. Not applied: the board and sprints lanes (own tinted
    `Lane`), the audit log's Load more (not asked). `/design-system` documents `ScrollPanel`.
+   **Issue editor popup DONE 2026-10-05 (owner's pick A).** Edit opens a centered popup (new shared `Dialog`, a native modal
+   dialog) from the issue list, the issue page and the side panel, instead of turning the row or the page into a form. With the
+   side panel open the popup appears on top (the panel was already written to leave Esc and clicks to an open dialog); Esc closes only
+   the popup. A click on the dimmed area closes it unless there is unsaved text. The description is a multi-line box (4.5rem to
+   16rem, vertical resize only: now every `Textarea`), and the issue page keeps its line breaks. Conflicts (409) still close it
+   with the existing notice. A known limit that was already true inline: the form's version follows live updates while its fields
+   do not, so a change made by someone else in the meantime is overwritten rather than flagged. 6 e2e tests (`edit-popup.spec.ts`);
+   three behaviours were removed one at a time to see them fail. Not done yet (asked, needs a design pass): a custom dropdown for
+   `Select` everywhere.
    **Readable URLs DONE 2026-10-04 (ADR 0030).** Projects and issues are named by their keys in the address:
    `/projects/WEB`, `/projects/WEB/issues/WEB-12`, `/projects/WEB?issue=WEB-12`. New endpoint
    `GET .../issues/by-number/:number`; a `ProjectRoute` layout resolves the key once from the cached project list and the

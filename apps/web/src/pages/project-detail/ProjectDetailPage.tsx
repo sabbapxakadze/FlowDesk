@@ -6,7 +6,7 @@ import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
 import { useMembers, useMemberNames } from "../../entities/member";
 import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
 import { CreateIssueForm } from "../../features/create-issue";
-import { EditIssueForm } from "../../features/edit-issue";
+import { EditIssueDialog } from "../../features/edit-issue";
 import { useAuth } from "../../shared/auth/useAuth";
 import {
   Button,
@@ -105,12 +105,12 @@ export function ProjectDetailPage() {
     resetKey: `${status}|${priority}|${assignee}|${sort}|${order}|${data?.pages.length ?? 0}`,
   });
 
-  // Which issue (if any) is currently showing its edit form instead of its
-  // card — page-level state because IssueCard (entities layer) can't
-  // import EditIssueForm (features layer); this is where the two compose.
+  // Which issue (if any) is open in the edit popup: page-level state because IssueCard (entities layer) can't
+  // import the editor (features layer); this is where the two compose.
   const panel = useIssuePanel();
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
   const [showConflictNotice, setShowConflictNotice] = useState(false);
+  const editingIssue = issueRows.find(({ item }) => item.id === editingIssueId)?.item;
 
   function setStatusFilter(value: string) {
     setSearchParams((prev) => {
@@ -252,32 +252,21 @@ export function ProjectDetailPage() {
       ) : (
         <ScrollPanel label="Issue list" className="max-h-[65dvh] sm:max-h-none sm:min-h-0">
         <ul className="flex flex-col gap-2">
-          {issueRows.map(({ key, item: issue, state, index }) =>
-            editingIssueId === issue.id ? (
-              <EditIssueForm
-                key={key}
-                issue={issue}
-                organizationId={organization!.id}
-                projectId={project.id}
-                onDone={() => setEditingIssueId(null)}
-                onConflict={() => setShowConflictNotice(true)}
-              />
-            ) : (
-              <IssueCard
-                key={key}
-                rowState={state}
-                rowIndex={index}
-                issue={issue}
-                projectKey={project.key}
-                assigneeName={nameOf(issue.assigneeId)}
-                onOpen={panel.open}
-                onEdit={() => {
-                  setShowConflictNotice(false);
-                  setEditingIssueId(issue.id);
-                }}
-              />
-            ),
-          )}
+          {issueRows.map(({ key, item: issue, state, index }) => (
+            <IssueCard
+              key={key}
+              rowState={state}
+              rowIndex={index}
+              issue={issue}
+              projectKey={project.key}
+              assigneeName={nameOf(issue.assigneeId)}
+              onOpen={panel.open}
+              onEdit={() => {
+                setShowConflictNotice(false);
+                setEditingIssueId(issue.id);
+              }}
+            />
+          ))}
         </ul>
         {hasNextPage && (
           <Button
@@ -293,6 +282,17 @@ export function ProjectDetailPage() {
         </ScrollPanel>
       )}
       </div>
+      {editingIssue && (
+        <EditIssueDialog
+          key={editingIssue.id}
+          issue={editingIssue}
+          issueKey={`${project.key}-${editingIssue.number}`}
+          organizationId={organization!.id}
+          projectId={project.id}
+          onClose={() => setEditingIssueId(null)}
+          onConflict={() => setShowConflictNotice(true)}
+        />
+      )}
       <IssuePanel project={project} />
     </Page>
   );

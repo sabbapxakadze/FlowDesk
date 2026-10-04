@@ -47,3 +47,7 @@ goes inside it). Two looks on the surface's own background, no tint: `raised` (a
 
 Motion (ADR 0029): `Button` has `pending` and `done`; `Card` takes `rowState`/`rowIndex` for list rows; hooks `useExitPresence`,
 `useAnimatedList`, `useRowMotion`/`useRowMotionProps` and `useSuccessFlash`; the `motion-*` classes are in `app/index.css`.
+
+`Dialog` (2026-10-05) is the modal every popup form uses (the issue editor): a native `<dialog>` with a title and a close button,
+`motion-dialog`, focus to the first `data-autofocus` element, back to the opener on close; `dismissOnBackdrop={false}` keeps a
+form with unsaved text from closing on a stray click. `Textarea` is resizable only vertically, between 4.5rem and 16rem tall.

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Issue, IssuePriority, IssueStatus } from "@flowdesk/contracts";
@@ -12,6 +13,7 @@ import {
   PRIORITY_LABELS,
   PRIORITY_ORDER,
   Select,
+  Textarea,
 } from "../../../shared/ui";
 import { LabelPicker } from "../../edit-issue-labels";
 import { updateIssue } from "../api/updateIssue";
@@ -43,15 +45,22 @@ export function EditIssueForm({
   projectId,
   onDone,
   onConflict,
+  onDirtyChange,
 }: {
   issue: Issue;
   organizationId: string;
   projectId: string;
   onDone: () => void;
   onConflict: () => void;
+  /** Tells the dialog whether there is unsaved text, so a stray click outside does not close it. */
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<FormValues>({
     defaultValues: {
       title: issue.title,
       description: issue.description ?? "",
@@ -61,6 +70,9 @@ export function EditIssueForm({
     },
   });
   const { data: members } = useMembers(organizationId);
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const mutation = useMutation({
     mutationFn: (data: FormValues) =>
@@ -106,44 +118,46 @@ export function EditIssueForm({
   return (
     <form
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
-      className="motion-rise-in mb-2 flex flex-col gap-2 rounded-[var(--radius-card)] border border-[var(--color-border-input)] px-4 py-3"
+      className="flex flex-col gap-3"
     >
       <Field label="Title">
-        <Input {...register("title", { required: true })} />
+        <Input data-autofocus {...register("title", { required: true })} />
       </Field>
 
       <Field label="Description">
-        <Input {...register("description")} />
+        <Textarea rows={4} {...register("description")} />
       </Field>
 
-      <Field label="Status">
-        <Select {...register("status")}>
-          <option value="todo">Todo</option>
-          <option value="in_progress">In progress</option>
-          <option value="done">Done</option>
-        </Select>
-      </Field>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Field label="Status">
+          <Select {...register("status")}>
+            <option value="todo">Todo</option>
+            <option value="in_progress">In progress</option>
+            <option value="done">Done</option>
+          </Select>
+        </Field>
 
-      <Field label="Priority">
-        <Select {...register("priority")}>
-          {PRIORITY_ORDER.map((value) => (
-            <option key={value} value={value}>
-              {PRIORITY_LABELS[value]}
-            </option>
-          ))}
-        </Select>
-      </Field>
+        <Field label="Priority">
+          <Select {...register("priority")}>
+            {PRIORITY_ORDER.map((value) => (
+              <option key={value} value={value}>
+                {PRIORITY_LABELS[value]}
+              </option>
+            ))}
+          </Select>
+        </Field>
 
-      <Field label="Assignee">
-        <Select {...register("assigneeId")}>
-          <option value="">Unassigned</option>
-          {members?.map((member) => (
-            <option key={member.userId} value={member.userId}>
-              {member.name}
-            </option>
-          ))}
-        </Select>
-      </Field>
+        <Field label="Assignee">
+          <Select {...register("assigneeId")}>
+            <option value="">Unassigned</option>
+            {members?.map((member) => (
+              <option key={member.userId} value={member.userId}>
+                {member.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
 
       <div className="flex flex-col gap-1 text-sm">
         Labels
@@ -154,12 +168,12 @@ export function EditIssueForm({
         />
       </div>
 
-      <div className="flex gap-2">
-        <Button type="submit" size="sm" pending={mutation.isPending} variant="success">
-          {mutation.isPending ? "Saving…" : "Save"}
-        </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={onDone}>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={onDone}>
           Cancel
+        </Button>
+        <Button type="submit" pending={mutation.isPending} variant="success">
+          {mutation.isPending ? "Saving…" : "Save"}
         </Button>
       </div>
 

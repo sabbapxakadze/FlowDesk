@@ -77,17 +77,22 @@ test.describe("with animations on", () => {
     await expect(save.locator("svg.lucide-check")).toHaveCount(0, { timeout: 3000 }); // and it goes away again
   });
 
-  test("an edit form that opens in place rises in", async ({ loggedInPage: page }) => {
+  test("the edit popup fades and grows in like the other dialogs", async ({ loggedInPage: page }) => {
+    // Why: Edit opens a native dialog with the shared motion-dialog classes; the duration is stretched so the
+    // middle of the transition can be sampled.
     const { projectId } = await createIssueViaApi(page.request, {
       projectName: "Website",
       projectKey: "WEB",
       titles: ["Edit me"],
     });
     await page.goto(`/projects/${projectId}`);
+    await page.addStyleTag({ content: ":root { --motion-duration-base: 1000ms; }" });
     await page.getByRole("listitem").filter({ hasText: "Edit me" }).getByRole("button", { name: "Edit" }).click();
-    const form = page.locator("form.motion-rise-in").first();
-    await expect(form).toBeVisible();
-    expect(await form.evaluate((el) => getComputedStyle(el).animationName)).toBe("motion-rise-in");
+    const dialog = page.locator("dialog.motion-dialog[aria-label^='Edit ']");
+    const opacity = () => dialog.evaluate((el) => Number(getComputedStyle(el).opacity));
+    expect(await opacity()).toBeLessThan(0.9); // still fading in
+    await page.waitForTimeout(1200);
+    expect(await opacity()).toBe(1);
   });
 
   test("switching the theme cross-fades the colours: the class is on the page for a moment, then gone", async ({

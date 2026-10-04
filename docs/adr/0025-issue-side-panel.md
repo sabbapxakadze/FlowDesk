@@ -73,3 +73,10 @@ header strip with the issue key, "Open full page" and a close button.
   positioned page content (the charts); the panel stays above it at `z-40`.
 - The panel body uses the page background so the cards inside (attachments, comments) stand out in
   dark mode, as on the full page.
+
+## Amendment 2026-10-05: editing is a popup
+
+Edit no longer turns the list row or the issue page into a form. It opens a modal dialog (`shared/ui/Dialog`, a native
+`<dialog>`) from the list, the issue page and this panel. A modal dialog is in the top layer, so it appears above the panel;
+the panel stays open behind it and keeps leaving Esc and clicks to an open dialog, as it already did for the search and the
+image preview. Esc closes only the dialog.
