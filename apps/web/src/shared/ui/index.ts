@@ -4,7 +4,7 @@ export { IconButton } from "./IconButton";
 export { Input } from "./Input";
 export { Textarea } from "./Textarea";
 export { Select } from "./Select";
-export { Field } from "./Field";
+export { Field, FieldRowAction } from "./Field";
 export { Card } from "./Card";
 export { ErrorText } from "./ErrorText";
 export { Skeleton } from "./Skeleton";

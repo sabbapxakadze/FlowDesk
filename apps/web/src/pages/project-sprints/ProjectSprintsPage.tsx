@@ -176,43 +176,57 @@ export function ProjectSprintsPage() {
                     onDone={() => setRenamingSprintId(null)}
                   />
                 ) : (
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium">{sprint.name}</p>
                     <SprintStatusBadge status={sprint.status} />
                   </div>
                 )}
                 {renamingSprintId !== sprint.id && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    aria-label={`Rename ${sprint.name}`}
-                    onClick={() => setRenamingSprintId(sprint.id)}
-                  >
-                    Rename
-                  </Button>
-                )}
-                {renamingSprintId !== sprint.id && sprint.status !== "active" && (
-                  <DeleteSprintButton organizationId={organization!.id} projectId={project.id} sprint={sprint} />
-                )}
-                {sprint.status === "planned" && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={startMutation.isPending}
-                    onClick={() => startMutation.mutate({ sprintId: sprint.id, version: sprint.version })}
-                  >
-                    Start
-                  </Button>
-                )}
-                {sprint.status === "active" && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={completeMutation.isPending}
-                    onClick={() => completeMutation.mutate({ sprintId: sprint.id, version: sprint.version })}
-                  >
-                    Complete
-                  </Button>
+                  // Three fixed slots in a fixed order (Rename, Start or Complete, Delete), so Rename
+                  // sits at the same place on every row whatever the status: a slot a status does not
+                  // use stays empty instead of letting the other buttons slide into it.
+                  <div className="flex shrink-0 items-center gap-2" data-testid="sprint-actions">
+                    <div className="w-20">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        fullWidth
+                        aria-label={`Rename ${sprint.name}`}
+                        onClick={() => setRenamingSprintId(sprint.id)}
+                      >
+                        Rename
+                      </Button>
+                    </div>
+                    <div className="w-24">
+                      {sprint.status === "planned" && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          fullWidth
+                          disabled={startMutation.isPending}
+                          onClick={() => startMutation.mutate({ sprintId: sprint.id, version: sprint.version })}
+                        >
+                          Start
+                        </Button>
+                      )}
+                      {sprint.status === "active" && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          fullWidth
+                          disabled={completeMutation.isPending}
+                          onClick={() => completeMutation.mutate({ sprintId: sprint.id, version: sprint.version })}
+                        >
+                          Complete
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex min-w-20 justify-end">
+                      {sprint.status !== "active" && (
+                        <DeleteSprintButton organizationId={organization!.id} projectId={project.id} sprint={sprint} />
+                      )}
+                    </div>
+                  </div>
                 )}
               </Card>
             ))}

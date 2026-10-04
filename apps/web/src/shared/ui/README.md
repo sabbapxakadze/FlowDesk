@@ -26,3 +26,8 @@ Buttons (Button cleanup slice, 2026-10-02): text that acts is `<Button variant="
 `Avatar` shows a photo (`src`) or the person's initials; it falls back to initials when the picture is missing
 or fails to load. Sizes: `sm` 20px, `md` 28px, `lg` 96px, `xl` 128px (profile pages). `PersonHover` shows
 photo, job title, role, email and an optional "View profile" link, all passed in as plain props.
+
+`Field` has an opt-in `reserveErrorSpace` for fields in an inline row (the three create forms): the error
+line always exists, with a fixed height and no width of its own, so a validation message never moves a
+neighbour or the button; `FieldRowAction` wraps the row's button so it lines up with the inputs' bottoms.
+Stacked forms (login, register) leave it off so they get no permanent gap.

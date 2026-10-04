@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createSprintRequestSchema, type CreateSprintRequest } from "@flowdesk/contracts";
 import { sprintKeys } from "../../../entities/sprint";
-import { Button, ErrorText, Field, Input } from "../../../shared/ui";
+import { Button, ErrorText, Field, FieldRowAction, Input } from "../../../shared/ui";
 import { createSprint } from "../api/createSprint";
 
 /**
@@ -38,21 +38,23 @@ export function CreateSprintForm({ organizationId, projectId }: { organizationId
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
       className="mb-6 flex flex-wrap items-end gap-3 rounded-[var(--radius-card)] bg-[var(--color-bg-surface)] p-4 shadow-sm"
     >
-      <Field label="Sprint name" error={errors.name?.message} className="flex-1">
+      <Field reserveErrorSpace label="Sprint name" error={errors.name?.message} className="flex-1">
         <Input {...register("name")} placeholder="Sprint 1" />
       </Field>
 
-      <Field label="Start date" error={errors.startDate?.message}>
+      <Field reserveErrorSpace label="Start date" error={errors.startDate?.message}>
         <Input type="date" {...register("startDate", { setValueAs: (v: string) => (v === "" ? undefined : v) })} />
       </Field>
 
-      <Field label="End date" error={errors.endDate?.message}>
+      <Field reserveErrorSpace label="End date" error={errors.endDate?.message}>
         <Input type="date" {...register("endDate", { setValueAs: (v: string) => (v === "" ? undefined : v) })} />
       </Field>
 
-      <Button type="submit" disabled={mutation.isPending}>
-        {mutation.isPending ? "Creating…" : "Create sprint"}
-      </Button>
+      <FieldRowAction>
+        <Button type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? "Creating…" : "Create sprint"}
+        </Button>
+      </FieldRowAction>
 
       {mutation.isError && <ErrorText className="w-full">{mutation.error.message}</ErrorText>}
     </form>

@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createProjectRequestSchema, type CreateProjectRequest } from "@flowdesk/contracts";
 import { projectKeys } from "../../../entities/project";
-import { Button, ErrorText, Field, Input } from "../../../shared/ui";
+import { Button, ErrorText, Field, FieldRowAction, Input } from "../../../shared/ui";
 import { createProject } from "../api/createProject";
 
 /**
@@ -38,17 +38,19 @@ export function CreateProjectForm({ organizationId }: { organizationId: string }
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
       className="mb-6 flex flex-wrap items-end gap-3 rounded-[var(--radius-card)] bg-[var(--color-bg-surface)] p-4 shadow-sm"
     >
-      <Field label="Name" error={errors.name?.message}>
+      <Field reserveErrorSpace label="Name" error={errors.name?.message}>
         <Input {...register("name")} placeholder="Website" />
       </Field>
 
-      <Field label="Key" error={errors.key?.message}>
+      <Field reserveErrorSpace label="Key" error={errors.key?.message}>
         <Input {...register("key")} placeholder="WEB" className="w-24 uppercase" />
       </Field>
 
-      <Button type="submit" disabled={mutation.isPending}>
-        {mutation.isPending ? "Adding…" : "Add project"}
-      </Button>
+      <FieldRowAction>
+        <Button type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? "Adding…" : "Add project"}
+        </Button>
+      </FieldRowAction>
 
       {mutation.isError && <ErrorText className="w-full">{mutation.error.message}</ErrorText>}
     </form>

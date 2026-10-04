@@ -2188,6 +2188,16 @@ The original plan for this slice, kept for the record:
    hides it). Mutations caught: bio ignored, photo ignored, dismissal ignored, dismissal not saved. One
    unexplained single failure of `members-manage` (removed person invited back) in one full e2e run; it passed
    alone 3 times and in the next full run (96/96), so it is recorded as a possible flake, cause not found.
+   **Small fixes DONE 2026-10-04 (owner's list, items 1 and 3-5):** a sprint row's buttons are three fixed slots
+   (Rename, Start or Complete, Delete), so Rename sits in the same place on completed, active and planned sprints
+   (it used to land elsewhere on the active row, which has no Delete); the three inline create forms (project,
+   issue, sprint) no longer shift when a validation error appears (`Field reserveErrorSpace`, `FieldRowAction`).
+   2 e2e tests (button positions across the three statuses; every label, input, button and the card keep the
+   exact same box when Submit is pressed empty, on all three forms). Both fail when the fix is removed. A first
+   version let a long message ("Key must be 2-10 characters") widen the narrow Key field; the test caught it and
+   the message now takes no width. **Not done (owner's list, later):** reordering the backlog (a rank column,
+   amends ADR 0008), and scrolling inside long board and sprint lists (design pass first). **Noted:** the create
+   forms now keep about one line of empty space below the inputs even with no error.
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

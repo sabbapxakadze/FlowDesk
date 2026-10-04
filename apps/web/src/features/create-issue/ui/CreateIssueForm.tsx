@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createIssueRequestSchema, type CreateIssueRequest } from "@flowdesk/contracts";
 import { issueKeys } from "../../../entities/issue";
-import { Button, ErrorText, Field, Input } from "../../../shared/ui";
+import { Button, ErrorText, Field, FieldRowAction, Input } from "../../../shared/ui";
 import { createIssue } from "../api/createIssue";
 
 /**
@@ -39,17 +39,19 @@ export function CreateIssueForm({
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
       className="mb-6 flex flex-wrap items-end gap-3 rounded-[var(--radius-card)] bg-[var(--color-bg-surface)] p-4 shadow-sm"
     >
-      <Field label="Title" error={errors.title?.message} className="flex-1">
+      <Field reserveErrorSpace label="Title" error={errors.title?.message} className="flex-1">
         <Input {...register("title")} placeholder="Something to do" />
       </Field>
 
-      <Field label="Description" error={errors.description?.message} className="flex-1">
+      <Field reserveErrorSpace label="Description" error={errors.description?.message} className="flex-1">
         <Input {...register("description")} placeholder="Optional" />
       </Field>
 
-      <Button type="submit" disabled={mutation.isPending}>
-        {mutation.isPending ? "Adding…" : "Add issue"}
-      </Button>
+      <FieldRowAction>
+        <Button type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? "Adding…" : "Add issue"}
+        </Button>
+      </FieldRowAction>
 
       {mutation.isError && <ErrorText className="w-full">{mutation.error.message}</ErrorText>}
     </form>
