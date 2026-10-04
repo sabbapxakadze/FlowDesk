@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ArrowUpRight, X } from "lucide-react";
 import { Link } from "react-router";
 import type { Attachment, IssueEvent } from "@flowdesk/contracts";
@@ -237,7 +237,9 @@ export function IssueDetail({
   );
   const { data: attachments } = useAttachments(organization!.id, projectId, issueId);
   // Timeline entries that arrive later (a comment, a status change, from anyone) open up with a flash.
-  const eventRows = useAnimatedList(events ?? [], (event) => event.id, { ready: !eventsPending });
+  // The API sends oldest first (analytics and history depend on it); the screen shows newest first.
+  const newestFirst = useMemo(() => [...(events ?? [])].reverse(), [events]);
+  const eventRows = useAnimatedList(newestFirst, (event) => event.id, { ready: !eventsPending });
   const { viewers } = useLiveIssueDetailUpdates(projectId, issueId, onGone);
   const otherViewers = viewers.filter((viewer) => viewer.userId !== user?.id);
 
@@ -365,6 +367,13 @@ export function IssueDetail({
       </div>
 
       <Heading className="mt-6 mb-2 text-lg font-semibold">Activity</Heading>
+      <div className="mb-4">
+        <CommentForm
+          organizationId={organization!.id}
+          projectId={project.id}
+          issueId={issue.id}
+        />
+      </div>
       {eventsPending ? (
         <TimelineSkeleton />
       ) : (
@@ -385,14 +394,6 @@ export function IssueDetail({
           ))}
         </ul>
       )}
-
-      <div className="mt-4">
-        <CommentForm
-          organizationId={organization!.id}
-          projectId={project.id}
-          issueId={issue.id}
-        />
-      </div>
 
       {/* The reporter, or an owner or admin (the API enforces the same rule). */}
       {(issue.reporterId === user?.id || role === "owner" || role === "admin") && (

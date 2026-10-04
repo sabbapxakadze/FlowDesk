@@ -2243,12 +2243,13 @@ The original plan for this slice, kept for the record:
    pages (needs React Router data mode), animating the board and sprints lanes, the search results.
    **Also 2026-10-04:** the Sort control no longer drops a line when the issue panel opens on a wide window (the
    filter row reserves room for the panel only below 1560px).
-   - **Idea noted 2026-10-04 (owner), not planned yet: newest first on an issue.** The Activity timeline (comments and
-     events together) would read newest at the TOP, oldest at the bottom ("created this issue" last), and the comment
-     box would move to the top, above the list, so a new comment lands right under where you typed it. Open questions:
-     whether the activity lines turn over with the comments or only the comments do (they share one timeline today),
-     and what a long issue shows first on the page and in the side panel. Touches `widgets/issue-detail`, the live
-     comment arrival (the new row would open at the top), and the e2e tests that read the order.
+   - **Newest first on an issue DONE 2026-10-04 (owner's idea).** The whole Activity timeline (comments and activity
+     lines together) reads newest at the top, "created this issue" last, and the comment box sits under the Activity
+     heading, above the list. Only the screen order changed: the API still sends events oldest first (analytics and
+     history rely on it) and `IssueDetail` reverses them before `useAnimatedList`, so a live arrival opens at the top.
+     The page and the side panel share it. 2 e2e tests (`timeline-order.spec.ts`: order and box position on the page;
+     live arrival from a second person in the panel); both fail when the reverse is removed. Named limit: no per-user
+     toggle.
    **Readable URLs DONE 2026-10-04 (ADR 0030).** Projects and issues are named by their keys in the address:
    `/projects/WEB`, `/projects/WEB/issues/WEB-12`, `/projects/WEB?issue=WEB-12`. New endpoint
    `GET .../issues/by-number/:number`; a `ProjectRoute` layout resolves the key once from the cached project list and the

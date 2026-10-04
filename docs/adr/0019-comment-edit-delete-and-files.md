@@ -71,3 +71,9 @@ append-only audit log that is never patched.
 - **One combined multipart request (comment + files).** One partial-failure mode
   instead of a clear per-file message, and it would need a second write path.
 - **Notify on edit.** Edits are frequent and low-signal; only new comments notify.
+
+## Amendment 2026-10-04: timeline order
+
+The issue timeline is shown newest first, with the comment box above it. Only the display changed: the events
+endpoint still returns oldest first (analytics and the folding of edits and deletes read that order), and the
+widget reverses the list before animating it.
