@@ -2198,6 +2198,10 @@ The original plan for this slice, kept for the record:
    the message now takes no width. **Not done (owner's list, later):** reordering the backlog (a rank column,
    amends ADR 0008), and scrolling inside long board and sprint lists (design pass first). **Noted:** the create
    forms now keep about one line of empty space below the inputs even with no error.
+   **Item 7 (profile back link) DONE 2026-10-04:** `PageHeader`'s `back` takes `history: true`; the profile's link
+   goes back to the page you came from ("Back") and to Members only with no previous page (bookmark, new tab). The
+   other back links were checked and left: the issue page's link to its project and Edit profile's link to your
+   profile are parents, not history. 1 e2e test; it fails with the option removed.
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

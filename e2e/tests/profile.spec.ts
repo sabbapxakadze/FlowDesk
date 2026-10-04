@@ -207,3 +207,34 @@ test('"Add photo" opens the edit page, and a photo makes the card go away', asyn
   await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
   await expect(card).toHaveCount(0);
 });
+
+test("the back link on a profile goes back to where you came from, and to Members only when there is no previous page", async ({
+  loggedInPage: page,
+}) => {
+  // Why: it always went to Members, a page you may never have visited (say you came from a comment).
+  const { projectId, issueIds } = await createIssueViaApi(page.request, {
+    projectName: "Website",
+    projectKey: "WEB",
+    titles: ["Where was I"],
+  });
+  const issueUrl = `/projects/${projectId}/issues/${issueIds[0]}`;
+  await page.goto(issueUrl);
+  await page.getByPlaceholder("Add a comment…").fill("Hello");
+  await page.getByRole("button", { name: "Comment", exact: true }).click();
+  const header = page.locator("li", { hasText: "Hello" });
+  await header.getByRole("link", { name: "E2E User" }).click();
+  await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+  await page.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`${issueUrl}$`));
+
+  // A profile opened straight from its address (a bookmark, a new tab) has no previous page.
+  await header.getByRole("link", { name: "E2E User" }).click();
+  const profileUrl = page.url();
+  await page.goto("about:blank");
+  await page.goto(profileUrl);
+  const fallback = page.getByRole("link", { name: "Members", exact: true }).first();
+  await expect(fallback).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back", exact: true })).toHaveCount(0);
+  await page.locator("main").getByRole("link", { name: "Members" }).click();
+  await expect(page).toHaveURL(/\/members$/);
+});

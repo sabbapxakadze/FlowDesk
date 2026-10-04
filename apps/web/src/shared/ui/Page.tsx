@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { buttonVariants } from "./buttonVariants";
 import { cn } from "./lib/cn";
 import { NavigationNotice } from "./NavigationNotice";
@@ -35,7 +35,9 @@ export function Page({
 /**
  * The top of a page: an optional small eyebrow (the project name on project
  * pages, an issue key on an issue), the serif title, an optional back link,
- * and `children` for a meta row under the title. It imports react-router's
+ * and `children` for a meta row under the title. A back link with `history: true` goes back to
+ * the page the person came from (labelled "Back"), and to its own address with its own label only
+ * when there is no previous page (opened from a bookmark or a new tab). It imports react-router's
  * Link, the one router dependency in this library, so a page does not
  * hand-write the same back-link markup.
  */
@@ -47,18 +49,33 @@ export function PageHeader({
 }: {
   eyebrow?: string;
   title: string;
-  back?: { to: string; label: string };
+  back?: { to: string; label: string; history?: boolean };
   children?: ReactNode;
 }) {
+  const navigate = useNavigate();
+  // React Router gives the first page of a session the key "default": there is nothing to go back to.
+  const hasPreviousPage = useLocation().key !== "default";
+  const backByHistory = Boolean(back?.history) && hasPreviousPage;
   return (
     <header className="mb-6">
       {back && (
         <Link
           to={back.to}
+          // history: go to where the person actually came from (a plain click only; a middle click or
+          // "open in new tab" still uses the fallback address). With no previous page, the fallback.
+          onClick={
+            backByHistory
+              ? (event) => {
+                  if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                  event.preventDefault();
+                  navigate(-1);
+                }
+              : undefined
+          }
           className={cn(buttonVariants({ variant: "link" }), "mb-2 inline-flex items-center gap-1")}
         >
           <ArrowLeft size={14} aria-hidden="true" />
-          {back.label}
+          {backByHistory ? "Back" : back.label}
         </Link>
       )}
       {eyebrow && <p className="text-sm text-[var(--color-text-muted)]">{eyebrow}</p>}

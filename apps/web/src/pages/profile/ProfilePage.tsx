@@ -153,7 +153,7 @@ export function ProfilePage() {
     const notFound = profile.error instanceof ApiError && profile.error.status === 404;
     return (
       <Page>
-        <PageHeader title={notFound ? "Person not found" : "Could not load this profile"} back={{ to: "/members", label: "Members" }} />
+        <PageHeader title={notFound ? "Person not found" : "Could not load this profile"} back={{ to: "/members", label: "Members", history: true }} />
         <p className={`text-sm ${MUTED}`}>
           {notFound
             ? "This person is not in your organization, or no longer is."
@@ -166,7 +166,7 @@ export function ProfilePage() {
   const person = profile.data;
   return (
     <Page>
-      <PageHeader title={person.name} back={{ to: "/members", label: "Members" }} />
+      <PageHeader title={person.name} back={{ to: "/members", label: "Members", history: true }} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
         <Card className="flex flex-col items-center gap-3 p-5 text-center md:self-start">
           <Avatar name={person.name} src={person.avatarUrl} size="xl" />
