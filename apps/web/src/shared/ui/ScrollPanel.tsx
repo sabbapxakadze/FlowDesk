@@ -1,0 +1,88 @@
+import { useLayoutEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { cn } from "./lib/cn";
+
+/**
+ * A list that grows inside its own scrolling area instead of stretching the page; "Load more" belongs with it.
+ * Both looks keep the surface's own background (no tint) and the slim always-visible scrollbar
+ * (`scrollbar-list-always`). The caller sets the height with `className`: a cap (`max-h-[28rem]`), or `min-h-0`
+ * inside a column that fills the window. `label` names the area for assistive tech.
+ *
+ * - `raised` (the Issues list): the list floats above the page, a thin outline and a soft outer shadow, so the
+ *   rows sit on a raised panel. The owner tried a pressed-in (inner shadow) version first and did not like it.
+ * - `edges` (a person's activity, an issue's comments and activity): no box. A soft shadow and a thin line fade
+ *   in at the top once the list has scrolled and at the bottom while more rows are hidden (`.scroll-edges` in
+ *   `app/index.css`; CSS only). Pass `onSurface` when the list sits inside a card, so the edges blend into the
+ *   card's colour instead of the page's.
+ *
+ * `fitWindow`: the cap is also limited to the room left in the window below the box's own top (never under
+ * 16rem), so the bottom edge, its shadow and the scrollbar are on screen at rest instead of below the fold,
+ * where nothing would show that the list scrolls. Re-measured when the window or the page above changes.
+ *
+ * `footer` (edges look): content pinned to the bottom of the box, always fully visible however far the list is
+ * scrolled (the "Load more" button). The rows scroll underneath it. It sticks at -0.5rem (the box's own bottom
+ * padding): sticky offsets count from inside the padding, and at 0 a strip of rows showed under the button.
+ */
+export function ScrollPanel({
+  label,
+  look = "raised",
+  onSurface = false,
+  fitWindow = false,
+  footer,
+  className,
+  children,
+}: {
+  label?: string;
+  look?: "raised" | "edges";
+  onSurface?: boolean;
+  fitWindow?: boolean;
+  footer?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
+  const element = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    const node = element.current;
+    if (!node || !fitWindow) return;
+    const cap = parseFloat(getComputedStyle(node).maxHeight);
+    function fit() {
+      if (!node) return;
+      const top = node.getBoundingClientRect().top + window.scrollY;
+      const room = Math.max(window.innerHeight - top - 24, 256);
+      node.style.maxHeight = `${Number.isFinite(cap) ? Math.min(cap, room) : room}px`;
+    }
+    node.style.maxHeight = "";
+    fit();
+    window.addEventListener("resize", fit);
+    const observer = new ResizeObserver(fit);
+    observer.observe(document.body);
+    return () => {
+      window.removeEventListener("resize", fit);
+      observer.disconnect();
+      node.style.maxHeight = "";
+    };
+  }, [fitWindow]);
+
+  const style: CSSProperties | undefined =
+    look === "edges" && onSurface ? ({ "--edge-bg": "var(--color-bg-surface)" } as CSSProperties) : undefined;
+  return (
+    <div
+      ref={element}
+      role={label ? "group" : undefined}
+      aria-label={label}
+      style={style}
+      className={cn(
+        "scrollbar-list-always overflow-y-auto",
+        look === "raised"
+          ? "rounded-[var(--radius-card)] border border-[var(--color-border-default)] p-2 pr-3 shadow-[0_6px_16px_-4px_color-mix(in_oklab,var(--color-text-default)_20%,transparent)]"
+          : "scroll-edges py-2 pr-2 pl-1",
+        className,
+      )}
+    >
+      {children}
+      {footer && (
+        <div className="sticky -bottom-2 -mb-2 bg-[var(--edge-bg,var(--color-bg-page))] pt-2 pb-2">{footer}</div>
+      )}
+    </div>
+  );
+}

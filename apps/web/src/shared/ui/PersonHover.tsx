@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from "react";
+import { useId, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router";
 import { Avatar } from "./Avatar";
 import { buttonVariants } from "./buttonVariants";
@@ -27,6 +27,10 @@ const TRIGGER_CLASSES =
  * looks the photo, job title, role and email up and renders this. `profileHref` adds a
  * "View profile" link (a router Link, like PageHeader's back link, so this library already
  * depends on the router for that one thing).
+ *
+ * Position: the card is `position: fixed`, placed under the name from its measured position when the pointer
+ * or focus arrives. An absolutely positioned card inside a scrolling list (the issue timeline) was clipped by
+ * the list and, even invisible, made it scrollable; a fixed card is neither.
  *
  * Touch screens: the card opens when the button gets focus on tap (not every
  * mobile browser focuses a button on tap, so there it may not open).
@@ -58,8 +62,21 @@ export function PersonHover({
   children?: ReactNode;
 }) {
   const cardId = useId();
+  const [place, setPlace] = useState<CSSProperties>({});
+  function measure(element: HTMLElement) {
+    const rect = element.getBoundingClientRect();
+    setPlace(
+      align === "right"
+        ? { top: rect.bottom, right: window.innerWidth - rect.right }
+        : { top: rect.bottom, left: rect.left },
+    );
+  }
   return (
-    <span className="group/person relative inline-block">
+    <span
+      className="group/person relative inline-block"
+      onPointerEnter={(event) => measure(event.currentTarget)}
+      onFocus={(event) => measure(event.currentTarget)}
+    >
       {profileHref ? (
         // The name and the picture are one link to the profile; the card above it only previews.
         <Link to={profileHref} aria-describedby={cardId} className={TRIGGER_CLASSES}>
@@ -74,7 +91,8 @@ export function PersonHover({
       <span
         id={cardId}
         role="tooltip"
-        className={`invisible absolute ${align === "right" ? "right-0" : "left-0"} top-full z-20 w-64 max-w-[calc(100vw-2rem)] pt-1 text-left text-xs font-normal opacity-0 transition-[opacity,visibility] delay-100 duration-150 group-focus-within/person:visible group-focus-within/person:opacity-100 group-focus-within/person:delay-300 group-hover/person:visible group-hover/person:opacity-100 group-hover/person:delay-300 motion-reduce:duration-0`}
+        style={place}
+        className={`invisible fixed z-20 w-64 max-w-[calc(100vw-2rem)] pt-1 text-left text-xs font-normal opacity-0 transition-[opacity,visibility] delay-100 duration-150 group-focus-within/person:visible group-focus-within/person:opacity-100 group-focus-within/person:delay-300 group-hover/person:visible group-hover/person:opacity-100 group-hover/person:delay-300 motion-reduce:duration-0`}
       >
         <span className="block rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-3 text-[var(--color-text-default)] shadow-lg">
           {/* The picture and the name in the card are a link too (the owner's rule: every picture

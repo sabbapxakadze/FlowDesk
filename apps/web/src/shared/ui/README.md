@@ -37,5 +37,13 @@ Stacked forms (login, register) leave it off so they get no permanent gap.
 always-visible scrollbar (`.scrollbar-list-always` in `app/index.css`; `.scrollbar-list` is the hover-only variant).
 `shared/dnd/multiList` holds the drag logic shared by the board and the sprints page.
 
+`ScrollPanel` (2026-10-04) is a list that grows inside its own scrolling area instead of stretching the page ("Load more"
+goes inside it). Two looks on the surface's own background, no tint: `raised` (a thin outline and a soft outer shadow, the Issues list) and
+`edges` (no box; a soft shadow and a thin line at the top once scrolled and at the bottom while more is hidden, CSS only via
+`.scroll-edges`; a person's activity and the full issue page's timeline). `PersonHover`'s card is `position: fixed`
+(placed from the name's measured position) so a scrolling list neither clips it nor becomes scrollable because of it.
+`ScrollPanel` also takes `fitWindow` (the cap shrinks to the room left in the window, so the bottom edge is on screen) and a
+`footer` (pinned to the bottom of the box, fully visible however far the list is scrolled: Load more on the profile).
+
 Motion (ADR 0029): `Button` has `pending` and `done`; `Card` takes `rowState`/`rowIndex` for list rows; hooks `useExitPresence`,
 `useAnimatedList`, `useRowMotion`/`useRowMotionProps` and `useSuccessFlash`; the `motion-*` classes are in `app/index.css`.

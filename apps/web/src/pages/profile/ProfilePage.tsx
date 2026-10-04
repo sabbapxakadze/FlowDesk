@@ -17,6 +17,7 @@ import {
   ErrorText,
   Page,
   PageHeader,
+  ScrollPanel,
   Skeleton,
   Time,
 } from "../../shared/ui";
@@ -105,14 +106,15 @@ function RecentActivity({ organizationId, profile }: { organizationId: string; p
       ) : items.length === 0 ? (
         <EmptyState>No activity yet.</EmptyState>
       ) : (
-        <>
-          <ul aria-label="Recent activity" className="flex flex-col gap-3">
-            {items.map((item) => (
-              <ActivityRow key={item.id} item={item} person={profile} />
-            ))}
-          </ul>
-          {activity.hasNextPage && (
-            <div className="mt-4">
+        // Capped: "Load more" adds rows inside the panel, the page keeps its height.
+        <ScrollPanel
+          label="Activity list"
+          look="edges"
+          onSurface
+          fitWindow
+          className="max-h-[28rem]"
+          footer={
+            activity.hasNextPage && (
               <Button
                 type="button"
                 variant="secondary"
@@ -122,9 +124,15 @@ function RecentActivity({ organizationId, profile }: { organizationId: string; p
               >
                 {activity.isFetchingNextPage ? "Loading…" : "Load more"}
               </Button>
-            </div>
-          )}
-        </>
+            )
+          }
+        >
+          <ul aria-label="Recent activity" className="flex flex-col gap-3 p-1">
+            {items.map((item) => (
+              <ActivityRow key={item.id} item={item} person={profile} />
+            ))}
+          </ul>
+        </ScrollPanel>
       )}
     </Card>
   );

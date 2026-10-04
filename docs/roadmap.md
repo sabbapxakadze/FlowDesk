@@ -2250,6 +2250,16 @@ The original plan for this slice, kept for the record:
      The page and the side panel share it. 2 e2e tests (`timeline-order.spec.ts`: order and box position on the page;
      live arrival from a second person in the panel); both fail when the reverse is removed. Named limit: no per-user
      toggle.
+   **Scrolling lists DONE 2026-10-04 (owner's design pass).** "Load more" no longer stretches the page. The Issues page fills the
+   window and its list scrolls in a raised panel (`ScrollPanel look="raised"`: outline and outer shadow; the owner tried a pressed-in version and did not like it; a short list keeps its own height);
+   a person's Recent activity (capped at 28rem) and the full issue page's comments and activity (capped at 32rem, comment box
+   fixed above) scroll with edge shadows and a line (`look="edges"`, E3). The side panel's timeline is left alone (it already
+   scrolls as a whole). Found on the way: `PersonHover`'s absolutely positioned card was clipped inside a scrolling list and made a
+   short one scrollable, so it is now `position: fixed`. The owner then found no sign that the comments scroll (their bottom
+   edge was below the fold) and the profile's Load more cut in half: both boxes are now also limited to the room left in the
+   window (`fitWindow`), and Load more is a footer pinned inside the profile box. 7 e2e tests (`scroll-panels.spec.ts`); the cap, the fill-the-window
+   page and the fixed card were each removed to see the tests fail. Not applied: the board and sprints lanes (own tinted
+   `Lane`), the audit log's Load more (not asked). `/design-system` documents `ScrollPanel`.
    **Readable URLs DONE 2026-10-04 (ADR 0030).** Projects and issues are named by their keys in the address:
    `/projects/WEB`, `/projects/WEB/issues/WEB-12`, `/projects/WEB?issue=WEB-12`. New endpoint
    `GET .../issues/by-number/:number`; a `ProjectRoute` layout resolves the key once from the cached project list and the

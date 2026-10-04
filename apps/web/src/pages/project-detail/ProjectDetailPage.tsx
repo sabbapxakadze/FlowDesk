@@ -17,6 +17,7 @@ import {
   PageHeader,
   PRIORITY_LABELS,
   PRIORITY_ORDER,
+  ScrollPanel,
   Select,
   Skeleton,
   STATUS_LABELS,
@@ -160,6 +161,9 @@ export function ProjectDetailPage() {
 
   return (
     <Page>
+      {/* From sm up the page is as tall as the window (the 4rem is the Page's own vertical padding) and the list
+          scrolls inside its panel, so "Load more" never stretches the page. A short list keeps its own height. */}
+      <div className="flex flex-col sm:h-[calc(100dvh-4rem)] sm:min-h-[28rem]">
       <PageHeader eyebrow={project.name} title="Issues" />
 
       <CreateIssueForm organizationId={organization!.id} projectId={project.id} />
@@ -246,6 +250,7 @@ export function ProjectDetailPage() {
             : "No issues yet."}
         </EmptyState>
       ) : (
+        <ScrollPanel label="Issue list" className="max-h-[65dvh] sm:max-h-none sm:min-h-0">
         <ul className="flex flex-col gap-2">
           {issueRows.map(({ key, item: issue, state, index }) =>
             editingIssueId === issue.id ? (
@@ -274,19 +279,20 @@ export function ProjectDetailPage() {
             ),
           )}
         </ul>
+        {hasNextPage && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="mt-3"
+            disabled={isFetchingNextPage}
+            onClick={() => void fetchNextPage()}
+          >
+            {isFetchingNextPage ? "Loading…" : "Load more"}
+          </Button>
+        )}
+        </ScrollPanel>
       )}
-
-      {hasNextPage && (
-        <Button
-          variant="secondary"
-          size="sm"
-          className="mt-3"
-          disabled={isFetchingNextPage}
-          onClick={() => void fetchNextPage()}
-        >
-          {isFetchingNextPage ? "Loading…" : "Load more"}
-        </Button>
-      )}
+      </div>
       <IssuePanel project={project} />
     </Page>
   );

@@ -16,6 +16,7 @@ import {
   Lane,
   Page,
   PageHeader,
+  ScrollPanel,
   Select,
   Skeleton,
   StatusBadge,
@@ -201,6 +202,51 @@ function Section({ title, note, children }: { title: string; note?: string; chil
       {!note && <div className="mb-3" />}
       {children}
     </section>
+  );
+}
+
+function DemoActivityRow({ i }: { i: number }) {
+  return (
+    <li className="flex items-center gap-3 text-sm">
+      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-border-default)]">
+        <Pencil size={14} aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1">changed the status of WEB-{i + 1} Fix the footer</span>
+      <span className="shrink-0 text-xs text-[var(--color-text-muted)]">{i + 1}h ago</span>
+    </li>
+  );
+}
+
+function ScrollPanelDemo() {
+  return (
+    <div className="grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2">
+      <div>
+        <p className="mb-2 text-sm font-medium">look="raised" (the Issues list)</p>
+        <ScrollPanel label="Tray demo" className="h-72">
+          <ul className="flex flex-col gap-2">
+            {Array.from({ length: 9 }, (_, i) => (
+              <Card key={i} as="li">
+                <p className="text-xs text-[var(--color-text-muted)]">WEB-{i + 1}</p>
+                <p className="font-medium">Fix the footer layout</p>
+              </Card>
+            ))}
+          </ul>
+          <Button variant="secondary" size="sm" className="mt-2">Load more</Button>
+        </ScrollPanel>
+      </div>
+      <div>
+        <p className="mb-2 text-sm font-medium">look="edges" onSurface (a person's activity, in a card)</p>
+        <Card className="p-5">
+          <p className="mb-3 text-sm font-semibold">Recent activity</p>
+          <ScrollPanel label="Edges demo" look="edges" onSurface className="h-60">
+            <ul className="flex flex-col gap-3">
+              {Array.from({ length: 9 }, (_, i) => <DemoActivityRow key={i} i={i} />)}
+            </ul>
+            <Button variant="secondary" size="sm" className="mt-3">Load more</Button>
+          </ScrollPanel>
+        </Card>
+      </div>
+    </div>
   );
 }
 
@@ -486,6 +532,13 @@ export function DesignSystemPage() {
             </Lane>
           ))}
         </div>
+      </Section>
+
+      <Section
+        title="ScrollPanel"
+        note="A list that grows inside its own scrolling area instead of stretching the page, with the slim always-visible scrollbar. Both looks keep the surface's own background. Raised: a thin outline and a soft outer shadow, so the list floats above the page; used by the Issues list (the owner tried a pressed-in version first and did not like it). Edges: no box; a soft shadow and a thin line fade in at the top once scrolled and at the bottom while more rows are hidden, used by a person's Recent activity and by an issue's comments and activity on the full page (scroll the second one)."
+      >
+        <ScrollPanelDemo />
       </Section>
 
       <Section

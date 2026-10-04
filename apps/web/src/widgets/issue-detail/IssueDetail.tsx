@@ -25,6 +25,7 @@ import {
   Page,
   PageHeader,
   PriorityBadge,
+  ScrollPanel,
   Skeleton,
   StatusBadge,
   useAnimatedList,
@@ -155,6 +156,16 @@ function Viewers({
       ))}
       {people.length === 1 ? " is also viewing" : " are also viewing"}
     </>
+  );
+}
+
+function TimelineScroll({ enabled, children }: { enabled: boolean; children: ReactNode }) {
+  return enabled ? (
+    <ScrollPanel label="Activity timeline" look="edges" fitWindow className="max-h-[32rem]">
+      {children}
+    </ScrollPanel>
+  ) : (
+    <>{children}</>
   );
 }
 
@@ -377,22 +388,26 @@ export function IssueDetail({
       {eventsPending ? (
         <TimelineSkeleton />
       ) : (
-        <ul className="flex flex-col gap-3">
-          {eventRows.map(({ key, item: event, state, index }) => (
-            <TimelineEntry
-              key={key}
-              rowState={state}
-              rowIndex={index}
-              event={event}
-              files={(attachments ?? []).filter(
-                (a) => a.commentId === event.payload.commentId,
-              )}
-              organizationId={organization!.id}
-              projectId={project.id}
-              issueId={issue.id}
-            />
-          ))}
-        </ul>
+        // On the full page a long timeline scrolls inside its own area (about 32rem) with the comment box fixed
+        // above it. The side panel already scrolls as a whole, so a second scroll inside it is left out.
+        <TimelineScroll enabled={!panel}>
+          <ul className="flex flex-col gap-3">
+            {eventRows.map(({ key, item: event, state, index }) => (
+              <TimelineEntry
+                key={key}
+                rowState={state}
+                rowIndex={index}
+                event={event}
+                files={(attachments ?? []).filter(
+                  (a) => a.commentId === event.payload.commentId,
+                )}
+                organizationId={organization!.id}
+                projectId={project.id}
+                issueId={issue.id}
+              />
+            ))}
+          </ul>
+        </TimelineScroll>
       )}
 
       {/* The reporter, or an owner or admin (the API enforces the same rule). */}

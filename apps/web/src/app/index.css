@@ -206,3 +206,18 @@ dialog.motion-dialog[open]::backdrop {
   .motion-slide-out-right, .motion-expand, .motion-collapse, .motion-flash { animation: none !important; }
   .motion-press, .motion-press:active:not(:disabled), .motion-theme-fade, .motion-theme-fade * { transition: none !important; transform: none !important; }
 }
+
+/* A scrolling list with no box (ScrollPanel look="edges"): a soft shadow and a 1px line fade in at the top once
+   the list has scrolled and stay at the bottom while more rows are hidden. The "scroll shadows" trick: the cover
+   gradients scroll with the content (local) and hide the shadow and line at an end; the shadow and line stay
+   fixed to the box (scroll). --edge-bg must be the colour behind the list (the page by default). */
+.scroll-edges {
+  --edge-shadow: color-mix(in oklab, var(--color-text-default) 22%, transparent);
+  background:
+    linear-gradient(var(--edge-bg, var(--color-bg-page)) 30%, transparent) top / 100% 2.5rem no-repeat local,
+    linear-gradient(transparent, var(--edge-bg, var(--color-bg-page)) 70%) bottom / 100% 2.5rem no-repeat local,
+    linear-gradient(var(--color-border-default), var(--color-border-default)) top / 100% 1px no-repeat scroll,
+    linear-gradient(var(--color-border-default), var(--color-border-default)) bottom / 100% 1px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 0, var(--edge-shadow), transparent) top / 100% 0.75rem no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--edge-shadow), transparent) bottom / 100% 0.75rem no-repeat scroll;
+}
