@@ -2202,6 +2202,33 @@ The original plan for this slice, kept for the record:
    goes back to the page you came from ("Back") and to Members only with no previous page (bookmark, new tab). The
    other back links were checked and left: the issue page's link to its project and Edit profile's link to your
    profile are parents, not history. 1 e2e test; it fails with the option removed.
+   **Owner's open list, added 2026-10-04 (in the order we plan to take them, nothing started):**
+   - **Readable URLs (decided, a big slice, ADR 0029 to write):** keys instead of UUIDs: `/projects/WEB`,
+     `/projects/WEB?issue=WEB-1` and the full issue page at `/projects/WEB/issues/WEB-1`. The API resolves a
+     project or issue by key or by ID (organization-scoped), old ID links keep working and are rewritten, case is
+     ignored, a deleted issue's number is never reused. One shared URL-builder function replaces the scattered
+     link strings (cards, board, sprints, sidebar, notifications, search, command palette, profile activity,
+     "Open full page"). e2e tests that match ID patterns need updating. The project key is immutable (ADR 0022).
+   - **DONE 2026-10-04 (see the entry after this list). Reorder issues inside the sprints-page backlog and the active sprint:** today they are
+     ordered by created time (ADR 0008 chose membership only). Recommended: a separate `backlog_rank` column
+     (own migration and backfill, a move endpoint like the board's, sortable drag), which amends ADR 0008. Open
+     questions: same for the active sprint? new issues at the top or the bottom of the backlog? does moving into a
+     sprint keep the position or go to the end?
+   - **Scroll inside long lists (needs a design pass):** the board columns and the sprints page lists grow the whole
+     page. Plan: mock fixed-height-fill and capped-height columns on `/design-system`, probably fill on the board
+     and a cap on the sprints page, with a capped Sprints list; check drag auto-scroll and phone width. Best taken
+     together with the backlog reordering.
+   **Backlog ordering and scrolling lanes DONE 2026-10-04 (owner's list items 2 and 6; ADR 0008 amended).** Both
+   sprints-page lists are drag-sortable (new column `backlog_rank`, migration 0024; new issues go on top; completing a
+   sprint puts its open issues on top in their order; reorders write a quiet `issue.reordered`; the Sprints list is
+   newest first). The board and the sprints page fill the window and their columns scroll inside tinted lanes with a
+   slim always-visible scrollbar; the board's drag logic moved to `shared/dnd/multiList` (BoardCard is now
+   `SortableIssueCard`). **Verified:** 11 new API tests (374 in all, 8 mutations caught, one real bug found: halving a
+   negative rank for "first place"), the migration backfill checked on dev data (313 issues, order kept, no
+   duplicates), 5 new e2e tests (reorder in the backlog and in the sprint with real mouse drags, a drop between two
+   cards across lists, lists scroll inside while the page does not, drag auto-scroll near the bottom edge) plus 1
+   board test for the same-column path of the extracted logic. **Not done:** photos on assignee circles, multi-select
+   drag, the readable URLs (still next on the list).
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

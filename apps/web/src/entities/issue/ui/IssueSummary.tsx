@@ -4,7 +4,7 @@ import type { Issue } from "../model";
 
 /**
  * The issue "face": the key in small muted text above the title, with an
- * optional slot underneath. IssueCard, BoardCard, SprintIssueCard and the
+ * optional slot underneath. IssueCard, SortableIssueCard and the
  * board's drag overlay all render this, so the four cannot drift apart.
  */
 export function IssueSummary({

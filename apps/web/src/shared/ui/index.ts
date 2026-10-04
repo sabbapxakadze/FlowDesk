@@ -17,6 +17,7 @@ export { anchoredTooltipProps } from "./anchoredTooltipProps";
 export { WrappingTick } from "./WrappingTick";
 export { Page, PageHeader } from "./Page";
 export { ColumnHeader } from "./ColumnHeader";
+export { Lane } from "./Lane";
 export { ThemeSwitch } from "./ThemeSwitch";
 export { Time } from "./Time";
 export { PriorityBadge } from "./PriorityBadge";

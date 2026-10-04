@@ -14,7 +14,7 @@ test("dragging a card to another column moves it, and it is still there after a 
   });
   await page.goto(`/projects/${projectId}/board`);
 
-  const column = (name: string) => page.locator("h2", { hasText: name }).locator("..");
+  const column = (name: string) => page.getByRole("group", { name, exact: true });
   await expect(column("Todo")).toContainText("Drag me");
   await expect(column("In progress")).not.toContainText("Drag me");
 
@@ -41,4 +41,34 @@ test("dragging a card to another column moves it, and it is still there after a 
   await page.reload();
   await expect(column("In progress")).toContainText("Drag me");
   await expect(column("Todo")).not.toContainText("Drag me");
+});
+
+test("dragging a card down inside its column reorders it, and the order survives a reload", async ({
+  loggedInPage: page,
+}) => {
+  // Why: the board's drag logic moved to shared/dnd (it is also used by the sprints page). The other test
+  // covers a drop into another column; this one covers the same-column path of the same code, where
+  // dnd-kit's sortable decides the final index.
+  const { projectId } = await createIssueViaApi(page.request, {
+    projectName: "Website",
+    projectKey: "WEB",
+    titles: ["Alpha", "Beta", "Gamma"],
+  });
+  await page.goto(`/projects/${projectId}/board`);
+  const todo = page.getByRole("group", { name: "Todo", exact: true });
+  const order = async () => (await todo.getByRole("listitem").allInnerTexts()).map((t) => t.match(/Alpha|Beta|Gamma/)![0]);
+  await expect.poll(order).toEqual(["Alpha", "Beta", "Gamma"]);
+
+  const alpha = (await todo.getByRole("listitem").filter({ hasText: "Alpha" }).boundingBox())!;
+  const gamma = (await todo.getByRole("listitem").filter({ hasText: "Gamma" }).boundingBox())!;
+  await page.mouse.move(alpha.x + alpha.width / 2, alpha.y + alpha.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(alpha.x + alpha.width / 2 + 10, alpha.y + alpha.height / 2 + 10, { steps: 5 });
+  await page.mouse.move(gamma.x + gamma.width / 2, gamma.y + gamma.height - 4, { steps: 20 });
+  await page.mouse.up();
+
+  await expect.poll(order).toEqual(["Beta", "Gamma", "Alpha"]);
+  await expect(page).toHaveURL(/\/board$/);
+  await page.reload();
+  await expect.poll(order).toEqual(["Beta", "Gamma", "Alpha"]);
 });

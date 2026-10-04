@@ -123,6 +123,7 @@ async function seedAnalyticsDemo(organizationId: string) {
       status,
       reporterId: demoUser.id,
       boardRank: String(n * 1000),
+      backlogRank: String(n * 1000),
       createdAt: new Date(createdAt),
       updatedAt: new Date(t),
     });

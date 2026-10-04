@@ -81,6 +81,10 @@ export const issues = pgTable(
     // bisection between the same two neighbors never loses precision;
     // never parsed into a JS number, only ever round-tripped as a string.
     boardRank: numeric("board_rank").notNull(),
+    // The order of the sprints-page lists (ADR 0008, amended): one rank for whichever list the issue is
+    // in, the backlog (sprint_id IS NULL) or one sprint. Same scheme as board_rank (ADR 0007), but
+    // meaningful only inside its current list. Added nullable, backfilled and set NOT NULL in migration 0024.
+    backlogRank: numeric("backlog_rank").notNull(),
     // Nullable = backlog. onDelete: "set null" (not "cascade") — a sprint
     // isn't a tenant boundary, so removing one returns its issues to the
     // backlog instead of deleting them. See Phase 5 slice 4's plan.
@@ -133,6 +137,15 @@ export const issues = pgTable(
     // Serves both the backlog query (sprint_id IS NULL) and the
     // active-sprint query (sprint_id = ?), both scoped to a project.
     index("issues_project_id_sprint_id_idx").on(table.projectId, table.sprintId),
+    // The sprints-page lists in rank order: WHERE project_id = ? AND sprint_id (IS NULL | = ?) ORDER BY
+    // backlog_rank, id, plus the neighbour lookups of a move. (The plain (project_id, sprint_id) index above is
+    // now a prefix of this one; it is left in place rather than dropped in the same migration.)
+    index("issues_project_id_sprint_id_backlog_rank_id_idx").on(
+      table.projectId,
+      table.sprintId,
+      table.backlogRank,
+      table.id,
+    ),
     // GIN, not the default btree — the only index type that can serve a
     // tsvector @@ tsquery match. See search() in issues.repository.ts.
     index("issues_search_vector_idx").using("gin", table.searchVector),

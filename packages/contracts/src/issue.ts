@@ -142,11 +142,15 @@ export type MoveIssueRequest = z.infer<typeof moveIssueRequestSchema>;
 
 export type UpdateIssueResponse = z.infer<typeof updateIssueResponseSchema>;
 
-// null means "move to the backlog". Response reuses
-// updateIssueResponseSchema's shape, same precedent as moveIssueRequestSchema.
+// null means "move to the backlog". prevIssueId / nextIssueId place the issue inside the target list,
+// with the same meaning as the board's move: nextIssueId = insert before that issue, prevIssueId = the
+// lower bound, neither = at the end of the list. Both must be in the TARGET list (ADR 0008, amended).
+// Response reuses updateIssueResponseSchema's shape, same precedent as moveIssueRequestSchema.
 export const assignIssueSprintRequestSchema = z.object({
   version: z.number().int(),
   sprintId: z.uuid().nullable(),
+  prevIssueId: z.uuid().optional(),
+  nextIssueId: z.uuid().optional(),
 });
 
 export type AssignIssueSprintRequest = z.infer<typeof assignIssueSprintRequestSchema>;

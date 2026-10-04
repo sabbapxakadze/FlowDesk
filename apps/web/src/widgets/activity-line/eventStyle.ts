@@ -60,6 +60,8 @@ export function eventStyle(event: Pick<IssueEvent, "type" | "payload">): EventSt
       return { Icon: Milestone, color: ADDED };
     case "issue.sprint_removed":
       return { Icon: Undo2, color: REMOVED };
+    case "issue.reordered":
+      return { Icon: ArrowUpDown, color: NEUTRAL };
     case "issue.moved":
       return p.fromStatus === p.toStatus
         ? { Icon: ArrowUpDown, color: NEUTRAL }

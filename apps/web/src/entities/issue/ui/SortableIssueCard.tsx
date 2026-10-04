@@ -9,7 +9,9 @@ import { DragHandle } from "./DragHandle";
 import { IssueSummary } from "./IssueSummary";
 
 /**
- * Draggable via useSortable, from anywhere on the card, and still a link.
+ * An issue card that is sortable inside a list (the board's columns, the sprints page's backlog and
+ * active sprint; renamed from BoardCard when the sprints page got the same ordering), draggable from
+ * anywhere on the card via useSortable, and still a link.
  *
  * - The pointer listeners sit on the wrapper <li>, so grabbing the card body
  *   drags it; a plain click never reaches dnd-kit's activation distance and
@@ -24,17 +26,20 @@ import { IssueSummary } from "./IssueSummary";
  *   keeps its own transition-shadow, so the hover shadow still animates
  *   (an inline `transition` on the Card itself would replace it).
  */
-export function BoardCard({
+export function SortableIssueCard({
   issue,
   projectKey,
   assigneeName,
   onOpen,
+  dragLabel = "Drag to reorder or move",
 }: {
   issue: Issue;
   projectKey: string;
   assigneeName?: string | null;
   /** Open the issue in the side panel instead of navigating (modified clicks still navigate). */
   onOpen?: (issueId: string) => void;
+  /** The grip button's accessible name. */
+  dragLabel?: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: issue.id,
@@ -49,7 +54,7 @@ export function BoardCard({
       {...pointerListeners(listeners)}
     >
       <Card hoverable className="flex items-start gap-2 select-none">
-        <DragHandle aria-label="Drag to reorder or move" {...attributes} {...listeners} />
+        <DragHandle aria-label={dragLabel} {...attributes} {...listeners} />
         <Link
           to={`/projects/${issue.projectId}/issues/${issue.id}`}
           draggable={false}

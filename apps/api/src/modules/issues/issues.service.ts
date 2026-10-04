@@ -275,6 +275,8 @@ export async function assignSprint(input: {
   issueId: string;
   expectedVersion: number;
   sprintId: string | null;
+  prevIssueId?: string;
+  nextIssueId?: string;
   actorId: string;
 }) {
   const result = await issuesRepository.assignSprint(input);

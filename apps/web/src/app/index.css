@@ -46,3 +46,57 @@ body {
     scrollbar-color: color-mix(in oklab, var(--color-text-sidebar) 45%, transparent) transparent;
   }
 }
+
+/* Scrolling lists inside pages (board columns, the sprints page lists): the same slim scrollbar as the
+   sidebar's, in neutral colours that follow the theme. The thumb shows while the list is hovered,
+   focused or scrolling (:hover / :focus-within); .scrollbar-list-always keeps it faintly visible and darkens it
+   while the pointer is on the thumb.
+   Same two implementations as above (webkit pseudo-elements for Chrome, Edge and Safari; the
+   standard properties only for browsers without them, i.e. Firefox). */
+.scrollbar-list::-webkit-scrollbar,
+.scrollbar-list-always::-webkit-scrollbar {
+  width: 8px;
+}
+.scrollbar-list::-webkit-scrollbar-track,
+.scrollbar-list-always::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-list::-webkit-scrollbar-button,
+.scrollbar-list-always::-webkit-scrollbar-button {
+  display: none;
+}
+.scrollbar-list::-webkit-scrollbar-thumb,
+.scrollbar-list-always::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+}
+.scrollbar-list-always::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--color-text-muted) 25%, transparent);
+}
+.scrollbar-list:hover::-webkit-scrollbar-thumb,
+.scrollbar-list:focus-within::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--color-text-muted) 55%, transparent);
+}
+/* The always-visible bar darkens only while the pointer is ON the thumb. It used to darken whenever the
+   list was hovered, and Chrome does not repaint a scrollbar's pseudo-element when an ANCESTOR's :hover
+   ends, so the bar stayed dark after the pointer had left (owner's report, 2026-10-04). The thumb's own
+   :hover is tracked by the scrollbar itself and does repaint. */
+.scrollbar-list-always::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--color-text-muted) 55%, transparent);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .scrollbar-list,
+  .scrollbar-list-always {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .scrollbar-list-always {
+    scrollbar-color: color-mix(in oklab, var(--color-text-muted) 25%, transparent) transparent;
+  }
+  .scrollbar-list:hover,
+  .scrollbar-list:focus-within,
+  .scrollbar-list-always:hover {
+    scrollbar-color: color-mix(in oklab, var(--color-text-muted) 55%, transparent) transparent;
+  }
+}

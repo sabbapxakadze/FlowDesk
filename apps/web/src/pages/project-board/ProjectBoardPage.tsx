@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams } from "react-router";
 import {
   DndContext,
@@ -6,19 +6,12 @@ import {
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
-  closestCenter,
-  closestCorners,
-  getFirstCollision,
-  pointerWithin,
-  rectIntersection,
   useDroppable,
   useSensor,
   useSensors,
-  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
-  type UniqueIdentifier,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -29,39 +22,35 @@ import {
 import type { Issue, IssueStatus } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
 import { useMemberNames } from "../../entities/member";
-import { BoardCard, IssueSummary, useBoard, useLiveIssueUpdates } from "../../entities/issue";
+import { SortableIssueCard, IssueSummary, useBoard, useLiveIssueUpdates } from "../../entities/issue";
 import { useMoveIssue } from "../../features/move-issue";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
 import { useAuth } from "../../shared/auth/useAuth";
+import { createMultiList, useMultiListCollision, type ListMap } from "../../shared/dnd/multiList";
 import {
   Card,
-  cn,
   ColumnHeader,
   EmptyState,
   ErrorText,
+  Lane,
   Page,
   PageHeader,
   Skeleton,
+  STATUS_LABELS,
 } from "../../shared/ui";
 
 const COLUMNS: IssueStatus[] = ["todo", "in_progress", "done"];
 
 /** Issue ids per column, in display order. */
-type ColumnMap = Record<IssueStatus, string[]>;
+type ColumnMap = ListMap<IssueStatus>;
 
-function isColumnId(id: UniqueIdentifier): id is IssueStatus {
-  return COLUMNS.includes(id as IssueStatus);
-}
+// The drag model (lists, hovering, collision) is shared with the sprints page: shared/dnd/multiList.
+const { isListId: isColumnId, findContainer, moveAcrossLists: moveAcrossColumns } = createMultiList(COLUMNS);
 
 function buildColumns(issues: Issue[] | undefined): ColumnMap {
   const map: ColumnMap = { todo: [], in_progress: [], done: [] };
   for (const issue of issues ?? []) map[issue.status].push(issue.id);
   return map;
-}
-
-function findContainer(map: ColumnMap, id: UniqueIdentifier): IssueStatus | undefined {
-  if (isColumnId(id)) return id;
-  return COLUMNS.find((status) => map[status].includes(String(id)));
 }
 
 /**
@@ -75,38 +64,6 @@ type DragState = {
   /** The board array at the moment of the drop, to tell when the cache changed. */
   issuesAtDrop: Issue[] | undefined;
 };
-
-/**
- * Moves `activeId` into the column that `over` belongs to, if that is a
- * different column: appended when `over` is the column itself, otherwise next
- * to the hovered card (after it when the dragged card's centre is past that
- * card's middle). Same column: unchanged (the sortable handles reordering).
- */
-function moveAcrossColumns(
-  columns: ColumnMap,
-  activeId: string,
-  over: { id: UniqueIdentifier; rect: { top: number; height: number } },
-  translated: { top: number; height: number } | null,
-): ColumnMap {
-  const from = findContainer(columns, activeId);
-  const to = findContainer(columns, over.id);
-  if (!from || !to || from === to) return columns;
-
-  const targetIds = columns[to];
-  let index = targetIds.length; // over the column itself: append
-  if (!isColumnId(over.id)) {
-    const overIndex = targetIds.indexOf(String(over.id));
-    const pastMiddle =
-      translated !== null && translated.top + translated.height / 2 > over.rect.top + over.rect.height / 2;
-    index = overIndex + (pastMiddle ? 1 : 0);
-  }
-
-  return {
-    ...columns,
-    [from]: columns[from].filter((id) => id !== activeId),
-    [to]: [...targetIds.slice(0, index), activeId, ...targetIds.slice(index)],
-  };
-}
 
 function ColumnSkeleton() {
   return (
@@ -124,38 +81,40 @@ function ColumnSkeleton() {
 /**
  * One droppable for the whole column: header, cards and the empty space below,
  * so a card can be dropped anywhere in the column, not only on the cards list.
- * The grid stretches every column to the tallest one. `highlighted` marks the
- * column that currently holds the dragged card. Each card inside is its own
- * sortable target ("insert here"); the page's collision detection maps the
- * column itself to its nearest card.
+ * The column is a Lane (a panel a shade apart from the page, header fixed, cards
+ * scrolling inside). `highlighted` marks the column that currently holds the
+ * dragged card. Each card inside is its own sortable target ("insert here"); the
+ * page's collision detection maps the column itself to its nearest card.
  */
 function BoardColumn({
   status,
   itemIds,
   highlighted,
+  dragging,
   header,
   children,
 }: {
   status: IssueStatus;
   itemIds: string[];
   highlighted: boolean;
+  /** A card is being dragged: the lane keeps at least the height it had when the drag began. */
+  dragging: boolean;
   header: ReactNode;
   children: ReactNode;
 }) {
   const { setNodeRef } = useDroppable({ id: status });
   return (
-    <div
+    <Lane
       ref={setNodeRef}
-      className={cn(
-        "flex h-full min-h-48 flex-col rounded-[var(--radius-card)] p-2 transition-colors",
-        highlighted && "bg-[var(--color-border-default)]/60",
-      )}
+      label={STATUS_LABELS[status]}
+      highlighted={highlighted}
+      freezeHeight={dragging}
+      header={header}
     >
-      {header}
       <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
         {children}
       </SortableContext>
-    </div>
+    </Lane>
   );
 }
 
@@ -182,15 +141,6 @@ export function ProjectBoardPage() {
 
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
-  const lastOverId = useRef<UniqueIdentifier | null>(null);
-  // The card the pointer was over when the dragged card was inserted into a new
-  // column. Until the pointer moves onto a DIFFERENT card, the dragged card
-  // itself is reported as "over": otherwise dnd-kit's swap logic sees the
-  // pointer still on that card, decides the dragged card wants to swap into its
-  // slot, and moves it back in front of it on drop (the preview said "after",
-  // the drop said "before").
-  const insertedNextToRef = useRef<UniqueIdentifier | null>(null);
-
   const baseColumns = useMemo(() => buildColumns(issues), [issues]);
   const byId = useMemo(() => new Map((issues ?? []).map((issue) => [issue.id, issue])), [issues]);
 
@@ -219,51 +169,12 @@ export function ProjectBoardPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  // Pointer-based, not corner-based: the column under the pointer wins, and
-  // inside a column the nearest card does (dnd-kit's multi-container recipe).
-  const collisionDetection = useCallback<CollisionDetection>(
-    (args) => {
-      // A keyboard drag has no pointer: the keyboard coordinate getter moves the
-      // card's rectangle between droppables, so it is judged by that rectangle's
-      // corners, exactly as dnd-kit's sortable keyboard support expects.
-      if (!args.pointerCoordinates) return closestCorners(args);
-
-      const pointerHits = pointerWithin(args);
-      const hits = pointerHits.length > 0 ? pointerHits : rectIntersection(args);
-      let overId = getFirstCollision(hits, "id");
-
-      if (overId != null) {
-        if (isColumnId(overId)) {
-          const ids = columns[overId];
-          if (ids.length > 0) {
-            const columnId = overId;
-            overId =
-              closestCenter({
-                ...args,
-                droppableContainers: args.droppableContainers.filter(
-                  (container) => container.id !== columnId && ids.includes(String(container.id)),
-                ),
-              })[0]?.id ?? overId;
-          }
-        }
-        if (insertedNextToRef.current != null) {
-          if (overId === insertedNextToRef.current) return [{ id: args.active.id }];
-          insertedNextToRef.current = null;
-        }
-        lastOverId.current = overId;
-        return [{ id: overId }];
-      }
-
-      return lastOverId.current != null ? [{ id: lastOverId.current }] : [];
-    },
-    [columns],
-  );
+  const { collisionDetection, insertedNextToRef, resetGuards } = useMultiListCollision(columns, isColumnId);
 
   function handleDragStart(event: DragStartEvent) {
     setActiveIssue(byId.get(String(event.active.id)) ?? null);
     setDrag({ columns: baseColumns, dragging: true, issuesAtDrop: undefined });
-    lastOverId.current = null;
-    insertedNextToRef.current = null;
+    resetGuards();
   }
 
   function handleDragOver({ active, over }: DragOverEvent) {
@@ -282,8 +193,7 @@ export function ProjectBoardPage() {
 
   function handleDragEnd({ active, over }: DragEndEvent) {
     setActiveIssue(null);
-    lastOverId.current = null;
-    insertedNextToRef.current = null;
+    resetGuards();
 
     const activeId = String(active.id);
     const dragged = byId.get(activeId);
@@ -338,8 +248,7 @@ export function ProjectBoardPage() {
   function handleDragCancel() {
     setActiveIssue(null);
     setDrag(null);
-    lastOverId.current = null;
-    insertedNextToRef.current = null;
+    resetGuards();
   }
 
   if (projectsPending) {
@@ -362,6 +271,9 @@ export function ProjectBoardPage() {
 
   return (
     <Page width="wide">
+      {/* From sm up the board fills the window: the page does not scroll, each column does (the 4rem is the
+          Page's own vertical padding). On a phone the columns stack and the page scrolls as usual. */}
+      <div className="flex flex-col sm:h-[calc(100dvh-4rem)] sm:min-h-[28rem]">
       <PageHeader eyebrow={project.name} title="Board" />
 
       {isError ? (
@@ -375,7 +287,7 @@ export function ProjectBoardPage() {
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
-          <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:min-h-0 sm:flex-1 sm:grid-cols-3 sm:grid-rows-[minmax(0,1fr)]">
             {COLUMNS.map((status) => {
               const ids = columns[status];
               const columnIssues = ids.flatMap((id) => {
@@ -388,6 +300,7 @@ export function ProjectBoardPage() {
                   status={status}
                   itemIds={ids}
                   highlighted={activeContainer === status}
+                  dragging={activeIssue !== null}
                   header={<ColumnHeader status={status} count={issuesPending ? undefined : ids.length} />}
                 >
                   {issuesPending ? (
@@ -395,7 +308,7 @@ export function ProjectBoardPage() {
                   ) : columnIssues.length > 0 ? (
                     <ul className="flex flex-col gap-2">
                       {columnIssues.map((issue) => (
-                        <BoardCard
+                        <SortableIssueCard
                           key={issue.id}
                           issue={issue}
                           projectKey={project.key}
@@ -425,6 +338,7 @@ export function ProjectBoardPage() {
           </DragOverlay>
         </DndContext>
       )}
+      </div>
       <IssuePanel projectId={project.id} />
     </Page>
   );

@@ -43,6 +43,9 @@ export function describeEvent(event: IssueEvent): string {
     }
     case "issue.commented":
       return "commented";
+    // A reorder inside the backlog or the active sprint: an audit row only, never a notification.
+    case "issue.reordered":
+      return "reordered this issue in its list";
     // Edits and deletes are folded into the comment itself on the timeline and
     // never notify, but the audit rows exist, so describe them if one is shown.
     case "issue.comment_edited":

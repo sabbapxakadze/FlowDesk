@@ -1,6 +1,6 @@
-import { and, asc, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { sprints, issues, projects } from "../../db/schema/index.js";
+import { sprints, projects } from "../../db/schema/index.js";
 import * as auditRepository from "../audit/audit.repository.js";
 import { writeIssueEvent } from "../issues/issues.repository.js";
 
@@ -21,7 +21,8 @@ export async function listByProject(organizationId: string, projectId: string) {
     .select()
     .from(sprints)
     .where(and(eq(sprints.organizationId, organizationId), eq(sprints.projectId, projectId)))
-    .orderBy(asc(sprints.createdAt));
+    // Newest first: the sprint you are working in is at the top of the list (owner's choice).
+    .orderBy(desc(sprints.createdAt), desc(sprints.id));
 }
 
 /**
@@ -206,11 +207,32 @@ export async function complete(input: {
       return current ? { status: "conflict", current } : { status: "not_found" };
     }
 
-    const released = await tx
-      .update(issues)
-      .set({ sprintId: null, updatedAt: new Date() })
-      .where(eq(issues.sprintId, input.sprintId))
-      .returning({ id: issues.id });
+    // The released issues land at the TOP of the backlog, in the order they had in the sprint
+    // (ADR 0008, amended): each gets a rank below the smallest backlog rank, spaced by 1000, in one
+    // statement so the backlog's current minimum is read once (not moved by the first update).
+    const releasedResult = await tx.execute<{ id: string }>(sql`
+      WITH bounds AS (
+        SELECT COALESCE(MIN(backlog_rank), 1000) AS floor
+        FROM issues
+        WHERE organization_id = ${input.organizationId} AND project_id = ${input.projectId} AND sprint_id IS NULL
+      ),
+      ranked AS (
+        SELECT id,
+               ROW_NUMBER() OVER (ORDER BY backlog_rank, id) AS rn,
+               COUNT(*) OVER () AS n
+        FROM issues
+        WHERE organization_id = ${input.organizationId} AND project_id = ${input.projectId}
+          AND sprint_id = ${input.sprintId}
+      )
+      UPDATE issues
+      SET sprint_id = NULL,
+          backlog_rank = bounds.floor - (ranked.n - ranked.rn + 1) * 1000,
+          updated_at = now()
+      FROM ranked, bounds
+      WHERE issues.id = ranked.id
+      RETURNING issues.id AS id
+    `);
+    const released = releasedResult.rows;
 
     // One writeIssueEvent call per released issue, not a single bulk
     // insert — each issue has its own distinct set of participants, so

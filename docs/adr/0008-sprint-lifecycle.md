@@ -119,3 +119,38 @@ small rather than growing one-to-one with every new noun in the schema.
   that was never asked for; `createdAt` ordering is correct for
   "membership in one of two lists" and can be revisited if backlog
   prioritization order is ever actually requested.
+
+## Amendment 2026-10-04: the sprints-page lists are ordered, and scroll inside lanes
+
+The owner asked to drag issues up and down inside the Backlog and the active sprint like on the board, so the
+"no within-list ordering" and "plain `useDraggable`" decisions above no longer hold.
+
+- **A second rank, `issues.backlog_rank`** (migration 0024, nullable, backfilled, NOT NULL, like ADR 0007's
+  `board_rank`). One rank per issue for WHICHEVER list it is in: the backlog (`sprint_id IS NULL`) or one sprint.
+  It is meaningless across lists. Backfill kept the creation order. A separate column (not `board_rank`), so
+  prioritising the backlog never moves a card on the board.
+- **Same scheme as ADR 0007** (numeric, bisection between neighbours, rebalance when the gap is exhausted). The
+  four ranking helpers now take a small "rank list" (which rank column, which rows) so the board's columns and
+  the sprints-page lists share them. One difference: a first place in a backlog list is "one step below the first
+  rank", because new issues are put on top with ranks below zero and half of a negative number is HIGHER (found by
+  a test); the board keeps halving, as its ranks are always positive.
+- **Where things go:** a new issue is first in the backlog; the issues of a completed sprint return to the top of
+  the backlog in the order they had; a drag drops at the exact place; assigning without neighbours (the API) appends
+  to the end of the target list.
+- **API:** `PATCH .../issues/:id/sprint` takes optional `prevIssueId` / `nextIssueId` (same meaning as the board's
+  move; both must be in the target list, else 400 `invalid_neighbor`). A move between lists keeps
+  `issue.sprint_assigned` / `issue.sprint_removed` and their notifications. A reorder inside one list writes the new
+  `issue.reordered`, an audit row with NO notification (grooming must not wake everyone who touched the issue).
+  The Sprints list is returned newest first.
+- **Web:** both lists are `@dnd-kit/sortable` lists with a live preview, using the drag logic extracted from the board
+  into `shared/dnd/multiList` (BoardCard became `SortableIssueCard`; SprintIssueCard is gone). Each list is a `Lane`
+  (a panel a shade apart from the page, `--color-bg-lane`, lighter than the cards in dark mode), header fixed, body
+  scrolling inside with a slim always-visible scrollbar. From `sm` up the board and the sprints page fit the window
+  (the page does not scroll; the sprints page keeps a 44rem minimum): a lane is as tall as its content, at least 16rem
+  and at most the space left, and scrolls past that. Lanes are NOT stretched to the tallest one (a 6-card Todo next to
+  a 79-card Done is a short box; owner feedback, same day). While a card is dragged every lane keeps at least the
+  height it had when the drag began (`Lane freezeHeight`), so the drop targets do not move under the pointer. The
+  Sprints list is capped at about 4 rows; on a phone everything stacks at its natural height.
+- **Rejected:** reusing `board_rank` (couples the two orders), a plain priority sort (no manual order), a capped
+  height with the page also scrolling (two scrollbars on top of each other), no container around columns (a short
+  column left a blank page).

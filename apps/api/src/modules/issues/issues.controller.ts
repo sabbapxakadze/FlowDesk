@@ -361,8 +361,14 @@ export async function assignIssueSprint(req: Request, res: Response) {
     issueId: req.ctx.issueId,
     expectedVersion: parsed.data.version,
     sprintId: parsed.data.sprintId,
+    prevIssueId: parsed.data.prevIssueId,
+    nextIssueId: parsed.data.nextIssueId,
     actorId: req.ctx.userId,
   });
+
+  if (result.status === "invalid_neighbor") {
+    throw new AppError("invalid_neighbor", 400, "One of the given neighbor issues isn't in that list.");
+  }
 
   if (result.status === "invalid_sprint") {
     throw new AppError("invalid_sprint", 400, "That sprint doesn't belong to this project.");

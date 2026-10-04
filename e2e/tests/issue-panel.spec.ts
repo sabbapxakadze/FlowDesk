@@ -165,7 +165,7 @@ test("on the board a click opens the panel, but finishing a drag does not", asyn
   // must keep a drop from opening the panel (the bug ADR 0018 fixed for navigation).
   const { projectId } = await setup(page, ["Drag me", "Other"]);
   await page.goto(`/projects/${projectId}/board`);
-  const column = (name: string) => page.locator("h2", { hasText: name }).locator("..");
+  const column = (name: string) => page.getByRole("group", { name, exact: true });
   const card = column("Todo").getByRole("listitem").filter({ hasText: "Drag me" });
   const from = (await card.boundingBox())!;
   const to = (await column("In progress").boundingBox())!;

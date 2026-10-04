@@ -15,6 +15,9 @@
 @theme static {
   --color-bg-page: var(--color-neutral-100);
   --color-bg-surface: var(--color-white);
+  /* A "lane": the panel a board column or a sprints-page list sits in. A shade apart from the page, with the
+     cards (bg-surface) standing out on it. */
+  --color-bg-lane: color-mix(in oklab, var(--color-neutral-200) 55%, var(--color-neutral-100));
 
   --color-text-default: var(--color-neutral-950);
   --color-text-muted: var(--color-neutral-600);
@@ -106,6 +109,9 @@
   :root:not([data-theme="light"]) {
     --color-bg-page: var(--color-neutral-950);
     --color-bg-surface: var(--color-neutral-900);
+    /* Dark: lighter than the cards (they sit in it like wells), because a lane between the page and the cards
+       would be almost the same shade as both. */
+    --color-bg-lane: var(--color-neutral-800);
 
     --color-text-default: var(--color-neutral-100);
     --color-text-muted: var(--color-neutral-400);
@@ -157,6 +163,7 @@
 
   --color-bg-page: var(--color-neutral-950);
   --color-bg-surface: var(--color-neutral-900);
+  --color-bg-lane: var(--color-neutral-800);
 
   --color-text-default: var(--color-neutral-100);
   --color-text-muted: var(--color-neutral-400);

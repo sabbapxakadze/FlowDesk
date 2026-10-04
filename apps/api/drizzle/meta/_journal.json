@@ -169,6 +169,13 @@
       "when": 1791059232151,
       "tag": "0023_perfect_hairball",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791117585007,
+      "tag": "0024_naive_dreaming_celestial",
+      "breakpoints": true
     }
   ]
 }

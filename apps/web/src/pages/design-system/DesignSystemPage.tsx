@@ -13,6 +13,7 @@ import {
   Field,
   IconButton,
   Input,
+  Lane,
   Page,
   PageHeader,
   Select,
@@ -465,6 +466,26 @@ export function DesignSystemPage() {
         note="Every logged-in page renders inside Page (the one main landmark, responsive padding, a reading or wide width) and starts with PageHeader (an eyebrow, the serif title, an optional back link and a meta row). They are used on every screen of the app, so they are described here rather than duplicated as a second h1."
       >
         <div />
+      </Section>
+
+      <Section
+        title="Lane"
+        note="The panel a board column or a sprints-page list sits in: a shade apart from the page (--color-bg-lane; lighter than the cards in dark mode, so they sit in it like wells), a fixed header, and a body that scrolls inside with the slim always-visible scrollbar. Chosen by the owner in the scroll design pass (2026-10-04)."
+      >
+        <div className="grid max-w-3xl grid-cols-2 gap-4" style={{ height: "280px" }}>
+          {["Todo", "In progress"].map((label, column) => (
+            <Lane key={label} header={<ColumnHeader label={label} count={12} />}>
+              <ul className="flex flex-col gap-2">
+                {Array.from({ length: 8 }, (_, i) => (
+                  <Card key={i} as="li">
+                    <p className="text-xs text-[var(--color-text-muted)]">DEMO-{column * 20 + i + 1}</p>
+                    <p className="font-medium">A card in the lane</p>
+                  </Card>
+                ))}
+              </ul>
+            </Lane>
+          ))}
+        </div>
       </Section>
 
       <Section title="Navigation shell preview" note="The sidebar's tokens in use: one inactive item, one active item.">

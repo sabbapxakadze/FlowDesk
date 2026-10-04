@@ -31,3 +31,8 @@ photo, job title, role, email and an optional "View profile" link, all passed in
 line always exists, with a fixed height and no width of its own, so a validation message never moves a
 neighbour or the button; `FieldRowAction` wraps the row's button so it lines up with the inputs' bottoms.
 Stacked forms (login, register) leave it off so they get no permanent gap.
+
+`Lane` (2026-10-04) is the panel a board column or a sprints-page list sits in: a shade apart from the page
+(`--color-bg-lane`, lighter than the cards in dark mode), a fixed header, and a body that scrolls inside with the slim
+always-visible scrollbar (`.scrollbar-list-always` in `app/index.css`; `.scrollbar-list` is the hover-only variant).
+`shared/dnd/multiList` holds the drag logic shared by the board and the sprints page.

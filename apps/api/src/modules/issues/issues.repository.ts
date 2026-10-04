@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import {
   attachments,
@@ -182,6 +182,46 @@ export async function findById(organizationId: string, projectId: string, issueI
 }
 
 /**
+ * An ordered list of issues whose order is a fractional rank (ADR 0007): which rank column it uses and
+ * which rows belong to it. There are two kinds. A BOARD column is (project, status) ordered by
+ * board_rank; a SPRINTS-PAGE list is (project, sprint or the backlog) ordered by backlog_rank (ADR 0008,
+ * amended). Every helper below (append, put on top, rebalance, neighbour lookup, bisection) works on
+ * either kind, so the ranking rules exist once. Always scoped by organization and project.
+ */
+type RankList = {
+  organizationId: string;
+  projectId: string;
+  key: "boardRank" | "backlogRank";
+  rank: typeof issues.boardRank | typeof issues.backlogRank;
+  scope: SQL;
+};
+
+function boardList(organizationId: string, projectId: string, status: string): RankList {
+  return {
+    organizationId,
+    projectId,
+    key: "boardRank",
+    rank: issues.boardRank,
+    scope: eq(issues.status, status as IssueStatus),
+  };
+}
+
+/** sprintId null = the backlog. */
+function sprintList(organizationId: string, projectId: string, sprintId: string | null): RankList {
+  return {
+    organizationId,
+    projectId,
+    key: "backlogRank",
+    rank: issues.backlogRank,
+    scope: sprintId === null ? isNull(issues.sprintId) : eq(issues.sprintId, sprintId),
+  };
+}
+
+function inList(list: RankList): SQL {
+  return and(eq(issues.organizationId, list.organizationId), eq(issues.projectId, list.projectId), list.scope)!;
+}
+
+/**
  * COALESCE(MAX(board_rank), 0) + 1000, scoped like every other tenant
  * read here — a plain SQL expression, not a separate awaited query, so
  * it's computed atomically as part of whatever INSERT/UPDATE embeds it,
@@ -193,10 +233,17 @@ export async function findById(organizationId: string, projectId: string, issueI
  * 0007 — this and every other rank value is a plain SQL expression,
  * never a JS number, to keep numeric's exact-decimal precision intact.
  */
-function nextRankSql(organizationId: string, projectId: string, status: string) {
-  return sql`COALESCE((SELECT MAX(${issues.boardRank}) FROM ${issues} WHERE ${issues.organizationId} = ${organizationId} AND ${issues.projectId} = ${projectId} AND ${issues.status} = ${status}), 0) + 1000`;
+function nextRankSql(list: RankList) {
+  return sql`COALESCE((SELECT MAX(${list.rank}) FROM ${issues} WHERE ${inList(list)}), 0) + 1000`;
 }
 
+/**
+ * The rank that puts a new row FIRST in the list: one step below the smallest rank in it (or 1000 for
+ * an empty list). Ranks below zero are fine for numeric. Same plain-SQL-expression rule as nextRankSql.
+ */
+function topRankSql(list: RankList) {
+  return sql`COALESCE((SELECT MIN(${list.rank}) - 1000 FROM ${issues} WHERE ${inList(list)}), 1000)`;
+}
 /** The exact type db.transaction()'s callback receives — extracted
  * rather than hand-typed, so it can never silently drift from what
  * Drizzle actually infers. */
@@ -224,26 +271,25 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 const MAX_RANK_SCALE = 10;
 
 /**
- * Renumbers every issue in a (project, status) column to fresh integer
+ * Renumbers every issue in a list (board column or sprints-page list) to fresh integer
  * multiples of 1000, oldest-first among ties — same shape as the slice 1
  * backfill migration, just scoped to one column and run inline instead
  * of as a migration. Small column sizes are assumed (this project's
  * real scale); a bulk single-statement renumber would be worth it at a
  * size where N sequential UPDATEs actually matters.
  */
-async function rebalanceColumn(tx: Tx, organizationId: string, projectId: string, status: IssueStatus) {
+async function rebalanceList(tx: Tx, list: RankList) {
   const rows = await tx
     .select({ id: issues.id })
     .from(issues)
-    .where(
-      and(eq(issues.organizationId, organizationId), eq(issues.projectId, projectId), eq(issues.status, status)),
-    )
-    .orderBy(asc(issues.boardRank), asc(issues.id));
+    .where(inList(list))
+    .orderBy(asc(list.rank), asc(issues.id));
 
   for (const [index, row] of rows.entries()) {
+    const rank = String((index + 1) * 1000);
     await tx
       .update(issues)
-      .set({ boardRank: String((index + 1) * 1000) })
+      .set(list.key === "boardRank" ? { boardRank: rank } : { backlogRank: rank })
       .where(eq(issues.id, row.id));
   }
 }
@@ -255,25 +301,12 @@ async function rebalanceColumn(tx: Tx, organizationId: string, projectId: string
  * needs (defense in depth, same reasoning as every other tenant-scoped
  * read here).
  */
-async function fetchRankInColumn(
-  tx: Tx,
-  organizationId: string,
-  projectId: string,
-  status: IssueStatus,
-  issueId: string,
-): Promise<string | null> {
+async function fetchRankInList(tx: Tx, list: RankList, issueId: string): Promise<string | null> {
   const [row] = await tx
-    .select({ boardRank: issues.boardRank })
+    .select({ rank: list.rank })
     .from(issues)
-    .where(
-      and(
-        eq(issues.id, issueId),
-        eq(issues.organizationId, organizationId),
-        eq(issues.projectId, projectId),
-        eq(issues.status, status),
-      ),
-    );
-  return row?.boardRank ?? null;
+    .where(and(eq(issues.id, issueId), inList(list)));
+  return row?.rank ?? null;
 }
 
 /**
@@ -294,27 +327,31 @@ async function fetchRankInColumn(
  * re-fetched by id, since a rebalance changes every rank in the column
  * and the values read before it would be stale. Returns null if either
  * neighbor isn't actually in this (project, status) column (see
- * fetchRankInColumn).
+ * fetchRankInList).
  */
 async function computeBisectedRank(
   tx: Tx,
-  organizationId: string,
-  projectId: string,
-  status: IssueStatus,
+  list: RankList,
   prevIssueId: string | null,
   nextIssueId: string,
 ): Promise<string | null> {
   const fetchBoth = async () => {
-    const nextRank = await fetchRankInColumn(tx, organizationId, projectId, status, nextIssueId);
+    const nextRank = await fetchRankInList(tx, list, nextIssueId);
     if (nextRank === null) return null;
     if (prevIssueId === null) return { prevRank: null, nextRank };
-    const prevRank = await fetchRankInColumn(tx, organizationId, projectId, status, prevIssueId);
+    const prevRank = await fetchRankInList(tx, list, prevIssueId);
     if (prevRank === null) return null;
     return { prevRank, nextRank };
   };
 
+  // First place in the list (no previous neighbour). A board column's ranks are always positive, so half
+  // of the first rank is a free place before it. The sprints-page lists put new issues on top with ranks
+  // that go below zero (topRankSql), where half of a negative rank is HIGHER than it, so there the first
+  // place is simply one step below the first rank (which also can never run out of room).
+  const beforeFirst = (nextRank: string) =>
+    list.key === "backlogRank" ? sql`${nextRank}::numeric - 1000` : sql`${nextRank}::numeric / 2`;
   const midpointOf = (prevRank: string | null, nextRank: string) =>
-    sql`trim_scale(${prevRank ? sql`(${prevRank}::numeric + ${nextRank}::numeric) / 2` : sql`${nextRank}::numeric / 2`})`;
+    sql`trim_scale(${prevRank ? sql`(${prevRank}::numeric + ${nextRank}::numeric) / 2` : beforeFirst(nextRank)})`;
 
   const ranks = await fetchBoth();
   if (!ranks) return null;
@@ -334,7 +371,7 @@ async function computeBisectedRank(
   // now-current (freshly evenly-spaced) neighbor ranks. Both neighbors
   // are guaranteed to still be in this column post-rebalance (it only
   // renumbers, never reorders or removes rows) — safe to re-fetch by id.
-  await rebalanceColumn(tx, organizationId, projectId, status);
+  await rebalanceList(tx, list);
   const freshRanks = await fetchBoth();
   if (!freshRanks) return null;
   const freshMidpoint = midpointOf(freshRanks.prevRank, freshRanks.nextRank);
@@ -414,7 +451,9 @@ export async function create(input: {
         // New issues always start in "todo" (the column default) —
         // append to the end of that column, same helper update() uses
         // when a status edit moves an issue into a different column.
-        boardRank: nextRankSql(input.organizationId, input.projectId, "todo"),
+        boardRank: nextRankSql(boardList(input.organizationId, input.projectId, "todo")),
+        // A new issue lands at the TOP of the backlog (owner decision, ADR 0008 amended).
+        backlogRank: topRankSql(sprintList(input.organizationId, input.projectId, null)),
       })
       .returning();
     if (!issue) throw new Error("Failed to create issue");
@@ -513,7 +552,7 @@ export async function update(input: {
     // A status that really changes moves the issue to the end of its new
     // column (ADR 0007 / the Phase 5 slice 1 plan's "Decisions").
     const boardRankChange = changed.status
-      ? { boardRank: nextRankSql(input.organizationId, input.projectId, changed.status) }
+      ? { boardRank: nextRankSql(boardList(input.organizationId, input.projectId, changed.status)) }
       : {};
 
     const [updated] = await tx
@@ -603,16 +642,14 @@ export async function move(input: {
     if (input.nextIssueId) {
       const bisected = await computeBisectedRank(
         tx,
-        input.organizationId,
-        input.projectId,
-        input.status,
+        boardList(input.organizationId, input.projectId, input.status),
         input.prevIssueId ?? null,
         input.nextIssueId,
       );
       if (bisected === null) return { status: "invalid_neighbor" };
       newRank = bisected;
     } else {
-      newRank = nextRankSql(input.organizationId, input.projectId, input.status);
+      newRank = nextRankSql(boardList(input.organizationId, input.projectId, input.status));
     }
 
     const [updated] = await tx
@@ -910,10 +947,9 @@ export async function listForBoard(organizationId: string, projectId: string) {
 
 /**
  * sprintId: null means the backlog (sprint_id IS NULL); a real id means
- * that sprint's issues. Ordered by createdAt, not a fractional rank —
- * see the Phase 5 slice 4 plan's "Decisions": this slice deliberately
- * doesn't reuse ADR 0007's ranking machinery, since backlog/sprint
- * membership was asked for, not backlog prioritization order.
+ * that sprint's issues. Ordered by backlog_rank (then id): the order the
+ * owner dragged them into (ADR 0008, amended; the ranking scheme is ADR
+ * 0007's). Served by issues_project_id_sprint_id_backlog_rank_id_idx.
  */
 export async function listByProjectAndSprint(organizationId: string, projectId: string, sprintId: string | null) {
   return db
@@ -926,7 +962,7 @@ export async function listByProjectAndSprint(organizationId: string, projectId: 
         sprintId === null ? isNull(issues.sprintId) : eq(issues.sprintId, sprintId),
       ),
     )
-    .orderBy(asc(issues.createdAt), asc(issues.id));
+    .orderBy(asc(issues.backlogRank), asc(issues.id));
 }
 
 /**
@@ -956,12 +992,24 @@ export async function getBacklog(organizationId: string, projectId: string) {
 
 /**
  * Assigning an issue to a sprint (or back to the backlog, sprintId
- * null) is an issue mutation, not a sprint one — same shape as move():
- * conditional UPDATE on the issue's own version. sprintId is validated
- * against this project/org before the update (defense in depth against
- * a foreign/cross-tenant sprint id, same reasoning as move()'s neighbor
- * validation) rather than trusting the foreign key alone to reject it
- * with a less useful error.
+ * null), at a chosen position in that list, is an issue mutation, not a
+ * sprint one: same shape as move(), a conditional UPDATE on the issue's
+ * own version. sprintId is validated against this project/org before the
+ * update (defense in depth against a foreign/cross-tenant sprint id, same
+ * reasoning as move()'s neighbor validation) rather than trusting the
+ * foreign key alone to reject it with a less useful error.
+ *
+ * Position (ADR 0008, amended): nextIssueId = insert before that issue,
+ * prevIssueId = the lower bound (omitted: the first place), neither = the
+ * end of the target list. Both neighbours must be in the TARGET list and
+ * neither may be the issue itself, otherwise "invalid_neighbor". The rank
+ * is computed with the same bisection and rebalancing as the board's.
+ *
+ * Events: moving between lists keeps the notifying
+ * issue.sprint_assigned / issue.sprint_removed. Reordering inside the
+ * SAME list writes issue.reordered with no notifications (an audit row
+ * only: grooming a backlog must not wake everyone who ever touched the
+ * issue), like comment edits.
  */
 export async function assignSprint(input: {
   organizationId: string;
@@ -969,14 +1017,25 @@ export async function assignSprint(input: {
   issueId: string;
   expectedVersion: number;
   sprintId: string | null;
+  prevIssueId?: string;
+  nextIssueId?: string;
   actorId: string;
 }): Promise<
   | { status: "assigned"; issue: IssueRow; notifiedUserIds: string[] }
   | { status: "conflict"; current: IssueRow }
   | { status: "not_found" }
   | { status: "invalid_sprint" }
+  | { status: "invalid_neighbor" }
 > {
   return db.transaction(async (tx) => {
+    const issueScope = and(
+      eq(issues.id, input.issueId),
+      eq(issues.organizationId, input.organizationId),
+      eq(issues.projectId, input.projectId),
+    );
+    const [currentRow] = await tx.select().from(issues).where(issueScope);
+    if (!currentRow) return { status: "not_found" };
+
     let sprintName: string | null = null;
     if (input.sprintId) {
       const [sprint] = await tx
@@ -993,39 +1052,43 @@ export async function assignSprint(input: {
       sprintName = sprint.name;
     }
 
+    const list = sprintList(input.organizationId, input.projectId, input.sprintId);
+    let newRank: string | ReturnType<typeof nextRankSql>;
+    if (input.nextIssueId) {
+      if (input.nextIssueId === input.issueId || input.prevIssueId === input.issueId) {
+        return { status: "invalid_neighbor" };
+      }
+      const bisected = await computeBisectedRank(tx, list, input.prevIssueId ?? null, input.nextIssueId);
+      if (bisected === null) return { status: "invalid_neighbor" };
+      newRank = bisected;
+    } else {
+      newRank = nextRankSql(list);
+    }
+
     const [updated] = await tx
       .update(issues)
-      .set({ sprintId: input.sprintId, version: sql`${issues.version} + 1`, updatedAt: new Date() })
-      .where(
-        and(
-          eq(issues.id, input.issueId),
-          eq(issues.organizationId, input.organizationId),
-          eq(issues.projectId, input.projectId),
-          eq(issues.version, input.expectedVersion),
-        ),
-      )
+      .set({ sprintId: input.sprintId, backlogRank: newRank, version: sql`${issues.version} + 1`, updatedAt: new Date() })
+      .where(and(issueScope, eq(issues.version, input.expectedVersion)))
       .returning();
 
     if (!updated) {
-      const [current] = await tx
-        .select()
-        .from(issues)
-        .where(
-          and(
-            eq(issues.id, input.issueId),
-            eq(issues.organizationId, input.organizationId),
-            eq(issues.projectId, input.projectId),
-          ),
-        );
+      const [current] = await tx.select().from(issues).where(issueScope);
       return current ? { status: "conflict", current } : { status: "not_found" };
     }
 
-    const notifiedUserIds = await writeIssueEvent(tx, {
-      issueId: updated.id,
-      actorId: input.actorId,
-      type: input.sprintId ? "issue.sprint_assigned" : "issue.sprint_removed",
-      payload: input.sprintId ? { sprintId: input.sprintId, sprintName } : { sprintId: null },
-    });
+    const sameList = currentRow.sprintId === input.sprintId;
+    const notifiedUserIds = sameList
+      ? await writeIssueEvent(
+          tx,
+          { issueId: updated.id, actorId: input.actorId, type: "issue.reordered", payload: { sprintId: input.sprintId } },
+          { notify: false },
+        )
+      : await writeIssueEvent(tx, {
+          issueId: updated.id,
+          actorId: input.actorId,
+          type: input.sprintId ? "issue.sprint_assigned" : "issue.sprint_removed",
+          payload: input.sprintId ? { sprintId: input.sprintId, sprintName } : { sprintId: null },
+        });
 
     return { status: "assigned", issue: updated, notifiedUserIds };
   });
