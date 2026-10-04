@@ -143,7 +143,7 @@ export function CommentCard({
 
       <div className="px-4 py-3">
         {isEditing ? (
-          <div className="flex flex-col gap-2">
+          <div className="motion-rise-in flex flex-col gap-2">
             <Textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -196,7 +196,7 @@ export function CommentCard({
           <div
             role="alertdialog"
             aria-label="Delete comment"
-            className="mt-3 flex flex-col gap-2 border-t border-[var(--color-border-default)] pt-3"
+            className="motion-rise-in mt-3 flex flex-col gap-2 border-t border-[var(--color-border-default)] pt-3"
           >
             <p className="text-sm">
               Delete this comment? Its text is removed from the timeline. Any files stay

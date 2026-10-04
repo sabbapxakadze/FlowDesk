@@ -48,7 +48,7 @@ export function CreateIssueForm({
       </Field>
 
       <FieldRowAction>
-        <Button type="submit" disabled={mutation.isPending}>
+        <Button type="submit" pending={mutation.isPending}>
           {mutation.isPending ? "Adding…" : "Add issue"}
         </Button>
       </FieldRowAction>

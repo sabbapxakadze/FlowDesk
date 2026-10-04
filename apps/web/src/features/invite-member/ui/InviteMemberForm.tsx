@@ -107,7 +107,7 @@ export function InviteMemberForm({ organizationId }: { organizationId: string })
         </Select>
       </Field>
 
-      <Button type="submit" className="mt-6" disabled={mutation.isPending}>
+      <Button type="submit" className="mt-6" pending={mutation.isPending}>
         {mutation.isPending ? "Inviting…" : "Send invitation"}
       </Button>
 

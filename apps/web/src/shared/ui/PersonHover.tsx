@@ -16,7 +16,8 @@ const TRIGGER_CLASSES =
  * it opens after a 300 ms pause (a "hover intent" delay) with a 150 ms fade, and
  * closes after 100 ms, which also lets the cursor travel from the name onto the
  * card without it vanishing (the card's wrapper touches the name, no gap).
- * Reduced-motion users get no fade.
+ * Reduced-motion users get no fade (duration 0), but keep the hover-intent delay: that delay is not motion, and
+ * removing it (as `transition-none` did) made the card open the instant the cursor crossed a name.
  *
  * The group is NAMED ("person"): a plain `group` would also react to any ancestor
  * that is a `group` (the comment card is one, for its Edit/Delete reveal), and the
@@ -73,7 +74,7 @@ export function PersonHover({
       <span
         id={cardId}
         role="tooltip"
-        className={`invisible absolute ${align === "right" ? "right-0" : "left-0"} top-full z-20 w-64 max-w-[calc(100vw-2rem)] pt-1 text-left text-xs font-normal opacity-0 transition-[opacity,visibility] delay-100 duration-150 group-focus-within/person:visible group-focus-within/person:opacity-100 group-focus-within/person:delay-300 group-hover/person:visible group-hover/person:opacity-100 group-hover/person:delay-300 motion-reduce:transition-none`}
+        className={`invisible absolute ${align === "right" ? "right-0" : "left-0"} top-full z-20 w-64 max-w-[calc(100vw-2rem)] pt-1 text-left text-xs font-normal opacity-0 transition-[opacity,visibility] delay-100 duration-150 group-focus-within/person:visible group-focus-within/person:opacity-100 group-focus-within/person:delay-300 group-hover/person:visible group-hover/person:opacity-100 group-hover/person:delay-300 motion-reduce:duration-0`}
       >
         <span className="block rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-3 text-[var(--color-text-default)] shadow-lg">
           {/* The picture and the name in the card are a link too (the owner's rule: every picture

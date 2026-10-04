@@ -76,7 +76,7 @@ export function RegisterForm() {
 
       {showGeneralError && <ErrorText>{mutation.error?.message}</ErrorText>}
 
-      <Button type="submit" fullWidth disabled={mutation.isPending}>
+      <Button type="submit" fullWidth pending={mutation.isPending}>
         {mutation.isPending ? "Creating account…" : "Create account"}
       </Button>
     </form>

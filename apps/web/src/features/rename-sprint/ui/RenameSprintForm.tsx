@@ -60,14 +60,14 @@ export function RenameSprintForm({
       onSubmit={handleSubmit((data) =>
         data.name.trim() === sprint.name ? onDone() : mutation.mutate(data),
       )}
-      className="flex flex-wrap items-center gap-2"
+      className="motion-rise-in flex flex-wrap items-center gap-2"
     >
       <Input
         {...register("name", { required: true })}
         aria-label="Sprint name"
         className="w-56"
       />
-      <Button type="submit" size="sm" variant="success" disabled={mutation.isPending}>
+      <Button type="submit" size="sm" variant="success" pending={mutation.isPending}>
         {mutation.isPending ? "Saving…" : "Save"}
       </Button>
       <Button type="button" size="sm" variant="secondary" onClick={onDone}>

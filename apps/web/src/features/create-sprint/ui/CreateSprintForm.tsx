@@ -51,7 +51,7 @@ export function CreateSprintForm({ organizationId, projectId }: { organizationId
       </Field>
 
       <FieldRowAction>
-        <Button type="submit" disabled={mutation.isPending}>
+        <Button type="submit" pending={mutation.isPending}>
           {mutation.isPending ? "Creating…" : "Create sprint"}
         </Button>
       </FieldRowAction>

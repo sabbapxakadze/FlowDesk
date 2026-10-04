@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Menu, X } from "lucide-react";
-import { Outlet } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import { useAuth } from "../shared/auth/useAuth";
 import { IconButton } from "../shared/ui";
 import { NotificationBell } from "../widgets/notification-bell";
@@ -8,6 +8,21 @@ import { Sidebar } from "../widgets/sidebar";
 import { useLiveOrganizationUpdates } from "./useLiveOrganizationUpdates";
 
 const DESKTOP_QUERY = "(min-width: 768px)";
+
+/**
+ * Where the current page renders. Keyed by the PATH only, so moving to another page replays the short
+ * fade-and-rise (motion-rise-in), while a filter, a sort or the side panel (`?issue=`) changes only the
+ * query string and must not replay it. The key also makes React mount the new page fresh, instead of
+ * reusing the old page's state when two paths use the same page component (project A's board, then B's).
+ */
+function PageOutlet() {
+  const { pathname } = useLocation();
+  return (
+    <div key={pathname} className="motion-rise-in min-w-0">
+      <Outlet />
+    </div>
+  );
+}
 
 // One layout is rendered at a time (not both, hidden with CSS): the bell
 // subscribes to live notifications on mount, so mounting two would double
@@ -55,9 +70,7 @@ export function AppShell() {
         <div className="sticky top-0 z-30 h-screen">
           <Sidebar actions={<NotificationBell panelAlign="left" />} />
         </div>
-        <div className="min-w-0">
-          <Outlet />
-        </div>
+        <PageOutlet />
       </div>
     );
   }
@@ -110,9 +123,7 @@ export function AppShell() {
         </div>
       )}
 
-      <div className="min-w-0">
-        <Outlet />
-      </div>
+      <PageOutlet />
     </div>
   );
 }

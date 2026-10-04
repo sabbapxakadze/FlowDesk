@@ -39,6 +39,10 @@ export default defineConfig({
     baseURL: `http://localhost:${WEB_PORT}`,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    // The app animates (page changes, the side panel, rows, dialogs). Ordinary tests run with the system
+    // setting "reduce motion", which turns every animation off and removes every exit delay, so they do not
+    // wait for or race animations. e2e/tests/motion.spec.ts opts back in to test the animations themselves.
+    reducedMotion: "reduce",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [

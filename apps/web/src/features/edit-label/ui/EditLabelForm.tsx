@@ -52,7 +52,7 @@ export function EditLabelForm({
         if (nothingChanged) return onDone();
         mutation.mutate(data);
       })}
-      className="flex flex-wrap items-center gap-2"
+      className="motion-rise-in flex flex-wrap items-center gap-2"
     >
       <input
         type="color"
@@ -65,7 +65,7 @@ export function EditLabelForm({
         aria-label="Label name"
         className="w-56"
       />
-      <Button type="submit" size="sm" disabled={mutation.isPending} variant="success">
+      <Button type="submit" size="sm" pending={mutation.isPending} variant="success">
         {mutation.isPending ? "Saving…" : "Save"}
       </Button>
       <Button type="button" size="sm" variant="secondary" onClick={onDone}>

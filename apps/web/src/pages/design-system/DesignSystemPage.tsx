@@ -488,6 +488,21 @@ export function DesignSystemPage() {
         </div>
       </Section>
 
+      <Section
+        title="Motion"
+        note="How the app moves (owner's design pass, 2026-10-04). Durations 120 to 220ms with one easing (--motion-duration-fast / -base / -slow, --motion-ease-out in app/index.css). Only opacity and transform change, except a row expanding or collapsing, which animates a grid row. Nothing ever delays an action: closing, saving and navigating happen at once and the animation is cosmetic. Everything is off when the system asks for reduced motion."
+      >
+        <ul className="max-w-3xl list-disc pl-5 text-sm">
+          <li>Page change: the new page fades in and rises 6px (motion-rise-in), keyed by path only.</li>
+          <li>Loading: rows rise in one after another, 40ms apart for the first 8 (staggerStyle).</li>
+          <li>Issue side panel: slides in from the right and fades, the page behind dims slightly; it slides out on close.</li>
+          <li>Dialogs: fade and grow from 96%, the backdrop fades; dropdowns fade and drop 4px.</li>
+          <li>Rows: a new row expands open with an accent flash, a removed row collapses.</li>
+          <li>Buttons: sink slightly while pressed; a running request shows a spinner, a saved one a tick.</li>
+          <li>Edit or confirm opening in place: fade and rise. Light/dark: colours cross-fade over about 200ms.</li>
+        </ul>
+      </Section>
+
       <Section title="Navigation shell preview" note="The sidebar's tokens in use: one inactive item, one active item.">
         <div className="w-56 rounded-[var(--radius-card)] border border-[var(--color-border-sidebar)] bg-[var(--color-bg-sidebar)] p-3">
           <p className="mb-2 px-2.5 font-display text-2xl text-[var(--color-text-sidebar-active)]">FlowDesk</p>

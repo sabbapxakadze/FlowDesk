@@ -116,7 +116,7 @@ export function CommentForm({
         </ul>
       )}
       <div className="flex items-center gap-2">
-        <Button type="submit" size="sm" disabled={mutation.isPending}>
+        <Button type="submit" size="sm" pending={mutation.isPending}>
           {mutation.isPending ? "Posting…" : "Comment"}
         </Button>
         <Button

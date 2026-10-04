@@ -100,3 +100,61 @@ body {
     scrollbar-color: color-mix(in oklab, var(--color-text-muted) 55%, transparent) transparent;
   }
 }
+
+/* ---- Motion (owner's design pass, 2026-10-04; see the Motion section of /design-system).
+   Durations and the easing are variables, so one place sets how fast the whole app moves.
+   Only opacity and transform are animated (cheap, no layout), apart from the row expand/collapse, which
+   animates a grid row (grid-template-rows 0fr <-> 1fr). Every class is switched off for people who asked their
+   system for reduced motion. */
+:root {
+  --motion-duration-fast: 120ms;
+  --motion-duration-base: 160ms;
+  --motion-duration-slow: 220ms;
+  --motion-ease-out: cubic-bezier(0.2, 0, 0, 1);
+}
+@keyframes motion-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes motion-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes motion-rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes motion-drop-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes motion-pop-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes motion-slide-in-right { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes motion-slide-out-right { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px); } }
+@keyframes motion-expand { from { grid-template-rows: 0fr; opacity: 0; } to { grid-template-rows: 1fr; opacity: 1; } }
+@keyframes motion-collapse { from { grid-template-rows: 1fr; opacity: 1; } to { grid-template-rows: 0fr; opacity: 0; } }
+@keyframes motion-flash {
+  from {
+    background-color: color-mix(in oklab, var(--color-accent-600) 18%, var(--color-bg-surface));
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-accent-600) 40%, transparent);
+  }
+  to {
+    background-color: var(--color-bg-surface);
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+.motion-fade-in { animation: motion-fade-in calc(var(--motion-duration-base)) var(--motion-ease-out) both; }
+.motion-fade-out { animation: motion-fade-out calc(var(--motion-duration-base)) var(--motion-ease-out) both; }
+.motion-rise-in { animation: motion-rise-in calc(var(--motion-duration-base)) var(--motion-ease-out) both; }
+.motion-drop-in { animation: motion-drop-in calc(var(--motion-duration-fast)) var(--motion-ease-out) both; }
+.motion-pop-in { animation: motion-pop-in calc(var(--motion-duration-base)) var(--motion-ease-out) both; }
+.motion-slide-in-right { animation: motion-slide-in-right calc(var(--motion-duration-slow)) var(--motion-ease-out) both; }
+.motion-slide-out-right { animation: motion-slide-out-right calc(var(--motion-duration-slow)) var(--motion-ease-out) both; }
+.motion-expand { animation: motion-expand calc(var(--motion-duration-slow)) var(--motion-ease-out) both; }
+.motion-collapse { animation: motion-collapse calc(var(--motion-duration-slow)) var(--motion-ease-out) both; }
+.motion-flash { animation: motion-flash calc(900ms) var(--motion-ease-out) both; }
+.motion-press { transition: transform calc(80ms) var(--motion-ease-out); }
+.motion-press:active:not(:disabled) { transform: scale(0.98); }
+/* A quick cross-fade of colours while the theme flips (the class is on <html> for a moment). */
+.motion-theme-fade,
+.motion-theme-fade *,
+.motion-theme-fade *::before,
+.motion-theme-fade *::after {
+  transition:
+    background-color calc(200ms) ease,
+    color calc(200ms) ease,
+    border-color calc(200ms) ease !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .motion-fade-in, .motion-fade-out, .motion-rise-in, .motion-drop-in, .motion-pop-in, .motion-slide-in-right,
+  .motion-slide-out-right, .motion-expand, .motion-collapse, .motion-flash { animation: none !important; }
+  .motion-press, .motion-press:active:not(:disabled), .motion-theme-fade, .motion-theme-fade * { transition: none !important; transform: none !important; }
+}

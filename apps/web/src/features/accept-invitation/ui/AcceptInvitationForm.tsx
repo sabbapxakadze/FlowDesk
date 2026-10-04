@@ -115,7 +115,7 @@ export function AcceptInvitationForm({ token }: { token: string }) {
 
         {showGeneralError && <ErrorText>{mutation.error?.message}</ErrorText>}
 
-        <Button type="submit" fullWidth disabled={mutation.isPending}>
+        <Button type="submit" fullWidth pending={mutation.isPending}>
           {mutation.isPending ? "Creating account…" : "Join"}
         </Button>
       </form>

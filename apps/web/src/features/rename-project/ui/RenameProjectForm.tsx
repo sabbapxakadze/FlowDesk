@@ -7,7 +7,7 @@ import {
   type UpdateProjectRequest,
 } from "@flowdesk/contracts";
 import { projectKeys } from "../../../entities/project";
-import { Button, ErrorText, Field, Input } from "../../../shared/ui";
+import { Button, ErrorText, Field, Input, useSuccessFlash } from "../../../shared/ui";
 import { updateProject } from "../api/updateProject";
 
 /**
@@ -43,6 +43,7 @@ export function RenameProjectForm({
       reset({ name: updated.name });
     },
   });
+  const saved = useSuccessFlash(mutation.isSuccess);
 
   return (
     <form
@@ -53,7 +54,7 @@ export function RenameProjectForm({
         <Input {...register("name")} className="w-full max-w-md" />
       </Field>
       <div className="flex items-center gap-3">
-        <Button type="submit" size="sm" variant="success" disabled={mutation.isPending || !isDirty}>
+        <Button type="submit" size="sm" variant="success" pending={mutation.isPending} done={saved} disabled={!isDirty}>
           {mutation.isPending ? "Saving…" : "Save"}
         </Button>
         {mutation.isSuccess && !isDirty && (

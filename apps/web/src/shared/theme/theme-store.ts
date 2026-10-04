@@ -13,6 +13,8 @@
  * first paint (React mounts after it, which would flash the wrong colours). It
  * reads the same key, so if KEY changes, change it there too.
  */
+import { prefersReducedMotion } from "../lib/motion";
+
 export type Theme = "system" | "light" | "dark";
 
 const KEY = "flowdesk-theme";
@@ -57,8 +59,21 @@ export function getTheme(): Theme {
   return current;
 }
 
+/**
+ * The colours blend for a moment (the `motion-theme-fade` class on <html>, app/index.css) instead of the
+ * whole page flipping in one frame. Only for a change the person makes here; the first paint and another
+ * tab's change are applied as they are. Skipped under "reduce motion".
+ */
+function fadeThemeChange(): void {
+  if (prefersReducedMotion()) return;
+  const root = document.documentElement;
+  root.classList.add("motion-theme-fade");
+  window.setTimeout(() => root.classList.remove("motion-theme-fade"), 260);
+}
+
 export function setTheme(theme: Theme): void {
   current = theme;
+  fadeThemeChange();
   applyToDocument(theme);
   try {
     if (theme === "system") {

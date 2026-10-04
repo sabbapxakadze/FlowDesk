@@ -106,7 +106,7 @@ export function EditIssueForm({
   return (
     <form
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
-      className="mb-2 flex flex-col gap-2 rounded-[var(--radius-card)] border border-[var(--color-border-input)] px-4 py-3"
+      className="motion-rise-in mb-2 flex flex-col gap-2 rounded-[var(--radius-card)] border border-[var(--color-border-input)] px-4 py-3"
     >
       <Field label="Title">
         <Input {...register("title", { required: true })} />
@@ -155,7 +155,7 @@ export function EditIssueForm({
       </div>
 
       <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={mutation.isPending} variant="success">
+        <Button type="submit" size="sm" pending={mutation.isPending} variant="success">
           {mutation.isPending ? "Saving…" : "Save"}
         </Button>
         <Button type="button" variant="secondary" size="sm" onClick={onDone}>

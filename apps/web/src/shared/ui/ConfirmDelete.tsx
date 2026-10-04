@@ -36,7 +36,7 @@ export function ConfirmDelete({
   }
 
   return (
-    <div role="alertdialog" aria-label={label} className="flex flex-col gap-2">
+    <div role="alertdialog" aria-label={label} className="motion-rise-in flex flex-col gap-2">
       <p className="text-sm text-[var(--color-text-default)]">{message}</p>
       <div className="flex gap-2">
         <Button

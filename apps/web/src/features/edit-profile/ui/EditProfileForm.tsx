@@ -9,7 +9,7 @@ import {
   type UpdateProfileRequest,
 } from "@flowdesk/contracts";
 import { ApiError } from "../../../shared/api/client";
-import { Button, ErrorText, Field, Input, Textarea } from "../../../shared/ui";
+import { Button, ErrorText, Field, Input, Textarea, useSuccessFlash } from "../../../shared/ui";
 import { useUpdateProfile } from "../api/profileMutations";
 import { AvatarEditor } from "./AvatarEditor";
 
@@ -34,6 +34,7 @@ export function EditProfileForm({ profile, onSaved }: { profile: Profile; onSave
     defaultValues: { name: profile.name, jobTitle: profile.jobTitle ?? "", bio: profile.bio ?? "" },
   });
   const bio = useWatch({ control, name: "bio" }) ?? "";
+  const saved = useSuccessFlash(mutation.isSuccess);
 
   const onSubmit = handleSubmit((data) =>
     mutation.mutate(data, {
@@ -86,7 +87,7 @@ export function EditProfileForm({ profile, onSaved }: { profile: Profile; onSave
           </p>
         )}
         <div className="flex gap-2">
-          <Button type="submit" variant="success" size="sm" disabled={mutation.isPending || !isDirty}>
+          <Button type="submit" variant="success" size="sm" pending={mutation.isPending} done={saved} disabled={!isDirty}>
             {mutation.isPending ? "Saving…" : "Save"}
           </Button>
         </div>

@@ -47,7 +47,7 @@ export function CreateProjectForm({ organizationId }: { organizationId: string }
       </Field>
 
       <FieldRowAction>
-        <Button type="submit" disabled={mutation.isPending}>
+        <Button type="submit" pending={mutation.isPending}>
           {mutation.isPending ? "Adding…" : "Add project"}
         </Button>
       </FieldRowAction>

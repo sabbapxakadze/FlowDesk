@@ -44,7 +44,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
       {mutation.isError && <ErrorText>{mutation.error.message}</ErrorText>}
 
-      <Button type="submit" fullWidth disabled={mutation.isPending}>
+      <Button type="submit" fullWidth pending={mutation.isPending}>
         {mutation.isPending ? "Resetting…" : "Reset password"}
       </Button>
     </form>
