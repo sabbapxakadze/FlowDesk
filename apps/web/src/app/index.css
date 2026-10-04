@@ -105,7 +105,12 @@ body {
    Durations and the easing are variables, so one place sets how fast the whole app moves.
    Only opacity and transform are animated (cheap, no layout), apart from the row expand/collapse, which
    animates a grid row (grid-template-rows 0fr <-> 1fr). Every class is switched off for people who asked their
-   system for reduced motion. */
+   system for reduced motion.
+
+   Fill mode: ENTERING classes use `backwards` (the first frame applies during any delay, then the animation
+   lets go), because a lingering animation (`both`/`forwards`) keeps its element on its own compositing layer
+   for good: wrapped around a whole page it made drags measurably slower. EXITING classes use `both`: they
+   must hold their last frame until the element is removed. */
 :root {
   --motion-duration-fast: 120ms;
   --motion-duration-base: 160ms;
@@ -122,25 +127,23 @@ body {
 @keyframes motion-expand { from { grid-template-rows: 0fr; opacity: 0; } to { grid-template-rows: 1fr; opacity: 1; } }
 @keyframes motion-collapse { from { grid-template-rows: 1fr; opacity: 1; } to { grid-template-rows: 0fr; opacity: 0; } }
 @keyframes motion-flash {
+  /* Only the starting frame: it fades to whatever the element's own colours are (a card has a surface, a
+     plain line has none), and fill-mode `backwards` leaves nothing behind afterwards. */
   from {
     background-color: color-mix(in oklab, var(--color-accent-600) 18%, var(--color-bg-surface));
     box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-accent-600) 40%, transparent);
   }
-  to {
-    background-color: var(--color-bg-surface);
-    box-shadow: 0 0 0 2px transparent;
-  }
 }
-.motion-fade-in { animation: motion-fade-in calc(var(--motion-duration-base)) var(--motion-ease-out) both; }
+.motion-fade-in { animation: motion-fade-in calc(var(--motion-duration-base)) var(--motion-ease-out) backwards; }
 .motion-fade-out { animation: motion-fade-out calc(var(--motion-duration-base)) var(--motion-ease-out) both; }
-.motion-rise-in { animation: motion-rise-in calc(var(--motion-duration-base)) var(--motion-ease-out) both; }
-.motion-drop-in { animation: motion-drop-in calc(var(--motion-duration-fast)) var(--motion-ease-out) both; }
-.motion-pop-in { animation: motion-pop-in calc(var(--motion-duration-base)) var(--motion-ease-out) both; }
-.motion-slide-in-right { animation: motion-slide-in-right calc(var(--motion-duration-slow)) var(--motion-ease-out) both; }
+.motion-rise-in { animation: motion-rise-in calc(var(--motion-duration-base)) var(--motion-ease-out) backwards; }
+.motion-drop-in { animation: motion-drop-in calc(var(--motion-duration-fast)) var(--motion-ease-out) backwards; }
+.motion-pop-in { animation: motion-pop-in calc(var(--motion-duration-base)) var(--motion-ease-out) backwards; }
+.motion-slide-in-right { animation: motion-slide-in-right calc(var(--motion-duration-slow)) var(--motion-ease-out) backwards; }
 .motion-slide-out-right { animation: motion-slide-out-right calc(var(--motion-duration-slow)) var(--motion-ease-out) both; }
 .motion-expand { animation: motion-expand calc(var(--motion-duration-slow)) var(--motion-ease-out) both; }
 .motion-collapse { animation: motion-collapse calc(var(--motion-duration-slow)) var(--motion-ease-out) both; }
-.motion-flash { animation: motion-flash calc(900ms) var(--motion-ease-out) both; }
+.motion-flash { animation: motion-flash 900ms var(--motion-ease-out) backwards; }
 .motion-press { transition: transform calc(80ms) var(--motion-ease-out); }
 .motion-press:active:not(:disabled) { transform: scale(0.98); }
 /* A quick cross-fade of colours while the theme flips (the class is on <html> for a moment). */

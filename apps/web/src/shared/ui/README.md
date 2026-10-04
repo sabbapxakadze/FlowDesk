@@ -36,3 +36,6 @@ Stacked forms (login, register) leave it off so they get no permanent gap.
 (`--color-bg-lane`, lighter than the cards in dark mode), a fixed header, and a body that scrolls inside with the slim
 always-visible scrollbar (`.scrollbar-list-always` in `app/index.css`; `.scrollbar-list` is the hover-only variant).
 `shared/dnd/multiList` holds the drag logic shared by the board and the sprints page.
+
+Motion (ADR 0029): `Button` has `pending` and `done`; `Card` takes `rowState`/`rowIndex` for list rows; hooks `useExitPresence`,
+`useAnimatedList`, `useRowMotion`/`useRowMotionProps` and `useSuccessFlash`; the `motion-*` classes are in `app/index.css`.

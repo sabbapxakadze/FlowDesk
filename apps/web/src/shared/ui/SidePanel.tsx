@@ -23,8 +23,9 @@ import { useEffect, useRef, type ReactNode } from "react";
  *
  * It is non-modal on purpose (aria-modal is false, nothing behind is made inert).
  *
- * Motion (owner's design pass, 2026-10-04): it slides in from the right while fading, and the page behind
- * dims a little (a fixed layer that does not catch clicks, so the page stays usable). `closing` is true
+ * Motion (owner's design pass, 2026-10-04): it slides in from the right while fading. The page behind is left
+ * exactly as it is: no dimming (the owner tried "slide and dim" and wanted nothing to change behind the panel,
+ * which is the whole point of it being non-modal). `closing` is true
  * while the exit animation plays (the caller keeps the panel mounted for that long, see useExitPresence):
  * the panel is `inert`, its listeners are off and focus has ALREADY gone back to what opened it, because
  * closing is never delayed, only the unmount.
@@ -84,11 +85,6 @@ export function SidePanel({
 
   return (
     <>
-      {/* The dim: above the sidebar (z-30), below the panel (z-40), and it never catches a click. */}
-      <div
-        aria-hidden="true"
-        className={`pointer-events-none fixed inset-0 z-[39] bg-black/15 ${closing ? "motion-fade-out" : "motion-fade-in"}`}
-      />
       <section
         ref={ref}
         role="dialog"

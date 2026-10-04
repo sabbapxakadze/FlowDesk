@@ -26,6 +26,9 @@ import {
   PriorityBadge,
   Skeleton,
   StatusBadge,
+  useAnimatedList,
+  useRowMotionProps,
+  type RowState,
 } from "../../shared/ui";
 
 function IssueDetailSkeleton() {
@@ -129,16 +132,21 @@ function TimelineEntry({
   organizationId,
   projectId,
   issueId,
+  rowState,
+  rowIndex,
 }: {
   event: IssueEvent;
+  rowState: RowState;
+  rowIndex: number;
   files: Attachment[];
   organizationId: string;
   projectId: string;
   issueId: string;
 }) {
+  const { ref: rowRef, className: rowClass, style: rowStyle } = useRowMotionProps<HTMLLIElement>(rowState, rowIndex);
   if (event.type === "issue.commented") {
     return (
-      <li>
+      <li ref={rowRef} style={rowStyle} className={rowClass}>
         <CommentCard
           event={event}
           files={files}
@@ -150,7 +158,7 @@ function TimelineEntry({
     );
   }
 
-  return <ActivityLine event={event} organizationId={organizationId} />;
+  return <ActivityLine event={event} organizationId={organizationId} rowState={rowState} rowIndex={rowIndex} />;
 }
 
 /**
@@ -196,6 +204,8 @@ export function IssueDetail({
     issueId,
   );
   const { data: attachments } = useAttachments(organization!.id, projectId, issueId);
+  // Timeline entries that arrive later (a comment, a status change, from anyone) open up with a flash.
+  const eventRows = useAnimatedList(events ?? [], (event) => event.id, { ready: !eventsPending });
   const { viewers } = useLiveIssueDetailUpdates(projectId, issueId, onGone);
   const otherViewers = viewers.filter((viewer) => viewer.userId !== user?.id);
 
@@ -338,9 +348,11 @@ export function IssueDetail({
         <TimelineSkeleton />
       ) : (
         <ul className="flex flex-col gap-3">
-          {events?.map((event) => (
+          {eventRows.map(({ key, item: event, state, index }) => (
             <TimelineEntry
-              key={event.id}
+              key={key}
+              rowState={state}
+              rowIndex={index}
               event={event}
               files={(attachments ?? []).filter(
                 (a) => a.commentId === event.payload.commentId,

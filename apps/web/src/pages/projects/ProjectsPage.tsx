@@ -2,7 +2,7 @@ import { ProjectCard, useProjects } from "../../entities/project";
 import { CreateProjectForm } from "../../features/create-project";
 import { ProfileNudgeCard } from "../../features/profile-nudge";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, EmptyState, ErrorText, Page, PageHeader, Skeleton } from "../../shared/ui";
+import { Card, EmptyState, ErrorText, Page, PageHeader, Skeleton, useAnimatedList } from "../../shared/ui";
 
 function ProjectListSkeleton() {
   return (
@@ -28,6 +28,7 @@ function ProjectListSkeleton() {
 export function ProjectsPage() {
   const { organization } = useAuth();
   const { data: projects, isPending, isError, error } = useProjects(organization!.id);
+  const rows = useAnimatedList(projects ?? [], (project) => project.id, { ready: !isPending });
 
   return (
     <Page>
@@ -41,12 +42,12 @@ export function ProjectsPage() {
         <ProjectListSkeleton />
       ) : isError ? (
         <ErrorText>Failed to load projects: {error.message}</ErrorText>
-      ) : projects.length === 0 ? (
+      ) : rows.length === 0 ? (
         <EmptyState block>No projects yet.</EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+          {rows.map(({ key, item, state, index }) => (
+            <ProjectCard key={key} project={item} rowState={state} rowIndex={index} />
           ))}
         </ul>
       )}

@@ -495,7 +495,7 @@ export function DesignSystemPage() {
         <ul className="max-w-3xl list-disc pl-5 text-sm">
           <li>Page change: the new page fades in and rises 6px (motion-rise-in), keyed by path only.</li>
           <li>Loading: rows rise in one after another, 40ms apart for the first 8 (staggerStyle).</li>
-          <li>Issue side panel: slides in from the right and fades, the page behind dims slightly; it slides out on close.</li>
+          <li>Issue side panel: slides in from the right and fades, and slides out on close. The page behind is not dimmed or changed.</li>
           <li>Dialogs: fade and grow from 96%, the backdrop fades; dropdowns fade and drop 4px.</li>
           <li>Rows: a new row expands open with an accent flash, a removed row collapses.</li>
           <li>Buttons: sink slightly while pressed; a running request shows a spinner, a saved one a tick.</li>

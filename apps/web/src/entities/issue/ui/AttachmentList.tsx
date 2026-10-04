@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useAttachments } from "../api/useAttachments";
 import { useDeleteAttachment } from "../api/useDeleteAttachment";
-import { Button, buttonVariants, Card, EmptyState, Skeleton } from "../../../shared/ui";
+import { Button, buttonVariants, Card, EmptyState, Skeleton, useAnimatedList } from "../../../shared/ui";
 import { formatFileSize } from "../../../shared/ui/lib/formatFileSize";
 import { AttachmentLink } from "./AttachmentLink";
 
@@ -27,6 +27,7 @@ export function AttachmentList({
 }) {
   const { data: attachments, isPending } = useAttachments(organizationId, projectId, issueId);
   const deleteMutation = useDeleteAttachment(organizationId, projectId, issueId);
+  const rows = useAnimatedList(attachments ?? [], (attachment) => attachment.id, { ready: !isPending });
 
   if (isPending) {
     return (
@@ -36,14 +37,14 @@ export function AttachmentList({
     );
   }
 
-  if (attachments?.length === 0) {
+  if (attachments && rows.length === 0) {
     return <EmptyState>No attachments yet.</EmptyState>;
   }
 
   return (
     <ul className="flex flex-col gap-2">
-      {attachments?.map((attachment) => (
-        <Card key={attachment.id} as="li" className="flex items-center justify-between gap-2">
+      {rows.map(({ key, item: attachment, state, index }) => (
+        <Card key={key} as="li" rowState={state} rowIndex={index} className="flex items-center justify-between gap-2">
           <AttachmentLink attachment={attachment} className={buttonVariants({ variant: "link" })}>
             {attachment.filename}
           </AttachmentLink>

@@ -12,6 +12,7 @@ import {
   PageHeader,
   Skeleton,
   Time,
+  useAnimatedList,
 } from "../../shared/ui";
 
 /**
@@ -29,6 +30,8 @@ export function MembersPage() {
   const members = useMembers(organizationId);
   const invitations = useInvitations(organizationId, { enabled: canManage });
   const revoke = useRevokeInvitation(organizationId);
+  const memberRows = useAnimatedList(members.data ?? [], (member) => member.userId, { ready: members.isSuccess });
+  const invitationRows = useAnimatedList(invitations.data ?? [], (invitation) => invitation.email, { ready: invitations.isSuccess });
 
   return (
     <Page>
@@ -43,8 +46,8 @@ export function MembersPage() {
         <ErrorText>Failed to load members: {members.error.message}</ErrorText>
       ) : (
         <ul aria-label="Members" className="flex flex-col gap-2">
-          {members.data.map((member) => (
-            <Card key={member.userId} as="li" className="flex flex-wrap items-center gap-3">
+          {memberRows.map(({ key, item: member, state, index }) => (
+            <Card key={key} as="li" rowState={state} rowIndex={index} className="flex flex-wrap items-center gap-3">
               <PersonName organizationId={organizationId} userId={member.userId} name={member.name} avatarOnly avatarSize="md" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
@@ -77,14 +80,14 @@ export function MembersPage() {
             <Skeleton className="h-12 w-full" />
           ) : invitations.isError ? (
             <ErrorText>Failed to load invitations: {invitations.error.message}</ErrorText>
-          ) : invitations.data.length === 0 ? (
+          ) : invitationRows.length === 0 ? (
             <EmptyState block>No pending invitations.</EmptyState>
           ) : (
             <ul aria-label="Pending invitations" className="flex flex-col gap-2">
-              {invitations.data.map((invitation) => (
+              {invitationRows.map(({ item: invitation, state, index }) => (
                 // Keyed by email, not id: a re-send replaces the row with a new id, and the
                 // new link it shows must survive that refetch.
-                <Card key={invitation.email} as="li" className="flex flex-wrap items-center gap-3">
+                <Card key={invitation.email} as="li" rowState={state} rowIndex={index} className="flex flex-wrap items-center gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{invitation.email}</p>
                     <p className="text-xs text-[var(--color-text-muted)]">

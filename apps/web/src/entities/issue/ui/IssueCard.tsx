@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Button, Card, StatusBadge } from "../../../shared/ui";
+import { Button, Card, StatusBadge, type RowState } from "../../../shared/ui";
 import type { Issue } from "../model";
 import { openIssueOnClick } from "../lib/issueLinkClick";
 import { IssueSummary } from "./IssueSummary";
@@ -21,6 +21,8 @@ export function IssueCard({
   assigneeName,
   onEdit,
   onOpen,
+  rowState,
+  rowIndex,
 }: {
   issue: Issue;
   projectKey: string;
@@ -28,9 +30,12 @@ export function IssueCard({
   onEdit?: () => void;
   /** Open the issue in the side panel instead of navigating (modified clicks still navigate). */
   onOpen?: (issueId: string) => void;
+  /** Motion of a row in a useAnimatedList list (see Card). */
+  rowState?: RowState;
+  rowIndex?: number;
 }) {
   return (
-    <Card as="li" hoverable className="flex items-start justify-between gap-2">
+    <Card as="li" hoverable rowState={rowState} rowIndex={rowIndex} className="flex items-start justify-between gap-2">
       <Link
         to={`/projects/${issue.projectId}/issues/${issue.id}`}
         data-panel-trigger

@@ -12,6 +12,7 @@ import {
   Page,
   PageHeader,
   Skeleton,
+  useAnimatedList,
 } from "../../shared/ui";
 
 /**
@@ -24,6 +25,7 @@ export function LabelsPage() {
   const { organization } = useAuth();
   const { data: labels, isPending, isError, error } = useLabels(organization!.id);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const labelRows = useAnimatedList(labels ?? [], (label) => label.id, { ready: !isPending });
   const role = useMyRole(organization!.id);
   const canDelete = role === "owner" || role === "admin";
 
@@ -39,16 +41,18 @@ export function LabelsPage() {
         <Skeleton className="h-12 w-full" />
       ) : isError ? (
         <ErrorText>Failed to load labels: {error.message}</ErrorText>
-      ) : labels.length === 0 ? (
+      ) : labelRows.length === 0 ? (
         <EmptyState block>
           No labels yet. Create one from an issue's edit form.
         </EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">
-          {labels.map((label) => (
+          {labelRows.map(({ key, item: label, state, index }) => (
             <Card
-              key={label.id}
+              key={key}
               as="li"
+              rowState={state}
+              rowIndex={index}
               className="flex flex-wrap items-start justify-between gap-3"
             >
               {editingId === label.id ? (

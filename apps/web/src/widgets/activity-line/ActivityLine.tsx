@@ -2,7 +2,15 @@ import type { ReactNode } from "react";
 import type { IssueEvent } from "@flowdesk/contracts";
 import { describeEvent } from "../../entities/issue";
 import { PersonName } from "../../entities/member";
-import { PRIORITY_LABELS, PriorityBadge, StatusBadge, STATUS_LABELS, Time } from "../../shared/ui";
+import {
+  PRIORITY_LABELS,
+  PriorityBadge,
+  StatusBadge,
+  STATUS_LABELS,
+  Time,
+  useRowMotionProps,
+  type RowState,
+} from "../../shared/ui";
 import { eventStyle } from "./eventStyle";
 
 const STRONG = "font-medium text-[var(--color-text-default)]";
@@ -125,12 +133,28 @@ function partsOf(event: IssueEvent, organizationId: string): Part[] {
  * (and anyone else mentioned) as a hoverable name, and the time at the right edge.
  * The sentence is plain text first, so it still reads without the colours.
  */
-export function ActivityLine({ event, organizationId }: { event: IssueEvent; organizationId: string }) {
+export function ActivityLine({
+  event,
+  organizationId,
+  rowState,
+  rowIndex,
+}: {
+  event: IssueEvent;
+  organizationId: string;
+  /** Motion of a row in a useAnimatedList list (see Card). */
+  rowState?: RowState;
+  rowIndex?: number;
+}) {
   const { Icon, color } = eventStyle(event);
+  const { ref: rowRef, className: rowClass, style: rowStyle } = useRowMotionProps<HTMLLIElement>(rowState, rowIndex);
   const parts = partsOf(event, organizationId);
 
   return (
-    <li className="flex items-center gap-3 text-sm text-[var(--color-text-muted)]">
+    <li
+      ref={rowRef}
+      style={rowStyle}
+      className={`flex items-center gap-3 text-sm text-[var(--color-text-muted)] ${rowClass}`}
+    >
       <span
         className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-border-default)] ${color}`}
       >

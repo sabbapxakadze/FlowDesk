@@ -36,10 +36,10 @@ const TONE: Record<"added" | "removed" | "changed", string> = {
   changed: "text-[var(--color-event-changed)]",
 };
 
-function AuditRow({ event, organizationId }: { event: AuditEvent; organizationId: string }) {
+function AuditRow({ event, organizationId, index }: { event: AuditEvent; organizationId: string; index: number }) {
   const Icon = ICONS[event.targetType];
   return (
-    <Card as="li" className="flex items-center gap-3">
+    <Card as="li" rowState="initial" rowIndex={index} className="flex items-center gap-3">
       <span
         className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-border-default)] ${TONE[auditTone(event)]}`}
       >
@@ -152,8 +152,8 @@ export function AuditLogPage() {
       ) : (
         <>
           <ul aria-label="Audit log" className="flex flex-col gap-2">
-            {events.map((event) => (
-              <AuditRow key={event.id} event={event} organizationId={organizationId} />
+            {events.map((event, index) => (
+              <AuditRow key={event.id} event={event} organizationId={organizationId} index={index} />
             ))}
           </ul>
           {hasNextPage && (

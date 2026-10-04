@@ -32,7 +32,7 @@ import { RenameSprintForm } from "../../features/rename-sprint";
 import { useAssignIssueSprint } from "../../features/assign-issue-sprint";
 import { useAuth } from "../../shared/auth/useAuth";
 import { createMultiList, useMultiListCollision, type ListMap } from "../../shared/dnd/multiList";
-import { Button, Card, ColumnHeader, EmptyState, ErrorText, Lane, Page, PageHeader, Skeleton } from "../../shared/ui";
+import { Button, Card, ColumnHeader, EmptyState, ErrorText, Lane, Page, PageHeader, Skeleton, useAnimatedList } from "../../shared/ui";
 
 /**
  * The two lists a card can be dragged between and within: the backlog and the active sprint. The drag
@@ -116,6 +116,7 @@ export function ProjectSprintsPage() {
   const project = projects?.find((p) => p.id === projectId);
 
   const { data: sprints, isPending: sprintsPending } = useSprints(organization!.id, projectId!);
+  const sprintRows = useAnimatedList(sprints ?? [], (sprint) => sprint.id, { ready: !sprintsPending });
   const [renamingSprintId, setRenamingSprintId] = useState<string | null>(null);
   const { data: backlogData, isPending: backlogPending, isError, error } = useBacklog(organization!.id, projectId!);
   const startMutation = useStartSprint(organization!.id, projectId!);
@@ -268,12 +269,12 @@ export function ProjectSprintsPage() {
         <ColumnHeader label="Sprints" count={sprintsPending ? undefined : sprints?.length} />
         {sprintsPending ? (
           <ListSkeleton />
-        ) : !sprints || sprints.length === 0 ? (
+        ) : !sprints || sprintRows.length === 0 ? (
           <EmptyState block>No sprints yet.</EmptyState>
         ) : (
           <ul className="scrollbar-list-always flex flex-col gap-2 sm:max-h-[19rem] sm:overflow-y-auto sm:pr-1">
-            {sprints.map((sprint) => (
-              <Card key={sprint.id} as="li" className="flex items-center justify-between gap-2">
+            {sprintRows.map(({ key, item: sprint, state, index }) => (
+              <Card key={key} as="li" rowState={state} rowIndex={index} className="flex items-center justify-between gap-2">
                 {renamingSprintId === sprint.id ? (
                   <RenameSprintForm
                     organizationId={organization!.id}

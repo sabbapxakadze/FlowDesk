@@ -8,6 +8,25 @@ import { createIssueViaApi } from "../support/api";
  * the animations themselves, and has one block that proves "reduce motion" really switches them off.
  */
 
+
+/** Records every Element.animate() call, so a test can see which rows opened or closed without timing it. */
+async function recordRowAnimations(page: Page) {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __rowAnims: { kind: "enter" | "leave"; tag: string }[] };
+    w.__rowAnims = [];
+    const original = Element.prototype.animate;
+    Element.prototype.animate = function (this: Element, keyframes, options) {
+      const frames = keyframes as Keyframe[];
+      if (Array.isArray(frames) && frames.length === 2 && "height" in frames[0]!) {
+        w.__rowAnims.push({ kind: frames[0]!.height === "0px" ? "enter" : "leave", tag: this.tagName });
+      }
+      return original.call(this, keyframes, options);
+    };
+  });
+}
+const rowAnimations = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __rowAnims: { kind: string; tag: string }[] }).__rowAnims);
+
 const animationOf = (page: Page, selector: string) =>
   page.locator(selector).first().evaluate((el) => getComputedStyle(el).animationName);
 
@@ -37,7 +56,7 @@ test.describe("with animations on", () => {
 
     await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Board" }).click();
     await expect(page).toHaveURL(/\/board$/);
-    expect(await page.locator("div.motion-rise-in[data-probe]").count()).toBe(0);
+    await expect(page.locator("div.motion-rise-in[data-probe]")).toHaveCount(0); // polled: the URL changes a moment before the new page is on screen
   });
 
   test("a running request shows a spinner on the button, and a saved profile shows a tick for a moment", async ({
@@ -81,7 +100,7 @@ test.describe("with animations on", () => {
     await expect(page.locator("html")).not.toHaveClass(/motion-theme-fade/, { timeout: 2000 });
   });
 
-  test("the issue panel slides in and dims the page; closing is immediate (focus back, inert) and it slides out before it is removed; another issue keeps the same panel", async ({
+  test("the issue panel slides in without touching the page behind it; closing is immediate (focus back, inert) and it slides out before it is removed; another issue keeps the same panel", async ({
     loggedInPage: page,
   }) => {
     // Why: the owner's panel pick. The exit animation must never delay the CLOSE itself: focus returns and
@@ -103,7 +122,8 @@ test.describe("with animations on", () => {
     const panel = page.locator('section[aria-label="Issue"]');
     await expect(panel).toBeVisible();
     expect(await panel.evaluate((el) => getComputedStyle(el).animationName)).toBe("motion-slide-in-right");
-    await expect(page.locator("div.pointer-events-none.fixed.inset-0")).toHaveCount(1); // the dim, which never catches a click
+    // Nothing behind the panel changes: no dimming layer (the owner tried it and did not want it).
+    await expect(page.locator("div.pointer-events-none.fixed.inset-0")).toHaveCount(0);
 
     // Another issue: the same panel element, not a new one sliding in again.
     await panel.evaluate((el) => el.setAttribute("data-probe", "1"));
@@ -124,7 +144,27 @@ test.describe("with animations on", () => {
     // ...while it is still on screen, sliding out, until the exit finishes.
     expect(await panel.evaluate((el) => getComputedStyle(el).animationName)).toBe("motion-slide-out-right");
     await expect(panel).toHaveCount(0, { timeout: 5000 });
-    await expect(page.locator("div.pointer-events-none.fixed.inset-0")).toHaveCount(0);
+  });
+
+  test("on a wide window the issue filters do not move when the panel opens", async ({ loggedInPage: page }) => {
+    // Why: the filter row only wraps clear of the panel when the window is narrow enough for them to overlap.
+    // On a wide one nothing is covered, so nothing may move (the owner saw Sort drop a line).
+    await page.setViewportSize({ width: 1920, height: 1000 });
+    const { projectId } = await createIssueViaApi(page.request, {
+      projectName: "Website",
+      projectKey: "WEB",
+      titles: ["Alpha"],
+    });
+    await page.goto(`/projects/${projectId}`);
+    const sort = page.getByLabel("Sort");
+    await expect(sort).toBeVisible();
+    const before = (await sort.boundingBox())!;
+    await page.getByRole("link", { name: /Alpha/ }).first().click();
+    await expect(page.locator('section[aria-label="Issue"]')).toBeVisible();
+    await page.waitForTimeout(400);
+    const after = (await sort.boundingBox())!;
+    expect(Math.abs(after.y - before.y)).toBeLessThan(1.5);
+    expect(Math.abs(after.x - before.x)).toBeLessThan(1.5);
   });
 
   test("a dialog fades and grows in and out (the backdrop too), and is really gone afterwards", async ({
@@ -174,6 +214,87 @@ test.describe("with animations on", () => {
     expect(await dropdown.evaluate((el) => getComputedStyle(el).animationName)).toBe("motion-fade-out");
     await expect(dropdown).toHaveCount(0, { timeout: 4000 });
   });
+
+  test("a list rises in one row after another on first load, then settles", async ({ loggedInPage: page }) => {
+    // Why: the owner's skeleton-to-content pick. The settle timer (1 s) is stretched so the state can be read.
+    await page.addInitScript(() => {
+      const original = window.setTimeout.bind(window);
+      window.setTimeout = ((fn: TimerHandler, ms?: number, ...args: unknown[]) =>
+        original(fn, ms === 1000 ? 20000 : ms, ...args)) as typeof window.setTimeout;
+    });
+    for (const name of ["Alpha", "Beta", "Gamma"]) {
+      await createIssueViaApi(page.request, { projectName: name, projectKey: name.slice(0, 3).toUpperCase(), titles: [] });
+    }
+    await page.goto("/projects");
+    const cards = page.locator("main ul li");
+    await expect(cards).toHaveCount(3);
+    const info = await cards.evaluateAll((els) => els.map((el) => ({ cls: el.className.includes("motion-rise-in"), delay: (el as HTMLElement).style.animationDelay })));
+    expect(info.every((i) => i.cls)).toBe(true);
+    expect(info.map((i) => i.delay)).toEqual(["0ms", "40ms", "80ms"]);
+  });
+
+  test("a created row opens up with a flash; a deleted row closes up before it is removed", async ({
+    loggedInPage: page,
+  }) => {
+    // Why: the owner's row pick (create and delete are the two moments rows change). Recorded through
+    // Element.animate, so nothing here depends on timing.
+    await recordRowAnimations(page);
+    const { projectId } = await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: [] });
+    await page.goto("/projects");
+    await expect(page.locator("main ul li")).toHaveCount(1);
+    expect(await rowAnimations(page)).toEqual([]); // the first load is not a change
+
+    await page.getByPlaceholder("Website", { exact: true }).fill("Second");
+    await page.getByPlaceholder("WEB", { exact: true }).fill("SEC");
+    await page.getByRole("button", { name: /Add project/ }).click();
+    await expect(page.locator("main ul li")).toHaveCount(2);
+    await expect(page.locator("main ul li.motion-flash")).toHaveCount(1);
+    // (React StrictMode runs an effect twice in development, so one row can start its animation twice.)
+    expect((await rowAnimations(page)).filter((a) => a.kind === "enter").length).toBeGreaterThan(0);
+
+    await page.goto(`/projects/${projectId}/sprints`);
+    await page.getByPlaceholder("Sprint 1").fill("Doomed");
+    await page.getByRole("button", { name: /Create sprint/ }).click();
+    const row = page.getByRole("listitem").filter({ hasText: "Doomed" });
+    await expect(row).toBeVisible();
+    await row.getByRole("button", { name: "Delete" }).click();
+    await page.getByRole("button", { name: "Delete sprint" }).click();
+    await expect(row).toHaveCount(0);
+    expect((await rowAnimations(page)).filter((a) => a.kind === "leave").length).toBeGreaterThan(0);
+  });
+
+  test("changing a filter or loading more is not a change: no row opens or closes", async ({ loggedInPage: page }) => {
+    // Why: the reset key. Without it every filter click would make the whole list close and open again.
+    await recordRowAnimations(page);
+    const { projectId } = await createIssueViaApi(page.request, {
+      projectName: "Website",
+      projectKey: "WEB",
+      titles: ["One", "Two", "Three"],
+    });
+    await page.goto(`/projects/${projectId}`);
+    await expect(page.getByRole("link", { name: /Three/ }).first()).toBeVisible();
+    await page.getByLabel("Filter by status").selectOption("done");
+    await expect(page.getByText("No issues match these filters.")).toBeVisible();
+    await page.getByLabel("Filter by status").selectOption("");
+    await expect(page.getByRole("link", { name: /Three/ }).first()).toBeVisible();
+    expect(await rowAnimations(page)).toEqual([]);
+  });
+
+  test("a new comment opens up on the timeline", async ({ loggedInPage: page }) => {
+    await recordRowAnimations(page);
+    const { projectId, issueIds } = await createIssueViaApi(page.request, {
+      projectName: "Website",
+      projectKey: "WEB",
+      titles: ["Talk"],
+    });
+    await page.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
+    await expect(page.getByText("created this issue")).toBeVisible();
+    expect(await rowAnimations(page)).toEqual([]);
+    await page.getByPlaceholder("Add a comment…").fill("Hello there");
+    await page.getByRole("button", { name: "Comment", exact: true }).click();
+    await expect(page.getByText("Hello there")).toBeVisible();
+    expect((await rowAnimations(page)).some((a) => a.kind === "enter")).toBe(true);
+  });
 });
 
 test.describe("with reduced motion", () => {
@@ -203,5 +324,17 @@ test.describe("with reduced motion", () => {
     expect(await panel.evaluate((el) => getComputedStyle(el).animationName)).toBe("none");
     await panel.getByRole("button", { name: "Close panel" }).click();
     await expect(panel).toHaveCount(0, { timeout: 300 });
+  });
+
+  test("rows appear and leave without any animation", async ({ loggedInPage: page }) => {
+    await recordRowAnimations(page);
+    await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: [] });
+    await page.goto("/projects");
+    await expect(page.locator("main ul li")).toHaveCount(1);
+    await page.getByPlaceholder("Website", { exact: true }).fill("Second");
+    await page.getByPlaceholder("WEB", { exact: true }).fill("SEC");
+    await page.getByRole("button", { name: /Add project/ }).click();
+    await expect(page.locator("main ul li")).toHaveCount(2);
+    expect(await rowAnimations(page)).toEqual([]);
   });
 });

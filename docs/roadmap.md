@@ -2203,7 +2203,7 @@ The original plan for this slice, kept for the record:
    other back links were checked and left: the issue page's link to its project and Edit profile's link to your
    profile are parents, not history. 1 e2e test; it fails with the option removed.
    **Owner's open list, added 2026-10-04 (in the order we plan to take them, nothing started):**
-   - **Readable URLs (decided, a big slice, ADR 0029 to write):** keys instead of UUIDs: `/projects/WEB`,
+   - **Readable URLs (decided, a big slice, ADR 0030 to write):** keys instead of UUIDs: `/projects/WEB`,
      `/projects/WEB?issue=WEB-1` and the full issue page at `/projects/WEB/issues/WEB-1`. The API resolves a
      project or issue by key or by ID (organization-scoped), old ID links keep working and are rewritten, case is
      ignored, a deleted issue's number is never reused. One shared URL-builder function replaces the scattered
@@ -2229,6 +2229,20 @@ The original plan for this slice, kept for the record:
    cards across lists, lists scroll inside while the page does not, drag auto-scroll near the bottom edge) plus 1
    board test for the same-column path of the extracted logic. **Not done:** photos on assignee circles, multi-select
    drag, the readable URLs (still next on the list).
+   **Motion DONE 2026-10-04 (owner's design-pass picks; ADR 0029).** Page fade-and-rise (by path only), staggered
+   list loads, the issue panel slides in and out (no dim, by the owner's decision after trying it), dialogs fade and
+   grow with a fading backdrop, the notifications dropdown fades and drops, rows open up with a flash on create and
+   close up on delete, buttons press, show a spinner while a request runs and a tick when saved, in-place edit forms
+   rise in, the theme cross-fades; all off under reduced motion, none delays an action. **Verified:** 15 e2e tests in
+   `motion.spec.ts` (each animation, the reset key, the reduced-motion block), the whole e2e suite now runs under
+   reduced motion and passes; mutation checks caught the page key, panel focus handling and the dialog exit. **Found
+   by measuring:** a page-wide animation left attached (fill mode) slowed drags (p95 16.8 to 49.9ms); fixed with
+   `backwards` fill. Drag frame times afterwards match the pre-motion figures within run-to-run variation (median
+   16.7ms, p95 16.8ms; stalls of about 200 to 300ms at drag start and drop with 80 cards existed before too). Also
+   fixed: the person hover card lost its hover delay under reduced motion. **Not done:** a true cross-fade between
+   pages (needs React Router data mode), animating the board and sprints lanes, the search results.
+   **Also 2026-10-04:** the Sort control no longer drops a line when the issue panel opens on a wide window (the
+   filter row reserves room for the panel only below 1560px).
 10. **Larger ideas, unscheduled:** project-level activity feed, a burndown chart
    from the stored events, sprint dates and progress on the sprint card, saved
    filters and views.

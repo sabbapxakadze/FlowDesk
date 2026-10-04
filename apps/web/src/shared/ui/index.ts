@@ -1,6 +1,8 @@
 export { Button, type ButtonProps } from "./Button";
 export { useSuccessFlash } from "./useSuccessFlash";
 export { useExitPresence } from "./useExitPresence";
+export { useAnimatedList, type AnimatedRow, type RowState } from "./useAnimatedList";
+export { useRowMotion, useRowMotionProps } from "./useRowMotion";
 export { buttonVariants } from "./buttonVariants";
 export { IconButton } from "./IconButton";
 export { Input } from "./Input";

@@ -20,6 +20,7 @@ import {
   Select,
   Skeleton,
   STATUS_LABELS,
+  useAnimatedList,
 } from "../../shared/ui";
 
 const STATUS_FILTER_VALUES: IssueStatus[] = ["todo", "in_progress", "done"];
@@ -96,6 +97,12 @@ export function ProjectDetailPage() {
   // reached before the first page loads, already gated below by
   // issuesPending — never a real empty-vs-loading ambiguity.
   const issues = data?.pages.flatMap((page) => page.data) ?? [];
+  // Rows that appear or leave (created, deleted, changed by someone else) move; a new filter, sort or page of
+  // results is not a change (it is part of the reset key), so those rows just rise in.
+  const issueRows = useAnimatedList(issues, (issue) => issue.id, {
+    ready: !issuesPending,
+    resetKey: `${status}|${priority}|${assignee}|${sort}|${order}|${data?.pages.length ?? 0}`,
+  });
 
   // Which issue (if any) is currently showing its edit form instead of its
   // card — page-level state because IssueCard (entities layer) can't
@@ -176,10 +183,11 @@ export function ProjectDetailPage() {
       {/* data-panel-trigger: working the filters while an issue is open in the side panel must not
           close it (the panel ignores clicks here), and the list changes behind it. */}
       {/* While the floating panel is open (480px wide, plus its margin) the row keeps clear of it, so
-          a filter that would sit underneath wraps onto a second line instead of being unreachable. */}
+          a filter that would sit underneath wraps onto a second line instead of being unreachable. Only below
+          1560px: on a wider window nothing is covered, so nothing may move. */}
       <div
         data-panel-trigger
-        className={`mt-4 mb-3 flex flex-wrap items-center gap-2 ${panel.issueId ? "sm:pr-[31rem]" : ""}`}
+        className={`mt-4 mb-3 flex flex-wrap items-center gap-2 ${panel.issueId ? "sm:max-[1559px]:pr-[31rem]" : ""}`}
       >
         <Select
           value={status ?? ""}
@@ -247,7 +255,7 @@ export function ProjectDetailPage() {
         <IssueListSkeleton />
       ) : isError ? (
         <ErrorText>Failed to load issues: {error.message}</ErrorText>
-      ) : issues.length === 0 ? (
+      ) : issueRows.length === 0 ? (
         <EmptyState block>
           {status || priority || assignee
             ? "No issues match these filters."
@@ -255,10 +263,10 @@ export function ProjectDetailPage() {
         </EmptyState>
       ) : (
         <ul className="flex flex-col gap-2">
-          {issues.map((issue) =>
+          {issueRows.map(({ key, item: issue, state, index }) =>
             editingIssueId === issue.id ? (
               <EditIssueForm
-                key={issue.id}
+                key={key}
                 issue={issue}
                 organizationId={organization!.id}
                 projectId={project.id}
@@ -267,7 +275,9 @@ export function ProjectDetailPage() {
               />
             ) : (
               <IssueCard
-                key={issue.id}
+                key={key}
+                rowState={state}
+                rowIndex={index}
                 issue={issue}
                 projectKey={project.key}
                 assigneeName={nameOf(issue.assigneeId)}

@@ -11,12 +11,23 @@ import {
 } from "../../entities/notification";
 import { describeEvent } from "../../entities/issue";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Button, EmptyState, Skeleton, useExitPresence } from "../../shared/ui";
+import { Button, EmptyState, Skeleton, useAnimatedList, useExitPresence, useRowMotionProps, type RowState } from "../../shared/ui";
 
-function NotificationRow({ notification, onSelect }: { notification: Notification; onSelect: () => void }) {
+function NotificationRow({
+  notification,
+  onSelect,
+  rowState,
+  rowIndex,
+}: {
+  notification: Notification;
+  onSelect: () => void;
+  rowState: RowState;
+  rowIndex: number;
+}) {
   const unread = notification.readAt === null;
+  const { ref: rowRef, className: rowClass, style: rowStyle } = useRowMotionProps<HTMLLIElement>(rowState, rowIndex);
   return (
-    <li>
+    <li ref={rowRef} style={rowStyle} className={rowClass}>
       <button
         type="button"
         onClick={onSelect}
@@ -62,6 +73,8 @@ export function NotificationBell({ panelAlign = "left" }: { panelAlign?: "left" 
   const organizationId = organization?.id ?? "";
   const { data: unreadCount } = useUnreadCount(organizationId);
   const { data: notificationList, isPending } = useNotifications(organizationId);
+  // New notifications (live) open up with a flash.
+  const rows = useAnimatedList(notificationList ?? [], (notification) => notification.id, { ready: !isPending });
   const markRead = useMarkNotificationRead(organizationId);
   const markAllRead = useMarkAllNotificationsRead(organizationId);
   useLiveNotifications(organizationId);
@@ -97,7 +110,6 @@ export function NotificationBell({ panelAlign = "left" }: { panelAlign?: "left" 
     navigate(`/projects/${notification.projectId}/issues/${notification.issueId}`);
   }
 
-  const rows = notificationList ?? [];
   const count = unreadCount ?? 0;
 
   return (
@@ -142,8 +154,14 @@ export function NotificationBell({ panelAlign = "left" }: { panelAlign?: "left" 
             <EmptyState>No notifications yet.</EmptyState>
           ) : (
             <ul className="flex flex-col gap-1">
-              {rows.map((notification) => (
-                <NotificationRow key={notification.id} notification={notification} onSelect={() => select(notification)} />
+              {rows.map(({ key, item: notification, state, index }) => (
+                <NotificationRow
+                  key={key}
+                  rowState={state}
+                  rowIndex={index}
+                  notification={notification}
+                  onSelect={() => select(notification)}
+                />
               ))}
             </ul>
           )}

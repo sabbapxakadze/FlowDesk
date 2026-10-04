@@ -117,6 +117,8 @@ link on the hover card; photos are re-made on upload (256x256 WebP) and served f
 "Finish your profile" card on Projects invites people with a bare profile (dismissal stored on the account).
 The sprints-page backlog and active sprint are drag-sortable (`backlog_rank`, ADR 0008 amended), and the board and sprints
 page scroll inside tinted lanes (`shared/ui/Lane`, `shared/dnd/multiList`).
+The app has a motion language (ADR 0029): page fade-and-rise, panel slide, dialog fade-and-grow, rows that open and close,
+button press/spinner/tick, theme cross-fade; all off under reduced motion, and the e2e suite runs with reduced motion on.
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,
