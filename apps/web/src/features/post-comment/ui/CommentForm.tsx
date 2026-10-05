@@ -1,12 +1,13 @@
 import { useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ALLOWED_ATTACHMENT_MIME_TYPES, MAX_ATTACHMENT_SIZE_BYTES } from "@flowdesk/contracts";
 import { issueKeys } from "../../../entities/issue";
 import { ApiError } from "../../../shared/api/client";
-import { Button, ErrorText, Textarea } from "../../../shared/ui";
+import { Button, ErrorText } from "../../../shared/ui";
 import { createComment } from "../api/createComment";
 import { uploadCommentFile } from "../api/uploadCommentFile";
+import { CommentBodyField } from "./CommentBodyField";
 
 type FormValues = { body: string };
 
@@ -39,7 +40,7 @@ export function CommentForm({
   issueId: string;
 }) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset } = useForm<FormValues>({ defaultValues: { body: "" } });
+  const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues: { body: "" } });
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [fileErrors, setFileErrors] = useState<string[]>([]);
@@ -93,7 +94,14 @@ export function CommentForm({
       })}
       className="flex flex-col gap-2"
     >
-      <Textarea {...register("body", { required: true })} placeholder="Add a comment…" rows={3} />
+      <Controller
+        control={control}
+        name="body"
+        rules={{ required: true }}
+        render={({ field }) => (
+          <CommentBodyField organizationId={organizationId} value={field.value} onChange={field.onChange} placeholder="Add a comment…" rows={3} />
+        )}
+      />
       {files.length > 0 && (
         <ul className="flex flex-wrap gap-2">
           {files.map((file, index) => (

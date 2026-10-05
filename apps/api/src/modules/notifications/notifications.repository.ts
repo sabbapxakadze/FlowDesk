@@ -63,6 +63,28 @@ export async function createForIssueEvent(
   return result.rows.map((row) => row.user_id);
 }
 
+/**
+ * Notifications for exactly these people (no participants, no assignee): someone newly @mentioned in an EDITED comment
+ * (ADR 0033). The caller has already checked they are members of the issue's organization. The actor is never told about
+ * their own mention. Returns the notified ids so the caller can push live after commit.
+ */
+export async function createForUsers(
+  tx: Tx,
+  input: { issueEventId: string; userIds: string[]; excludeActorId: string },
+): Promise<string[]> {
+  const userIds = input.userIds.filter((id) => id !== input.excludeActorId);
+  if (userIds.length === 0) return [];
+  const result = await tx.execute<{ user_id: string }>(sql`
+    INSERT INTO notifications (user_id, issue_event_id)
+    SELECT DISTINCT unnest(ARRAY[${sql.join(
+      userIds.map((id) => sql`${id}::uuid`),
+      sql`, `,
+    )}]), ${input.issueEventId}::uuid
+    RETURNING user_id
+  `);
+  return result.rows.map((row) => row.user_id);
+}
+
 const notificationColumns = {
   id: notifications.id,
   readAt: notifications.readAt,

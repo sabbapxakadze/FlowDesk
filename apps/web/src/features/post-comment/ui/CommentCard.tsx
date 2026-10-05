@@ -3,11 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileText, Pencil, Trash2 } from "lucide-react";
 import type { Attachment, IssueEvent } from "@flowdesk/contracts";
 import { AttachmentLink, AttachmentThumbnail, issueKeys, previewKind } from "../../../entities/issue";
-import { PersonName } from "../../../entities/member";
-import { Button, ErrorText, IconButton, Textarea, Time } from "../../../shared/ui";
+import { MentionedText, PersonName } from "../../../entities/member";
+import { Button, ErrorText, IconButton, Time } from "../../../shared/ui";
 import { formatFileSize } from "../../../shared/ui/lib/formatFileSize";
 import { deleteComment } from "../api/deleteComment";
 import { updateComment } from "../api/updateComment";
+import { CommentBodyField } from "./CommentBodyField";
 
 // Edit and Delete are quiet until you point at the comment or tab into it, so a
 // long thread is not a wall of buttons. On a touch screen (no hover) they are
@@ -144,9 +145,10 @@ export function CommentCard({
       <div className="px-4 py-3">
         {isEditing ? (
           <div className="motion-rise-in flex flex-col gap-2">
-            <Textarea
+            <CommentBodyField
+              organizationId={organizationId}
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={setDraft}
               rows={3}
               aria-label="Edit comment"
               autoFocus
@@ -177,7 +179,9 @@ export function CommentCard({
             {editMutation.isError && <ErrorText>{editMutation.error.message}</ErrorText>}
           </div>
         ) : (
-          <p className="text-sm break-words whitespace-pre-wrap">{payload.body}</p>
+          <p className="text-sm break-words whitespace-pre-wrap">
+            <MentionedText organizationId={organizationId} body={payload.body} />
+          </p>
         )}
 
         {files.length > 0 && (

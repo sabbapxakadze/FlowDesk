@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
+import { mentionedUserIds, type IssuePriority, type IssueStatus } from "@flowdesk/contracts";
 import { AppError } from "../../shared/errors.js";
 import { hasPermission, type Role } from "../../shared/permissions.js";
 import {
@@ -154,8 +154,27 @@ export async function detachLabel(input: {
   return result;
 }
 
-export async function addComment(input: { issueId: string; authorId: string; body: string }) {
-  const { comment, notifiedUserIds } = await issuesRepository.addComment(input);
+/**
+ * The people a comment body @mentions who are CURRENT members of this organization (ADR 0033). The ids come from text the
+ * client sent, so they are never trusted: a made-up id or a person in another organization is simply dropped (no
+ * notification, and the comment still posts, its token just shows as text). The notification SQL does not check membership
+ * itself, so this is the check.
+ */
+async function mentionedMembers(organizationId: string, body: string): Promise<string[]> {
+  const found: string[] = [];
+  for (const id of mentionedUserIds(body)) {
+    if (await organizationsRepository.findMember(organizationId, id)) found.push(id);
+  }
+  return found;
+}
+
+export async function addComment(input: { organizationId: string; issueId: string; authorId: string; body: string }) {
+  const { comment, notifiedUserIds } = await issuesRepository.addComment({
+    issueId: input.issueId,
+    authorId: input.authorId,
+    body: input.body,
+    mentionedUserIds: await mentionedMembers(input.organizationId, input.body),
+  });
   broadcastIssueCommented(input.issueId);
   broadcastNotifications(notifiedUserIds);
   return comment;
@@ -222,13 +241,18 @@ export async function editComment(input: {
   if (!comment) return { status: "not_found" } as const;
   if (comment.authorId !== input.actorId) return { status: "forbidden" } as const;
 
-  const updated = await issuesRepository.updateComment({
+  // Only people this edit ADDS are told: those mentioned now and not in the text it replaces (ADR 0033).
+  const before = mentionedUserIds(comment.body);
+  const newMentionUserIds = (await mentionedMembers(input.organizationId, input.body)).filter((id) => !before.includes(id));
+  const { comment: updated, notifiedUserIds } = await issuesRepository.updateComment({
     issueId: input.issueId,
     commentId: input.commentId,
     actorId: input.actorId,
     body: input.body,
+    newMentionUserIds,
   });
   broadcastIssueCommented(input.issueId);
+  broadcastNotifications(notifiedUserIds);
   return { status: "edited", comment: updated } as const;
 }
 

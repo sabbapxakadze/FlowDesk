@@ -9,7 +9,7 @@ import {
   useNotifications,
   useUnreadCount,
 } from "../../entities/notification";
-import { describeEvent } from "../../entities/issue";
+import { describeEventFor } from "../../entities/issue";
 import { useAuth } from "../../shared/auth/useAuth";
 import { issuePath } from "../../shared/lib/paths";
 import { Button, EmptyState, Skeleton, useAnimatedList, useExitPresence, useRowMotionProps, type RowState } from "../../shared/ui";
@@ -26,6 +26,7 @@ function NotificationRow({
   rowIndex: number;
 }) {
   const unread = notification.readAt === null;
+  const { user } = useAuth();
   const { ref: rowRef, className: rowClass, style: rowStyle } = useRowMotionProps<HTMLLIElement>(rowState, rowIndex);
   return (
     <li ref={rowRef} style={rowStyle} className={rowClass}>
@@ -46,7 +47,7 @@ function NotificationRow({
           }`}
         >
           <span className="font-medium">{notification.event.actorName}</span>{" "}
-          {describeEvent(notification.event)}
+          {describeEventFor(notification.event, user?.id)}
           {" — "}
           {notification.issueTitle}
         </p>

@@ -444,13 +444,21 @@ async function computeBisectedRank(
 export async function writeIssueEvent(
   tx: Tx,
   input: { issueId: string; actorId: string; type: string; payload: Record<string, unknown> },
-  options: { notify?: boolean; alsoNotifyUserIds?: string[] } = {},
+  options: { notify?: boolean; alsoNotifyUserIds?: string[]; notifyOnly?: string[] } = {},
 ): Promise<string[]> {
   const [event] = await tx.insert(issueEvents).values(input).returning({ id: issueEvents.id });
   if (!event) throw new Error("Failed to write issue event");
   // notify: false writes the audit row but creates no notifications (comment
   // edits and deletes are quiet by design, see ADR 0019).
   if (options.notify === false) return [];
+  // notifyOnly: tell exactly these people and nobody else (a person newly @mentioned in an edited comment, ADR 0033).
+  if (options.notifyOnly) {
+    return notificationsRepository.createForUsers(tx, {
+      issueEventId: event.id,
+      userIds: options.notifyOnly,
+      excludeActorId: input.actorId,
+    });
+  }
   return notificationsRepository.createForIssueEvent(tx, {
     issueEventId: event.id,
     issueId: input.issueId,
@@ -852,7 +860,7 @@ export async function detachLabel(input: {
  * timeline never has to join back to comments to render a "commented"
  * line) — see the Phase 3 slice 4 plan's "Decisions" section.
  */
-export async function addComment(input: { issueId: string; authorId: string; body: string }) {
+export async function addComment(input: { issueId: string; authorId: string; body: string; mentionedUserIds?: string[] }) {
   return db.transaction(async (tx) => {
     const [comment] = await tx
       .insert(comments)
@@ -860,12 +868,18 @@ export async function addComment(input: { issueId: string; authorId: string; bod
       .returning();
     if (!comment) throw new Error("Failed to create comment");
 
-    const notifiedUserIds = await writeIssueEvent(tx, {
-      issueId: input.issueId,
-      actorId: input.authorId,
-      type: "issue.commented",
-      payload: { commentId: comment.id, body: comment.body },
-    });
+    const mentioned = input.mentionedUserIds ?? [];
+    // The mentioned are told on top of the usual participants and assignee (one notification each, UNION dedups).
+    const notifiedUserIds = await writeIssueEvent(
+      tx,
+      {
+        issueId: input.issueId,
+        actorId: input.authorId,
+        type: "issue.commented",
+        payload: { commentId: comment.id, body: comment.body, mentions: mentioned },
+      },
+      { alsoNotifyUserIds: mentioned },
+    );
 
     return { comment, notifiedUserIds };
   });
@@ -892,7 +906,14 @@ export async function findComment(organizationId: string, issueId: string, comme
  * not: a new issue.comment_edited event is appended (history is never
  * patched). Quiet: no notifications.
  */
-export async function updateComment(input: { issueId: string; commentId: string; actorId: string; body: string }) {
+export async function updateComment(input: {
+  issueId: string;
+  commentId: string;
+  actorId: string;
+  body: string;
+  /** Members newly @mentioned by this edit (not by the old text). Only they are told (ADR 0033). */
+  newMentionUserIds?: string[];
+}) {
   return db.transaction(async (tx) => {
     const [comment] = await tx
       .update(comments)
@@ -901,17 +922,19 @@ export async function updateComment(input: { issueId: string; commentId: string;
       .returning();
     if (!comment) throw new Error("Failed to update comment");
 
-    await writeIssueEvent(
+    const newMentions = input.newMentionUserIds ?? [];
+    const notifiedUserIds = await writeIssueEvent(
       tx,
       {
         issueId: input.issueId,
         actorId: input.actorId,
         type: "issue.comment_edited",
-        payload: { commentId: comment.id, body: comment.body },
+        payload: { commentId: comment.id, body: comment.body, mentions: newMentions },
       },
-      { notify: false },
+      // Quiet, except for people this edit newly mentions (a named exception to ADR 0019).
+      newMentions.length > 0 ? { notifyOnly: newMentions } : { notify: false },
     );
-    return comment;
+    return { comment, notifiedUserIds };
   });
 }
 

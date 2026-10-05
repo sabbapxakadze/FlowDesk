@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router";
-import { describeEvent, useAssignedIssues } from "../../entities/issue";
+import { describeEventFor, useAssignedIssues } from "../../entities/issue";
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
@@ -119,7 +119,7 @@ export function MyWorkPage() {
                     <span className="block text-xs text-[var(--color-text-muted)]">
                       {notification.projectKey}-{notification.issueNumber}
                     </span>
-                    <span className="font-medium">{notification.event.actorName}</span> {describeEvent(notification.event)}
+                    <span className="font-medium">{notification.event.actorName}</span> {describeEventFor(notification.event, user?.id)}
                     {" \u2014 "}
                     {notification.issueTitle}
                   </span>

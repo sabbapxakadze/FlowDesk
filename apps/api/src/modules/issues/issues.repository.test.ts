@@ -1374,7 +1374,8 @@ describe("issues repository — comments and activity timeline", () => {
       .from(issueEvents)
       .where(and(eq(issueEvents.issueId, issue.id), eq(issueEvents.type, "issue.commented")));
     expect(commentEvents).toHaveLength(1);
-    expect(commentEvents[0]?.payload).toEqual({ commentId: comment.id, body: "This is a comment" });
+    // `mentions` is always recorded (empty when nobody is @mentioned, ADR 0033).
+    expect(commentEvents[0]?.payload).toEqual({ commentId: comment.id, body: "This is a comment", mentions: [] });
   });
 
   it("lists a real issue's whole life in chronological order with actor names", async () => {

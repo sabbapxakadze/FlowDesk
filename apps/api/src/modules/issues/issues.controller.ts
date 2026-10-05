@@ -259,6 +259,7 @@ export async function createComment(req: Request, res: Response) {
   }
 
   const comment = await issuesService.addComment({
+    organizationId: req.ctx.organizationId,
     issueId: req.ctx.issueId,
     authorId: req.ctx.userId,
     body: parsed.data.body,

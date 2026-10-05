@@ -7,6 +7,7 @@ export { buttonVariants } from "./buttonVariants";
 export { IconButton } from "./IconButton";
 export { Input } from "./Input";
 export { Textarea } from "./Textarea";
+export { MentionTextarea, type MentionCandidate, type MentionRef } from "./MentionTextarea";
 export { Field, FieldRowAction } from "./Field";
 export { Card } from "./Card";
 export { ErrorText } from "./ErrorText";

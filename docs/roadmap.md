@@ -1734,7 +1734,14 @@ The original plan for this slice, kept for the record:
    `Ctrl K`), and a bad link says "not found" in under a second is DONE (polish slice 2026-10-01). **`C` to create an issue: DONE 2026-10-05** (it
    focuses the new-issue title on the issues page). **STILL OPEN:** filtering the list by clicking a label (labels are not shown on the
    cards or on the issue page at all, only in the editor's picker and on the Labels page, so there is nothing to click yet).
-6. **Markdown and @mentions** in descriptions and comments. **STILL OPEN (checked 2026-10-05: descriptions and comments are plain text; the
+6. **@mentions in comments DONE 2026-10-05 (ADR 0033; owner's picks: comments only, mentioned people are told even if they never touched the issue and also by an edit that adds them, the list opens under the box).**
+   Type `@` in the comment box and a list of members opens under it (filters as you type, arrows/Enter/Tab choose, Esc closes only the list); the box shows `@Name`, the stored body holds
+   `@[Name](user:<id>)`; the posted comment shows each mention as a person link with the hover card; editing keeps them. The server keeps only CURRENT members of the organization (a made-up
+   id or another organization's person is ignored), tells the mentioned (one notification even if they are also a participant), and on an edit tells only the people it adds; the bell and
+   My work read "mentioned you in a comment". No schema change. 6 API tests (`mentions.http.test.ts`) and 3 e2e tests (`mentions.spec.ts`); removed one at a time to see tests fail: no membership
+   filter, an edit notifying everyone mentioned, no exclusion of the writer on an edit. **Not done:** mentions in the issue description (its text feeds the search column, and its event payload would need
+   a change), `@everyone`, **Markdown (still open)**. Named limits: two people with exactly the same name in one comment resolve to the last one picked; the list is under the box, not at the caret.
+   Not tested: that `mentions` stays out of the public profile activity (that feed returns `{}` for comment events by design). **Markdown STILL OPEN (checked 2026-10-05: descriptions and comments are plain text; the
    description keeps its line breaks since 2026-10-05, nothing more).**
    **Two navigation bugs noted 2026-10-05 (owner), NOT fixed yet.** (1) An issue opened from My work shows "<- {project name}", not "Back": `IssueDetail`
    passes a fixed back link without `history: true` (the `PageHeader` option the profile page already uses), so Back should return to the page the

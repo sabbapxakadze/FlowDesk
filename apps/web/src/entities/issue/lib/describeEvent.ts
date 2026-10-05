@@ -8,6 +8,22 @@ import { PRIORITY_LABELS, STATUS_LABELS } from "../../../shared/ui";
  * consumer, so this earns its own place in entities/issue rather than
  * staying page-local.
  */
+/**
+ * The same sentence for one viewer: a comment (or an edit of one) that @mentions THEM reads "mentioned you in a comment"
+ * (ADR 0033). Everyone else, and every other event, reads as describeEvent does.
+ */
+export function describeEventFor(event: IssueEvent, viewerId: string | undefined): string {
+  if (
+    viewerId &&
+    (event.type === "issue.commented" || event.type === "issue.comment_edited") &&
+    Array.isArray(event.payload.mentions) &&
+    event.payload.mentions.includes(viewerId)
+  ) {
+    return "mentioned you in a comment";
+  }
+  return describeEvent(event);
+}
+
 export function describeEvent(event: IssueEvent): string {
   switch (event.type) {
     case "issue.created":

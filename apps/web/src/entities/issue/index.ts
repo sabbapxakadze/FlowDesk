@@ -12,7 +12,7 @@ export { useLiveIssueUpdates } from "./api/useLiveIssueUpdates";
 export { useLiveIssueDetailUpdates } from "./api/useLiveIssueDetailUpdates";
 export { useAttachments } from "./api/useAttachments";
 export { useDeleteAttachment } from "./api/useDeleteAttachment";
-export { describeEvent } from "./lib/describeEvent";
+export { describeEvent, describeEventFor } from "./lib/describeEvent";
 export { issueKeys } from "./api/queryKeys";
 export { IssueCard } from "./ui/IssueCard";
 export { IssueSummary } from "./ui/IssueSummary";
