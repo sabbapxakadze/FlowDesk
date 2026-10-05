@@ -1,6 +1,7 @@
 import { test, expect, logInThroughForm } from "../support/fixtures";
 import { createIssueViaApi } from "../support/api";
 import { addOrgMember } from "../support/db";
+import { combobox, editField, pick } from "../support/dropdown";
 
 test("assign a teammate: card, filters, activity, and the teammate is notified live", async ({
   loggedInPage: pageA,
@@ -30,9 +31,7 @@ test("assign a teammate: card, filters, activity, and the teammate is notified l
   await pageA.goto(`/projects/${projectId}`);
   const card = (title: string) => pageA.getByRole("listitem").filter({ hasText: title });
   await card("Pass the baton").getByRole("button", { name: "Edit" }).click();
-  await pageA
-    .locator(`select[name="assigneeId"]`)
-    .selectOption({ label: "Second Person" });
+  await pick(editField(pageA, "Assignee"), "Second Person");
   await pageA.getByRole("button", { name: "Save" }).click();
   await expect(
     card("Pass the baton").getByRole("img", { name: "Assigned to Second Person" }),
@@ -45,17 +44,17 @@ test("assign a teammate: card, filters, activity, and the teammate is notified l
   await expect(pageB.getByRole("button", { name: "Notifications" })).toContainText("1");
 
   // Filters on A's page, and the choice lives in the URL.
-  await pageA.getByLabel("Filter by assignee").selectOption("unassigned");
+  await pick(combobox(pageA, "Filter by assignee"), "Unassigned");
   await expect(pageA).toHaveURL(/assignee=unassigned/);
   await expect(card("Nobody's job")).toBeVisible();
   await expect(card("Pass the baton")).toHaveCount(0);
-  await pageA.getByLabel("Filter by assignee").selectOption({ label: "Second Person" });
+  await pick(combobox(pageA, "Filter by assignee"), "Second Person");
   await expect(card("Pass the baton")).toBeVisible();
   await expect(card("Nobody's job")).toHaveCount(0);
 
   // B's "Assigned to me" shows exactly the issue assigned to B.
   await pageB.goto(`/projects/${projectId}`);
-  await pageB.getByLabel("Filter by assignee").selectOption({ label: "Assigned to me" });
+  await pick(combobox(pageB, "Filter by assignee"), "Assigned to me");
   await expect(
     pageB.getByRole("listitem").filter({ hasText: "Pass the baton" }),
   ).toBeVisible();
@@ -71,7 +70,7 @@ test("assign a teammate: card, filters, activity, and the teammate is notified l
   // from 1 to 2), even though B never commented or edited anything on the issue.
   await pageA.goto(`/projects/${projectId}`);
   await card("Pass the baton").getByRole("button", { name: "Edit" }).click();
-  await pageA.locator(`select[name="assigneeId"]`).selectOption({ label: "Unassigned" });
+  await pick(editField(pageA, "Assignee"), "Unassigned");
   await pageA.getByRole("button", { name: "Save" }).click();
   await expect(card("Pass the baton").getByRole("img", { name: /Assigned to/ })).toHaveCount(0);
   await expect(pageB.getByRole("button", { name: "Notifications" })).toContainText("2");

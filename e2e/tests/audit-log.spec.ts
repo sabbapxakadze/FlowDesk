@@ -1,6 +1,7 @@
 import { test, expect, logInThroughForm } from "../support/fixtures";
 import { apiSession, createIssueViaApi } from "../support/api";
 import { addOrgMember } from "../support/db";
+import { combobox, expectValue, pick } from "../support/dropdown";
 
 const rows = (page: import("@playwright/test").Page) =>
   page.getByRole("list", { name: "Audit log" }).getByRole("listitem");
@@ -50,17 +51,17 @@ test("filter by kind and by person; the choice is in the URL and survives a relo
 
   await page.goto("/audit-log");
   await expect(rows(page)).toHaveCount(2); // project created, invited
-  await page.getByLabel("Filter by kind").selectOption({ label: "Members" });
+  await pick(combobox(page, "Filter by kind"), "Members");
   await expect(page).toHaveURL(/kind=member/);
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText("invited new@example.com to join as member", { useInnerText: true });
 
   await page.reload();
-  await expect(page.getByLabel("Filter by kind")).toHaveValue("member");
+  await expectValue(combobox(page, "Filter by kind"), "member");
   await expect(rows(page)).toHaveCount(1);
 
-  await page.getByLabel("Filter by kind").selectOption({ label: "Everything" });
-  await page.getByLabel("Filter by person").selectOption({ label: "Second Person" });
+  await pick(combobox(page, "Filter by kind"), "Everything");
+  await pick(combobox(page, "Filter by person"), "Second Person");
   await expect(page).toHaveURL(/actor=/);
   await expect(page.getByText("Nothing matches these filters.")).toBeVisible(); // they did nothing yet
   await second.close();

@@ -51,3 +51,8 @@ Motion (ADR 0029): `Button` has `pending` and `done`; `Card` takes `rowState`/`r
 `Dialog` (2026-10-05) is the modal every popup form uses (the issue editor): a native `<dialog>` with a title and a close button,
 `motion-dialog`, focus to the first `data-autofocus` element, back to the opener on close; `dismissOnBackdrop={false}` keeps a
 form with unsaved text from closing on a stray click. `Textarea` is resizable only vertically, between 4.5rem and 16rem tall.
+
+`Dropdown` (2026-10-05, owner's pick D4) replaces the native `<select>`, which is gone (`Select` and its arrow token were deleted): `options`
+(value, label, optional mark), `value`, `onChange(value)`. A search box past 7 options, the chosen row in the link colour, a fixed-position list that flips up
+near the bottom, as wide as its widest option, Esc closes only the list. Forms use it through `Controller`; `entities/member`'s `memberOptions` builds people lists;
+`STATUS_OPTIONS` and `PRIORITY_OPTIONS` carry the status dot and priority icon. In e2e tests use `pick(combobox(page, name), label)` from `e2e/support/dropdown.ts`.

@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createInvitationRequestSchema, type CreateInvitationRequest } from "@flowdesk/contracts";
 import { invitationKeys } from "../../../entities/invitation";
 import { ApiError } from "../../../shared/api/client";
-import { Button, ErrorText, Field, Input, Select } from "../../../shared/ui";
+import { Button, Dropdown, ErrorText, Field, Input } from "../../../shared/ui";
 import { createInvitation } from "../api/createInvitation";
 
 const ROLE_HELP: Record<CreateInvitationRequest["role"], string> = {
@@ -100,11 +100,21 @@ export function InviteMemberForm({ organizationId }: { organizationId: string })
       </Field>
 
       <Field label="Role" error={errors.role?.message}>
-        <Select {...register("role")}>
-          <option value="member">Member</option>
-          <option value="admin">Admin</option>
-          <option value="viewer">Viewer</option>
-        </Select>
+        <Controller
+          control={control}
+          name="role"
+          render={({ field }) => (
+            <Dropdown
+              value={field.value}
+              onChange={field.onChange}
+              options={[
+                { value: "member", label: "Member" },
+                { value: "admin", label: "Admin" },
+                { value: "viewer", label: "Viewer" },
+              ]}
+            />
+          )}
+        />
       </Field>
 
       <Button type="submit" className="mt-6" pending={mutation.isPending}>

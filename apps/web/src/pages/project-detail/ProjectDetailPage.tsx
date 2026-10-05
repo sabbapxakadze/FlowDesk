@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
 import { useCurrentProject } from "../../entities/project";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
-import { useMembers, useMemberNames } from "../../entities/member";
+import { memberOptions, useMembers, useMemberNames } from "../../entities/member";
 import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
 import { CreateIssueForm } from "../../features/create-issue";
 import { EditIssueDialog } from "../../features/edit-issue";
@@ -11,16 +11,16 @@ import { useAuth } from "../../shared/auth/useAuth";
 import {
   Button,
   Card,
+  Dropdown,
   EmptyState,
   ErrorText,
   Page,
   PageHeader,
-  PRIORITY_LABELS,
+  PRIORITY_OPTIONS,
   PRIORITY_ORDER,
   ScrollPanel,
-  Select,
   Skeleton,
-  STATUS_LABELS,
+  STATUS_OPTIONS,
   useAnimatedList,
 } from "../../shared/ui";
 
@@ -177,60 +177,44 @@ export function ProjectDetailPage() {
         data-panel-trigger
         className={`mt-4 mb-3 flex flex-wrap items-center gap-2 ${panel.issueRef ? "sm:max-[1559px]:pr-[31rem]" : ""}`}
       >
-        <Select
-          value={status ?? ""}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="w-auto"
+        <Dropdown
           aria-label="Filter by status"
-        >
-          <option value="">All statuses</option>
-          {STATUS_FILTER_VALUES.map((s) => (
-            <option key={s} value={s}>
-              {STATUS_LABELS[s]}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={priority ?? ""}
-          onChange={(e) => setPriorityFilter(e.target.value)}
           className="w-auto"
+          value={status ?? ""}
+          onChange={setStatusFilter}
+          options={[{ value: "", label: "All statuses" }, ...STATUS_OPTIONS]}
+        />
+        <Dropdown
           aria-label="Filter by priority"
-        >
-          <option value="">All priorities</option>
-          {PRIORITY_ORDER.map((p) => (
-            <option key={p} value={p}>
-              {PRIORITY_LABELS[p]}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={assignee ?? ""}
-          onChange={(e) => setAssigneeFilter(e.target.value)}
           className="w-auto"
+          value={priority ?? ""}
+          onChange={setPriorityFilter}
+          options={[{ value: "", label: "All priorities" }, ...PRIORITY_OPTIONS]}
+        />
+        <Dropdown
           aria-label="Filter by assignee"
-        >
-          <option value="">Anyone</option>
-          <option value="unassigned">Unassigned</option>
-          {/* "Assigned to me" is just the signed-in user's own id. */}
-          {user && <option value={user.id}>Assigned to me</option>}
-          {members
-            ?.filter((member) => member.userId !== user?.id)
-            .map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {member.name}
-              </option>
-            ))}
-        </Select>
-        <Select
-          value={sortChoice}
-          onChange={(e) => setSortChoice(e.target.value)}
           className="w-auto"
+          value={assignee ?? ""}
+          onChange={setAssigneeFilter}
+          options={[
+            { value: "", label: "Anyone" },
+            { value: "unassigned", label: "Unassigned" },
+            // "Assigned to me" is just the signed-in user's own id.
+            ...(user ? [{ value: user.id, label: "Assigned to me" }] : []),
+            ...memberOptions(members?.filter((member) => member.userId !== user?.id)),
+          ]}
+        />
+        <Dropdown
           aria-label="Sort"
-        >
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
-          <option value="priority">Highest priority first</option>
-        </Select>
+          className="w-auto"
+          value={sortChoice}
+          onChange={setSortChoice}
+          options={[
+            { value: "newest", label: "Newest first" },
+            { value: "oldest", label: "Oldest first" },
+            { value: "priority", label: "Highest priority first" },
+          ]}
+        />
       </div>
 
       {showConflictNotice && (

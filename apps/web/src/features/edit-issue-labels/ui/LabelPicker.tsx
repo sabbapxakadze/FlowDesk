@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLabels, labelKeys, LabelBadge } from "../../../entities/label";
 import { useIssueLabels, issueKeys } from "../../../entities/issue";
-import { Button, Input, Select } from "../../../shared/ui";
+import { Button, Dropdown, Input } from "../../../shared/ui";
 import { attachLabel } from "../api/attachLabel";
 import { detachLabel } from "../api/detachLabel";
 import { createLabel } from "../api/createLabel";
@@ -71,19 +71,19 @@ export function LabelPicker({
       </div>
 
       <div className="flex items-center gap-2 text-sm">
-        <Select
+        <Dropdown
           value=""
-          onChange={(e) => {
-            if (e.target.value) attachMutation.mutate(e.target.value);
+          placeholder="+ Add label"
+          className="w-auto"
+          onChange={(id) => {
+            if (id) attachMutation.mutate(id);
           }}
-        >
-          <option value="">+ Add label</option>
-          {available.map((label) => (
-            <option key={label.id} value={label.id}>
-              {label.name}
-            </option>
-          ))}
-        </Select>
+          options={available.map((label) => ({
+            value: label.id,
+            label: label.name,
+            icon: <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: label.color }} />,
+          }))}
+        />
       </div>
 
       {/*

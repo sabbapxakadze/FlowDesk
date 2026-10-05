@@ -2,7 +2,7 @@ import { useSearchParams } from "react-router";
 import { useVelocity } from "../../entities/analytics";
 import { useCurrentProject } from "../../entities/project";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Card, Page, PageHeader, Select } from "../../shared/ui";
+import { Card, Dropdown, Page, PageHeader } from "../../shared/ui";
 import { BreakdownCharts } from "../../widgets/breakdown-charts";
 import { CycleTimeChart } from "../../widgets/cycle-time-chart";
 import { ThroughputChart } from "../../widgets/throughput-chart";
@@ -72,34 +72,24 @@ export function ProjectAnalyticsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
         <label className="flex items-center gap-2">
           <span className="text-[var(--color-text-muted)]">Period</span>
-          <Select
-            value={weeks}
-            onChange={(e) => setRange("weeks", Number(e.target.value), DEFAULT_WEEKS)}
-            className="w-auto"
+          <Dropdown
             aria-label="Period for throughput and cycle time"
-          >
-            {WEEKS_CHOICES.map((choice) => (
-              <option key={choice} value={choice}>
-                Last {choice} weeks
-              </option>
-            ))}
-          </Select>
+            className="w-auto"
+            value={String(weeks)}
+            onChange={(value) => setRange("weeks", Number(value), DEFAULT_WEEKS)}
+            options={WEEKS_CHOICES.map((choice) => ({ value: String(choice), label: `Last ${choice} weeks` }))}
+          />
         </label>
         {sprintChoices.length > 1 && (
           <label className="flex items-center gap-2">
             <span className="text-[var(--color-text-muted)]">Velocity</span>
-            <Select
-              value={sprints}
-              onChange={(e) => setRange("sprints", Number(e.target.value), DEFAULT_SPRINTS)}
-              className="w-auto"
+            <Dropdown
               aria-label="Number of sprints for velocity"
-            >
-              {sprintChoices.map((choice) => (
-                <option key={choice} value={choice}>
-                  Last {choice} sprints
-                </option>
-              ))}
-            </Select>
+              className="w-auto"
+              value={String(sprints)}
+              onChange={(value) => setRange("sprints", Number(value), DEFAULT_SPRINTS)}
+              options={sprintChoices.map((choice) => ({ value: String(choice), label: `Last ${choice} sprints` }))}
+            />
           </label>
         )}
       </div>

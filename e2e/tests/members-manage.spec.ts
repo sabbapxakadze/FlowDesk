@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { test, expect, logInThroughForm, TEST_USER } from "../support/fixtures";
 import { createIssueViaApi } from "../support/api";
 import { addOrgMember } from "../support/db";
+import { editField, expectValue, inviteRole, pick } from "../support/dropdown";
 
 const SECOND = { email: "e2e-second@example.com", name: "Second Person" };
 const memberRow = (page: Page, name: string) =>
@@ -21,11 +22,11 @@ test("an owner changes a member role from the list and it sticks after a reload;
   await openMembersWithSecond(page);
   const row = memberRow(page, SECOND.name);
   await expect(row).toContainText("Member");
-  await row.getByLabel(`Role of ${SECOND.name}`).selectOption({ label: "Admin" });
-  await expect(row.getByLabel(`Role of ${SECOND.name}`)).toHaveValue("admin");
+  await pick(row.getByRole("combobox", { name: `Role of ${SECOND.name}` }), "Admin");
+  await expectValue(row.getByRole("combobox", { name: `Role of ${SECOND.name}` }), "admin");
 
   await page.reload();
-  await expect(memberRow(page, SECOND.name).getByLabel(`Role of ${SECOND.name}`)).toHaveValue("admin");
+  await expectValue(memberRow(page, SECOND.name).getByRole("combobox", { name: `Role of ${SECOND.name}` }), "admin");
 
   // Your own row (the owner) has no controls.
   await expect(memberRow(page, TEST_USER.name).getByRole("combobox")).toHaveCount(0);
@@ -38,8 +39,8 @@ test("an admin sees controls for members but none on the owner or on themselves"
 }) => {
   // Why: an admin can manage members but the owner is protected; the UI must not offer it.
   await openMembersWithSecond(page);
-  await memberRow(page, SECOND.name).getByLabel(`Role of ${SECOND.name}`).selectOption({ label: "Admin" });
-  await expect(memberRow(page, SECOND.name).getByLabel(`Role of ${SECOND.name}`)).toHaveValue("admin");
+  await pick(memberRow(page, SECOND.name).getByRole("combobox", { name: `Role of ${SECOND.name}` }), "Admin");
+  await expectValue(memberRow(page, SECOND.name).getByRole("combobox", { name: `Role of ${SECOND.name}` }), "admin");
 
   const ctx = await browser.newContext();
   const admin = await ctx.newPage();
@@ -67,7 +68,7 @@ test("removing a member asks first, unassigns their issues, and they see a clear
   });
   await page.goto(`/projects/${projectId}`);
   await page.getByRole("listitem").filter({ hasText: "Held by Second" }).getByRole("button", { name: "Edit" }).click();
-  await page.locator(`select[name="assigneeId"]`).selectOption({ label: SECOND.name });
+  await pick(editField(page, "Assignee"), SECOND.name);
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("img", { name: `Assigned to ${SECOND.name}` })).toBeVisible();
 
@@ -118,7 +119,7 @@ test("a removed person is invited back, joins with one click (no new password) a
   await expect(memberRow(page, SECOND.name)).toHaveCount(0);
 
   await page.getByLabel("Email").fill(SECOND.email);
-  await page.locator(`select[name="role"]`).selectOption({ label: "Viewer" });
+  await pick(inviteRole(page), "Viewer");
   await page.getByRole("button", { name: "Send invitation" }).click();
   const url = await page.getByLabel("Invitation link").inputValue();
 

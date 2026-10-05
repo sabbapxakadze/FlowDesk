@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "../support/fixtures";
 import { createIssueViaApi } from "../support/api";
+import { combobox, pick } from "../support/dropdown";
 
 /**
  * Readable addresses (ADR 0030): projects and issues are named by their keys in the address bar
@@ -54,7 +55,7 @@ test("the side panel is ?issue=WEB-1 and survives a reload; Open full page is /p
   await expect(page).toHaveURL(/\/projects\/WEB\?issue=WEB-1$/);
 
   // The list's filters live next to it, in the same address.
-  await page.getByLabel("Filter by status").selectOption("todo");
+  await pick(combobox(page, "Filter by status"), "Todo");
   await expect(page).toHaveURL(/status=todo/);
   await expect(page).toHaveURL(/issue=WEB-1/);
 

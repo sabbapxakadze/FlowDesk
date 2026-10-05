@@ -2267,8 +2267,17 @@ The original plan for this slice, kept for the record:
    16rem, vertical resize only: now every `Textarea`), and the issue page keeps its line breaks. Conflicts (409) still close it
    with the existing notice. A known limit that was already true inline: the form's version follows live updates while its fields
    do not, so a change made by someone else in the meantime is overwritten rather than flagged. 6 e2e tests (`edit-popup.spec.ts`);
-   three behaviours were removed one at a time to see them fail. Not done yet (asked, needs a design pass): a custom dropdown for
-   `Select` everywhere.
+   three behaviours were removed one at a time to see them fail.
+   **Dropdown DONE 2026-10-05 (owner's pick D4).** `shared/ui/Dropdown` replaces the browser's `<select>` everywhere (14 uses: the issue
+   filters and sort, the issue editor, invite and member roles, the label picker, the audit log filters, the analytics ranges; the old
+   `Select` component and its arrow token are deleted). A box like the other controls and a floating list with a mark before each label (status
+   dot, priority icon, avatar), a search box past seven options, the chosen row in the link colour. Select-only combobox pattern (combobox, listbox,
+   option, aria-selected, aria-activedescendant); Down/Up, Home/End, Enter/Space, type-ahead; Esc closes only the list (not the popup or panel
+   behind it); `position: fixed` and flips upward when there is more room above; as wide as its widest option so a row of filters never jumps; forms
+   use it through react-hook-form's `Controller`. `memberOptions` (entities/member) builds the people lists. The e2e suite's 27 `selectOption` calls
+   became a `pick` helper (`e2e/support/dropdown.ts`); 6 new tests (`dropdown.spec.ts`) and 5 behaviours removed one at a time to see them fail.
+   Named limits: the list is not virtualised (fine for the longest list here, the members); no multi-select (the label picker adds one at a
+   time, as before); a screen reader was not run, the semantics follow the pattern.
    **Readable URLs DONE 2026-10-04 (ADR 0030).** Projects and issues are named by their keys in the address:
    `/projects/WEB`, `/projects/WEB/issues/WEB-12`, `/projects/WEB?issue=WEB-12`. New endpoint
    `GET .../issues/by-number/:number`; a `ProjectRoute` layout resolves the key once from the cached project list and the

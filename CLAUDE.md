@@ -121,6 +121,7 @@ Addresses are readable (ADR 0030): `/projects/WEB`, `/projects/WEB/issues/WEB-12
 rewritten; ids remain the identity inside the app and the API.
 The app has a motion language (ADR 0029): page fade-and-rise, panel slide, dialog fade-and-grow, rows that open and close,
 button press/spinner/tick, theme cross-fade; all off under reduced motion, and the e2e suite runs with reduced motion on.
+Every dropdown is the app's own `shared/ui/Dropdown` (search past seven options, marks before labels, keyboard and screen-reader support), not a native select.
 Long lists scroll inside their own area instead of stretching the page (`shared/ui/ScrollPanel`: a raised panel on the Issues
 page, edge shadows on a person's activity and an issue's timeline).
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.

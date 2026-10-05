@@ -1,18 +1,18 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Issue, IssuePriority, IssueStatus } from "@flowdesk/contracts";
 import { issueKeys } from "../../../entities/issue";
-import { useMembers } from "../../../entities/member";
+import { memberOptions, useMembers } from "../../../entities/member";
 import { ApiError } from "../../../shared/api/client";
 import {
   Button,
+  Dropdown,
   ErrorText,
   Field,
   Input,
-  PRIORITY_LABELS,
-  PRIORITY_ORDER,
-  Select,
+  PRIORITY_OPTIONS,
+  STATUS_OPTIONS,
   Textarea,
 } from "../../../shared/ui";
 import { LabelPicker } from "../../edit-issue-labels";
@@ -58,6 +58,7 @@ export function EditIssueForm({
   const queryClient = useQueryClient();
   const {
     register,
+    control,
     handleSubmit,
     formState: { isDirty },
   } = useForm<FormValues>({
@@ -130,32 +131,33 @@ export function EditIssueForm({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Status">
-          <Select {...register("status")}>
-            <option value="todo">Todo</option>
-            <option value="in_progress">In progress</option>
-            <option value="done">Done</option>
-          </Select>
+          <Controller
+            control={control}
+            name="status"
+            render={({ field }) => <Dropdown value={field.value} onChange={field.onChange} options={STATUS_OPTIONS} />}
+          />
         </Field>
 
         <Field label="Priority">
-          <Select {...register("priority")}>
-            {PRIORITY_ORDER.map((value) => (
-              <option key={value} value={value}>
-                {PRIORITY_LABELS[value]}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={control}
+            name="priority"
+            render={({ field }) => <Dropdown value={field.value} onChange={field.onChange} options={PRIORITY_OPTIONS} />}
+          />
         </Field>
 
         <Field label="Assignee">
-          <Select {...register("assigneeId")}>
-            <option value="">Unassigned</option>
-            {members?.map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {member.name}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={control}
+            name="assigneeId"
+            render={({ field }) => (
+              <Dropdown
+                value={field.value}
+                onChange={field.onChange}
+                options={[{ value: "", label: "Unassigned" }, ...memberOptions(members)]}
+              />
+            )}
+          />
         </Field>
       </div>
 

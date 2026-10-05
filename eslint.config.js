@@ -136,6 +136,7 @@ export default tseslint.config(
     files: [
       "apps/web/src/shared/ui/Button.tsx", // the Button itself
       "apps/web/src/shared/ui/IconButton.tsx", // the IconButton itself
+      "apps/web/src/shared/ui/Dropdown.tsx", // the box that opens the list: a select-style control, not a Button look
       "apps/web/src/shared/ui/PersonHover.tsx", // the name that opens a card: text plus avatar, not a Button look
       "apps/web/src/shared/ui/ThemeSwitch.tsx", // a segmented toggle group
       "apps/web/src/entities/issue/ui/DragHandle.tsx", // a drag handle with dnd-kit listeners

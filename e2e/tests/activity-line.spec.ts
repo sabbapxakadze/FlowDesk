@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "../support/fixtures";
 import { createIssueViaApi } from "../support/api";
 import { addOrgMember } from "../support/db";
+import { editField, pick } from "../support/dropdown";
 
 /** An issue with a "created" line and an "assigned to Second Person" line, opened. */
 async function openIssueWithAssignment(page: Page) {
@@ -20,7 +21,7 @@ async function openIssueWithAssignment(page: Page) {
     .filter({ hasText: "Pass the baton" })
     .getByRole("button", { name: "Edit" })
     .click();
-  await page.locator(`select[name="assigneeId"]`).selectOption({ label: "Second Person" });
+  await pick(editField(page, "Assignee"), "Second Person");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(
     page.getByRole("img", { name: "Assigned to Second Person" }),

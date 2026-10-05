@@ -1,13 +1,14 @@
 import type { Page } from "@playwright/test";
 import { test, expect, logInThroughForm, TEST_USER } from "../support/fixtures";
 import { addOrgMember } from "../support/db";
+import { inviteRole, pick } from "../support/dropdown";
 
 const membersList = (page: Page) => page.getByRole("list", { name: "Members", exact: true });
 const pendingList = (page: Page) => page.getByRole("list", { name: "Pending invitations" });
 
 async function invite(page: Page, email: string, role: "Member" | "Admin" | "Viewer" = "Member") {
   await page.getByLabel("Email").fill(email);
-  await page.locator(`select[name="role"]`).selectOption({ label: role });
+  await pick(inviteRole(page), role);
   await page.getByRole("button", { name: "Send invitation" }).click();
 }
 

@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { test, expect, logInThroughForm } from "../support/fixtures";
 import { createIssueViaApi } from "../support/api";
 import { addOrgMember } from "../support/db";
+import { editField, pick } from "../support/dropdown";
 
 const visibleCard = (page: Page) => page.locator('[role="tooltip"]:visible');
 
@@ -22,7 +23,7 @@ async function openIssue(page: Page) {
     .filter({ hasText: "Pass the baton" })
     .getByRole("button", { name: "Edit" })
     .click();
-  await page.locator(`select[name="assigneeId"]`).selectOption({ label: "Second Person" });
+  await pick(editField(page, "Assignee"), "Second Person");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("img", { name: "Assigned to Second Person" })).toBeVisible();
   const url = `/projects/${projectId}/issues/${issueIds[0]}`;

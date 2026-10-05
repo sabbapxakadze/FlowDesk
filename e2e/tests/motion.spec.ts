@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "../support/fixtures";
 import { createIssueViaApi } from "../support/api";
+import { combobox, pick } from "../support/dropdown";
 
 /**
  * The app's motion (owner's design pass, 2026-10-04). The rest of the suite runs with the system setting
@@ -50,7 +51,7 @@ test.describe("with animations on", () => {
     await expect(page.getByRole("link", { name: /One/ }).first()).toBeVisible();
     // Mark the page wrapper; it must survive a query-string change and be replaced by a path change.
     await page.evaluate(() => document.querySelector("div.motion-rise-in")!.setAttribute("data-probe", "1"));
-    await page.getByLabel("Filter by status").selectOption("todo");
+    await pick(combobox(page, "Filter by status"), "Todo");
     await expect(page).toHaveURL(/status=todo/);
     expect(await page.locator("div.motion-rise-in[data-probe]").count()).toBe(1);
 
@@ -279,9 +280,9 @@ test.describe("with animations on", () => {
     });
     await page.goto(`/projects/${projectId}`);
     await expect(page.getByRole("link", { name: /Three/ }).first()).toBeVisible();
-    await page.getByLabel("Filter by status").selectOption("done");
+    await pick(combobox(page, "Filter by status"), "Done");
     await expect(page.getByText("No issues match these filters.")).toBeVisible();
-    await page.getByLabel("Filter by status").selectOption("");
+    await pick(combobox(page, "Filter by status"), "All statuses");
     await expect(page.getByRole("link", { name: /Three/ }).first()).toBeVisible();
     expect(await rowAnimations(page)).toEqual([]);
   });

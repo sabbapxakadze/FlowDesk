@@ -11,16 +11,18 @@ import {
   EmptyState,
   ErrorText,
   Dialog,
+  Dropdown,
   Field,
   IconButton,
   Input,
   Lane,
   Page,
   PageHeader,
+  PRIORITY_OPTIONS,
   ScrollPanel,
-  Select,
   SidePanel,
   Skeleton,
+  STATUS_OPTIONS,
   StatusBadge,
   Textarea,
   ThemeSwitch,
@@ -253,6 +255,8 @@ function ScrollPanelDemo() {
 }
 
 function DemoEditForm({ onCancel }: { onCancel: () => void }) {
+  const [status, setStatus] = useState("todo");
+  const [priority, setPriority] = useState("high");
   return (
     <form
       className="flex flex-col gap-3"
@@ -269,21 +273,13 @@ function DemoEditForm({ onCancel }: { onCancel: () => void }) {
       </Field>
       <div className="grid grid-cols-3 gap-3">
         <Field label="Status">
-          <Select defaultValue="todo">
-            <option value="todo">Todo</option>
-            <option value="in_progress">In progress</option>
-          </Select>
+          <Dropdown value={status} onChange={setStatus} options={STATUS_OPTIONS} />
         </Field>
         <Field label="Priority">
-          <Select defaultValue="high">
-            <option value="high">High</option>
-            <option value="low">Low</option>
-          </Select>
+          <Dropdown value={priority} onChange={setPriority} options={PRIORITY_OPTIONS} />
         </Field>
         <Field label="Assignee">
-          <Select defaultValue="me">
-            <option value="me">Assigned to me</option>
-          </Select>
+          <Dropdown value="me" onChange={() => undefined} options={[{ value: "me", label: "Assigned to me" }]} />
         </Field>
       </div>
       <div className="flex justify-end gap-2">
@@ -323,6 +319,49 @@ function DialogDemo() {
           </div>
         </SidePanel>
       )}
+    </div>
+  );
+}
+
+const DEMO_PEOPLE = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson", "Linus Torvalds", "Margaret Hamilton", "Dennis Ritchie", "Barbara Liskov"];
+
+function DropdownDemo() {
+  const [status, setStatus] = useState("todo");
+  const [priority, setPriority] = useState("high");
+  const [person, setPerson] = useState("");
+  const [placeholderValue, setPlaceholderValue] = useState("");
+  return (
+    <div className="grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
+      <Field label="Status">
+        <Dropdown value={status} onChange={setStatus} options={STATUS_OPTIONS} />
+      </Field>
+      <Field label="Priority">
+        <Dropdown value={priority} onChange={setPriority} options={PRIORITY_OPTIONS} />
+      </Field>
+      <Field label="Assignee (eight people: has a search box)">
+        <Dropdown
+          value={person}
+          onChange={setPerson}
+          options={[
+            { value: "", label: "Unassigned" },
+            ...DEMO_PEOPLE.map((name) => ({ value: name, label: name, icon: <Avatar name={name} size="sm" /> })),
+          ]}
+        />
+      </Field>
+      <Field label="With a placeholder (nothing chosen)">
+        <Dropdown
+          value={placeholderValue}
+          onChange={setPlaceholderValue}
+          placeholder="+ Add label"
+          options={[
+            { value: "bug", label: "bug" },
+            { value: "design", label: "design" },
+          ]}
+        />
+      </Field>
+      <Field label="Disabled">
+        <Dropdown value="member" onChange={() => undefined} disabled options={[{ value: "member", label: "Member" }]} />
+      </Field>
     </div>
   );
 }
@@ -499,16 +538,12 @@ export function DesignSystemPage() {
         </div>
       </Section>
 
-      <Section title="Input, Textarea, Select">
+      <Section title="Input, Textarea">
         <div className="flex max-w-sm flex-col gap-3">
           <Input placeholder="A text input" />
           <Input placeholder="Invalid (aria-invalid)" aria-invalid="true" />
           <Input placeholder="Disabled" disabled />
-          <Textarea placeholder="A textarea" rows={3} />
-          <Select>
-            <option>Option one</option>
-            <option>Option two</option>
-          </Select>
+          <Textarea placeholder="A textarea (resizable only up and down, between 4.5rem and 16rem tall)" rows={3} />
         </div>
       </Section>
 
@@ -623,6 +658,13 @@ export function DesignSystemPage() {
         note="The modal every popup form uses (the issue editor, opened from the issue list, the issue page and the side panel). A native dialog opened with showModal(): it sits above everything, so with the side panel open it simply appears on top; the page behind is inert, Esc closes only the dialog, focus goes to the first data-autofocus field and back to the opener on close. Fades and grows in. A click on the dimmed area closes it unless dismissOnBackdrop is false (the editor sets that while there is unsaved text)."
       >
         <DialogDemo />
+      </Section>
+
+      <Section
+        title="Dropdown"
+        note="The app's dropdown (owner's pick D4, 2026-10-05), used instead of the browser's select in every filter, form and list. A box that looks like the other controls; a floating list with an optional mark before each label (status dot, priority icon, avatar); a search box once there are more than seven options; the chosen row in the link colour. Keyboard: Down/Up open and move, Home/End jump, Enter or Space choose, a letter jumps to a match, Esc closes only the list, Tab moves on. The box is as wide as its widest option, so a choice never moves its neighbours. Roles and aria attributes follow the select-only combobox pattern."
+      >
+        <DropdownDemo />
       </Section>
 
       <Section

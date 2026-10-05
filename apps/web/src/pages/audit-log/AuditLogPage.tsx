@@ -9,9 +9,9 @@ import {
 } from "lucide-react";
 import type { AuditEvent, AuditTargetType } from "@flowdesk/contracts";
 import { auditTone, describeAuditEvent, useAuditEvents, type AuditFilters } from "../../entities/audit";
-import { PersonName, useMembers, useMyRole } from "../../entities/member";
+import { memberOptions, PersonName, useMembers, useMyRole } from "../../entities/member";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Button, Card, EmptyState, ErrorText, Page, PageHeader, Select, Skeleton, Time } from "../../shared/ui";
+import { Button, Card, Dropdown, EmptyState, ErrorText, Page, PageHeader, Skeleton, Time } from "../../shared/ui";
 
 const KINDS: { value: AuditTargetType; label: string }[] = [
   { value: "project", label: "Projects" },
@@ -111,32 +111,20 @@ export function AuditLogPage() {
       </p>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Select
-          value={filters.actor ?? ""}
-          onChange={(e) => setFilter("actor", e.target.value)}
-          className="w-auto"
+        <Dropdown
           aria-label="Filter by person"
-        >
-          <option value="">Anyone</option>
-          {members?.map((member) => (
-            <option key={member.userId} value={member.userId}>
-              {member.name}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={filters.kind ?? ""}
-          onChange={(e) => setFilter("kind", e.target.value)}
           className="w-auto"
+          value={filters.actor ?? ""}
+          onChange={(value) => setFilter("actor", value)}
+          options={[{ value: "", label: "Anyone" }, ...memberOptions(members)]}
+        />
+        <Dropdown
           aria-label="Filter by kind"
-        >
-          <option value="">Everything</option>
-          {KINDS.map((kind) => (
-            <option key={kind.value} value={kind.value}>
-              {kind.label}
-            </option>
-          ))}
-        </Select>
+          className="w-auto"
+          value={filters.kind ?? ""}
+          onChange={(value) => setFilter("kind", value)}
+          options={[{ value: "", label: "Everything" }, ...KINDS.map((kind) => ({ value: kind.value, label: kind.label }))]}
+        />
       </div>
 
       {!canView || isPending ? (

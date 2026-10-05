@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "../support/fixtures";
 import { createIssueViaApi, setIssuePriorityViaApi } from "../support/api";
+import { combobox, expectValue, pick } from "../support/dropdown";
 
 const RANK = { none: 0, low: 1, medium: 2, high: 3, urgent: 4 } as const;
 type Priority = keyof typeof RANK;
@@ -32,28 +33,28 @@ test("sorting by priority puts the most urgent first, newest first within a prio
   }
 
   await page.goto(`/projects/${projectId}`);
-  const sort = page.getByLabel("Sort");
-  await expect(sort).toHaveValue("newest");
+  const sort = combobox(page, "Sort");
+  await expectValue(sort, "newest");
   const titleOf = () => titlesOf(page);
 
   // Default: newest first by creation time.
   await expect.poll(titleOf).toEqual(["Urgent two", "Medium one", "High one", "Unranked", "Urgent one", "Low one"]);
 
-  await sort.selectOption({ label: "Highest priority first" });
+  await pick(sort, "Highest priority first");
   await expect(page).toHaveURL(/sort=priority/);
   await expect(page).not.toHaveURL(/order=/);
   await expect.poll(titleOf).toEqual(["Urgent two", "Urgent one", "High one", "Medium one", "Low one", "Unranked"]);
 
   await page.reload();
-  await expect(sort).toHaveValue("priority");
+  await expectValue(sort, "priority");
   await expect.poll(titleOf).toEqual(["Urgent two", "Urgent one", "High one", "Medium one", "Low one", "Unranked"]);
 
-  await sort.selectOption({ label: "Oldest first" });
+  await pick(sort, "Oldest first");
   await expect(page).toHaveURL(/order=asc/);
   await expect(page).not.toHaveURL(/sort=/);
   await expect.poll(titleOf).toEqual(["Low one", "Urgent one", "Unranked", "High one", "Medium one", "Urgent two"]);
 
-  await sort.selectOption({ label: "Newest first" });
+  await pick(sort, "Newest first");
   await expect(page).not.toHaveURL(/sort=|order=/);
   await expect.poll(titleOf).toEqual(["Urgent two", "Medium one", "High one", "Unranked", "Urgent one", "Low one"]);
 });

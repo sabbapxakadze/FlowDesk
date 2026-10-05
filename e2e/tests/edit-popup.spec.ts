@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "../support/fixtures";
 import { apiSession, createIssueViaApi } from "../support/api";
+import { pick } from "../support/dropdown";
 
 /**
  * Editing an issue happens in a popup (a native modal dialog) from the issue list, the issue page and the side
@@ -27,7 +28,7 @@ test("Edit on a list row opens a popup, Save updates the row, and focus goes bac
   await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel("Title")).toBeFocused(); // starts in the first field
   await dialog.getByLabel("Title").fill("Alpha renamed");
-  await dialog.getByLabel("Priority").selectOption("high");
+  await pick(dialog.getByRole("combobox", { name: /priority/i }), "High");
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(row(page, "Alpha renamed")).toContainText("High");

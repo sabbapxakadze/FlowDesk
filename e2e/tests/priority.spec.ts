@@ -1,5 +1,6 @@
 import { test, expect } from "../support/fixtures";
 import { createIssueViaApi } from "../support/api";
+import { combobox, editField, editor, pick } from "../support/dropdown";
 
 test("set a priority, see it on the card, filter by it, and see it in the activity once", async ({
   loggedInPage: page,
@@ -18,13 +19,13 @@ test("set a priority, see it on the card, filter by it, and see it in the activi
   // Set High on the first issue through the edit form.
   const card = (title: string) => page.getByRole("listitem").filter({ hasText: title });
   await card("Urgent thing").getByRole("button", { name: "Edit" }).click();
-  await page.locator(`select[name="priority"]`).selectOption("high");
+  await pick(editField(page, "Priority"), "High");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(card("Urgent thing")).toContainText("High");
   await expect(card("Calm thing")).not.toContainText("High");
 
   // Filter: only the high-priority issue remains, and the choice lives in the URL.
-  await page.getByLabel("Filter by priority").selectOption("high");
+  await pick(combobox(page, "Filter by priority"), "High");
   await expect(page).toHaveURL(/priority=high/);
   await expect(card("Urgent thing")).toBeVisible();
   await expect(card("Calm thing")).toHaveCount(0);
@@ -34,7 +35,7 @@ test("set a priority, see it on the card, filter by it, and see it in the activi
 
   // Edit again without touching priority: the activity must still show only one priority change.
   await card("Urgent thing").getByRole("button", { name: "Edit" }).click();
-  const editForm = page.locator("form", { has: page.locator(`select[name="priority"]`) });
+  const editForm = editor(page).locator("form");
   await editForm.locator(`textarea[name="description"]`).fill("Now with a description");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Now with a description")).toHaveCount(0); // list cards do not show it

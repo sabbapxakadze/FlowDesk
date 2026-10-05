@@ -3,6 +3,7 @@ import { test, expect, logInThroughForm } from "../support/fixtures";
 import { createIssueViaApi } from "../support/api";
 import { addOrgMember } from "../support/db";
 import { makePng } from "../support/png";
+import { combobox, pick } from "../support/dropdown";
 
 const panelOf = (page: Page) => page.getByRole("dialog", { name: "Issue", exact: true });
 const cardLink = (page: Page, title: string) => page.getByRole("link", { name: new RegExp(title) });
@@ -110,7 +111,7 @@ test("a click outside that lands on a link still works while the panel closes; c
     await page.keyboard.press("Escape"); // close the native option list, if one opened
     await expect(panelOf(page)).toBeVisible();
   }
-  await page.getByLabel("Sort").selectOption({ label: "Highest priority first" });
+  await pick(combobox(page, "Sort"), "Highest priority first");
   await expect(page).toHaveURL(/sort=priority/);
   await expect(page).toHaveURL(/status=todo/);
   await expect(page).toHaveURL(/issue=WEB-1/); // still open

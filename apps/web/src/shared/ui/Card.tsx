@@ -15,7 +15,7 @@ import { useRowMotion } from "./useRowMotion";
  * outline. `hoverable` is opt-in (only the clickable cards need it).
  *
  * forwardRef (Phase 5 slice 3): dnd-kit's useSortable needs a real DOM
- * ref to attach to (setNodeRef) — same reason Input/Textarea/Select are
+ * ref to attach to (setNodeRef) — same reason Input/Textarea are
  * forwardRef already, for React Hook Form's register(). Existing
  * callers are unaffected; none passed a ref before.
  *

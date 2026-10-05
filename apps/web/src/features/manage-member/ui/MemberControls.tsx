@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { OrganizationMember } from "@flowdesk/contracts";
 import { issueKeys } from "../../../entities/issue";
 import { memberKeys } from "../../../entities/member";
-import { ConfirmDelete, ErrorText, Select } from "../../../shared/ui";
+import { ConfirmDelete, Dropdown, ErrorText } from "../../../shared/ui";
 import { changeMemberRole } from "../api/changeMemberRole";
 import { removeMember } from "../api/removeMember";
 
@@ -38,17 +38,19 @@ export function MemberControls({
 
   return (
     <div className="flex flex-wrap items-start gap-3">
-      <Select
+      <Dropdown
         aria-label={`Role of ${member.name}`}
         value={member.role}
         disabled={roleMutation.isPending}
-        onChange={(e) => roleMutation.mutate(e.target.value as ChangeableRole)}
-        className="py-1"
-      >
-        <option value="admin">Admin</option>
-        <option value="member">Member</option>
-        <option value="viewer">Viewer</option>
-      </Select>
+        onChange={(value) => roleMutation.mutate(value as ChangeableRole)}
+        size="sm"
+        className="w-auto"
+        options={[
+          { value: "admin", label: "Admin" },
+          { value: "member", label: "Member" },
+          { value: "viewer", label: "Viewer" },
+        ]}
+      />
       <ConfirmDelete
         label="Remove"
         confirmLabel={`Remove ${member.name}`}
