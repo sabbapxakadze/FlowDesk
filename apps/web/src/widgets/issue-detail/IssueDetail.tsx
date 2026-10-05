@@ -289,7 +289,9 @@ export function IssueDetail({
       </header>
     ) : (
       <PageHeader
-        back={{ to: projectPath(project.key), label: project.name }}
+        // history: Back returns to wherever the issue was opened from (My work, the board, a notification); the project is the
+        // fallback for a first page or a new tab.
+        back={{ to: projectPath(project.key), label: project.name, history: true }}
         eyebrow={`${project.key}-${issue.number}`}
         title={title}
       >

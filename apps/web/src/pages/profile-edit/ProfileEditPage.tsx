@@ -11,7 +11,7 @@ export function ProfileEditPage() {
 
   return (
     <Page>
-      <PageHeader title="Edit profile" back={{ to: user ? `/people/${user.id}` : "/projects", label: "Your profile" }} />
+      <PageHeader title="Edit profile" back={{ to: user ? `/people/${user.id}` : "/projects", label: "Your profile", history: true }} />
       <Card className="max-w-xl p-5">
         {profile.isPending ? (
           <Skeleton className="h-48 w-full" />

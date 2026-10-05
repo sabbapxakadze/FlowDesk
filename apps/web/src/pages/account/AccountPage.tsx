@@ -28,7 +28,7 @@ export function AccountPage() {
 
   return (
     <Page>
-      <PageHeader title="Account" back={{ to: "/profile", label: "Edit profile" }} />
+      <PageHeader title="Account" back={{ to: "/profile", label: "Edit profile", history: true }} />
       {account.isPending ? (
         <Skeleton className="h-48 w-full max-w-xl" />
       ) : account.isError ? (

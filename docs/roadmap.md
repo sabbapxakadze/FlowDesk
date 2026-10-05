@@ -1743,7 +1743,7 @@ The original plan for this slice, kept for the record:
    a change), `@everyone`, **Markdown (still open)**. Named limits: two people with exactly the same name in one comment resolve to the last one picked; the list is under the box, not at the caret.
    Not tested: that `mentions` stays out of the public profile activity (that feed returns `{}` for comment events by design). **Markdown STILL OPEN (checked 2026-10-05: descriptions and comments are plain text; the
    description keeps its line breaks since 2026-10-05, nothing more).**
-   **Two navigation bugs noted 2026-10-05 (owner), NOT fixed yet.** (1) An issue opened from My work shows "<- {project name}", not "Back": `IssueDetail`
+   **Two navigation bugs noted 2026-10-05 (owner), FIXED the same day** (the issue page's, Edit profile's and Account's back links now use `PageHeader`'s `history: true`, so Back returns to where the person came from and the named page is only the fallback for a first page or a new tab; 3 e2e tests in `back-links.spec.ts`; removing the option from the issue page and the edit page made 2 of them fail; the Account test was not mutation-checked). The original report: (1) An issue opened from My work shows "<- {project name}", not "Back": `IssueDetail`
    passes a fixed back link without `history: true` (the `PageHeader` option the profile page already uses), so Back should return to the page the
    person came from (My work, the board, search, a notification), with the project as the fallback for a first page or a new tab. (2) Profile then
    Edit profile then "Your profile" then Back goes round in a circle: the edit page's back link is a plain link that PUSHES a new history entry, so
