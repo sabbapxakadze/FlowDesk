@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, ne } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import {
   authTokens,
@@ -112,11 +112,14 @@ export async function revokeAllForUser(userId: string) {
     .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
 }
 
+export type AuthTokenPurpose = "email_verification" | "password_reset" | "email_change";
+
 export async function createAuthToken(input: {
   userId: string;
-  purpose: "email_verification" | "password_reset";
+  purpose: AuthTokenPurpose;
   tokenHash: string;
   expiresAt: Date;
+  newEmail?: string;
 }) {
   const [token] = await db.insert(authTokens).values(input).returning();
   if (!token) throw new Error("Failed to create auth token");
@@ -129,10 +132,7 @@ export async function createAuthToken(input: {
  * see auth.service.ts's INVALID_TOKEN_ERROR — so there's no need to
  * distinguish them here.
  */
-export async function findValidAuthToken(
-  tokenHash: string,
-  purpose: "email_verification" | "password_reset",
-) {
+export async function findValidAuthToken(tokenHash: string, purpose: AuthTokenPurpose) {
   const [token] = await db
     .select()
     .from(authTokens)
@@ -158,4 +158,50 @@ export async function verifyUserEmail(userId: string) {
 
 export async function updateUserPassword(userId: string, passwordHash: string) {
   await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+}
+
+/**
+ * Signs out every session of the person EXCEPT one family (the device that is changing the password): a changed
+ * password should end the sessions that might belong to someone else, not the one in use.
+ */
+export async function revokeOtherFamilies(userId: string, keepFamilyId: string) {
+  await db
+    .update(sessions)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(sessions.userId, userId), ne(sessions.familyId, keepFamilyId), isNull(sessions.revokedAt)));
+}
+
+/** The new address replaces the account's email and counts as verified: its owner just opened the link sent to it. */
+export async function updateUserEmail(userId: string, email: string) {
+  await db.update(users).set({ email, emailVerifiedAt: new Date() }).where(eq(users.id, userId));
+}
+
+/** Retires every unused email-change link of a person (a newer request replaces older ones; a confirmed one ends them all). */
+export async function invalidatePendingEmailChanges(userId: string) {
+  await db
+    .update(authTokens)
+    .set({ usedAt: new Date() })
+    .where(and(eq(authTokens.userId, userId), eq(authTokens.purpose, "email_change"), isNull(authTokens.usedAt)));
+}
+
+/** The address the person asked to change to and has not confirmed yet (the newest unexpired request), if any. */
+export async function findPendingEmailChange(userId: string) {
+  const [token] = await db
+    .select({ newEmail: authTokens.newEmail })
+    .from(authTokens)
+    .where(
+      and(
+        eq(authTokens.userId, userId),
+        eq(authTokens.purpose, "email_change"),
+        isNull(authTokens.usedAt),
+        gt(authTokens.expiresAt, new Date()),
+      ),
+    )
+    .orderBy(desc(authTokens.createdAt))
+    .limit(1);
+  return token?.newEmail ?? null;
+}
+
+export async function updateUserTimezone(userId: string, timezone: string | null) {
+  await db.update(users).set({ timezone }).where(eq(users.id, userId));
 }

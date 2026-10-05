@@ -21,8 +21,13 @@ export function ProfileEditPage() {
           <EditProfileForm profile={profile.data} />
         )}
       </Card>
+      <p className="mt-4 text-sm">
+        <Link to="/account" className={buttonVariants({ variant: "link" })}>
+          Account settings: email, password, timezone
+        </Link>
+      </p>
       {profile.isSuccess && (
-        <p className="mt-4 text-sm">
+        <p className="mt-2 text-sm">
           <Link to={`/people/${profile.data.userId}`} className={buttonVariants({ variant: "link" })}>
             See how others see it
           </Link>

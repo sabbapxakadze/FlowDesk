@@ -7,6 +7,11 @@ import {
   registerResponseSchema,
   requestPasswordResetRequestSchema,
   verifyEmailRequestSchema,
+  changePasswordRequestSchema,
+  confirmEmailChangeRequestSchema,
+  getAccountResponseSchema,
+  requestEmailChangeRequestSchema,
+  updateTimezoneRequestSchema,
 } from "@flowdesk/contracts";
 import { env } from "../../config/env.js";
 import { AppError } from "../../shared/errors.js";
@@ -117,6 +122,50 @@ export async function logoutAll(req: Request, res: Response) {
   const refreshToken = readRefreshCookie(req);
   await authService.logoutAll(refreshToken);
   res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions());
+  res.status(204).end();
+}
+
+function badRequest(message: string, parsed: { error: { flatten: () => { fieldErrors: Record<string, string[] | undefined> } } }) {
+  return new AppError("validation_error", 400, message, parsed.error.flatten().fieldErrors as Record<string, string[]>);
+}
+
+export async function getAccount(req: Request, res: Response) {
+  const data = await authService.getAccount(req.auth!.userId);
+  res.json(getAccountResponseSchema.parse({ data }));
+}
+
+export async function updateTimezone(req: Request, res: Response) {
+  const parsed = updateTimezoneRequestSchema.safeParse(req.body);
+  if (!parsed.success) throw badRequest("Invalid timezone", parsed);
+  await authService.updateTimezone(req.auth!.userId, parsed.data.timezone);
+  res.json(getAccountResponseSchema.parse({ data: await authService.getAccount(req.auth!.userId) }));
+}
+
+/** Needs the refresh cookie as well as the access token: the cookie says which session is "this device" (kept). */
+export async function changePassword(req: Request, res: Response) {
+  const parsed = changePasswordRequestSchema.safeParse(req.body);
+  if (!parsed.success) throw badRequest("Invalid password change", parsed);
+  const cookie: unknown = req.cookies?.[REFRESH_COOKIE_NAME];
+  const { keptThisSession } = await authService.changePassword({
+    userId: req.auth!.userId,
+    ...parsed.data,
+    refreshToken: typeof cookie === "string" && cookie.length > 0 ? cookie : undefined,
+  });
+  if (!keptThisSession) res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions());
+  res.status(200).json({ keptThisSession });
+}
+
+export async function requestEmailChange(req: Request, res: Response) {
+  const parsed = requestEmailChangeRequestSchema.safeParse(req.body);
+  if (!parsed.success) throw badRequest("Invalid email change", parsed);
+  const result = await authService.requestEmailChange({ userId: req.auth!.userId, ...parsed.data });
+  res.status(202).json(result);
+}
+
+export async function confirmEmailChange(req: Request, res: Response) {
+  const parsed = confirmEmailChangeRequestSchema.safeParse(req.body);
+  if (!parsed.success) throw badRequest("Invalid confirmation request", parsed);
+  await authService.confirmEmailChange(parsed.data.token);
   res.status(204).end();
 }
 

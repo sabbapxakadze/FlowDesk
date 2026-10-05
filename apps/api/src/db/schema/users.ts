@@ -16,6 +16,8 @@ export const users = pgTable("users", {
   jobTitle: varchar("job_title", { length: 100 }),
   bio: varchar("bio", { length: 300 }),
   avatarKey: varchar("avatar_key", { length: 64 }),
+  // The person's own timezone (an IANA name such as "Europe/Warsaw"); null means "use the browser's".
+  timezone: varchar("timezone", { length: 64 }),
   // When the person pressed "Not now" on the "Finish your profile" card; null = not dismissed.
   profileNudgeDismissedAt: timestamp("profile_nudge_dismissed_at", { withTimezone: true }),
   // Null until a verify-email token is confirmed. Login is not gated on

@@ -11,6 +11,8 @@ import { users } from "./users.js";
 export const authTokenPurpose = pgEnum("auth_token_purpose", [
   "email_verification",
   "password_reset",
+  // Confirms a NEW email address before it replaces the account's email (the address is in `newEmail`).
+  "email_change",
 ]);
 
 export const authTokens = pgTable(
@@ -22,6 +24,8 @@ export const authTokens = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     purpose: authTokenPurpose("purpose").notNull(),
     tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    // Only for purpose email_change: the address that becomes the account's email once the link is opened.
+    newEmail: varchar("new_email", { length: 255 }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     usedAt: timestamp("used_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

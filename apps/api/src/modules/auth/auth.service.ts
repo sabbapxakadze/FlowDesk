@@ -4,7 +4,14 @@ import { AppError } from "../../shared/errors.js";
 import * as authRepository from "./auth.repository.js";
 import * as organizationsRepository from "../organizations/organizations.repository.js";
 import { generateOpaqueToken, hashToken, signAccessToken } from "./tokens.js";
-import { sendPasswordResetEmail, sendVerificationEmail } from "../../lib/email.js";
+import {
+  sendEmailChangeConfirmationEmail,
+  sendEmailChangedNotice,
+  sendEmailChangeRequestedNotice,
+  sendPasswordChangedNotice,
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from "../../lib/email.js";
 
 function toSlug(name: string): string {
   const slug = name
@@ -65,8 +72,9 @@ const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
  */
 async function issueAuthToken(
   userId: string,
-  purpose: "email_verification" | "password_reset",
+  purpose: authRepository.AuthTokenPurpose,
   ttlMs: number,
+  newEmail?: string,
 ): Promise<string> {
   const token = generateOpaqueToken();
   await authRepository.createAuthToken({
@@ -74,6 +82,7 @@ async function issueAuthToken(
     purpose,
     tokenHash: hashToken(token),
     expiresAt: new Date(Date.now() + ttlMs),
+    newEmail,
   });
   return token;
 }
@@ -130,6 +139,7 @@ export async function register(input: {
 }
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const EMAIL_CHANGE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 const INVALID_CREDENTIALS_ERROR = () =>
   new AppError("invalid_credentials", 401, "Incorrect email or password.");
@@ -194,7 +204,7 @@ export async function login(input: { email: string; password: string }) {
   return {
     accessToken,
     refreshToken,
-    user: { id: user.id, email: user.email, name: user.name },
+    user: { id: user.id, email: user.email, name: user.name, timezone: user.timezone },
     organization,
   };
 }
@@ -238,7 +248,7 @@ export async function refresh(refreshToken: string) {
   return {
     accessToken,
     refreshToken: newRefreshToken,
-    user: { id: user.id, email: user.email, name: user.name },
+    user: { id: user.id, email: user.email, name: user.name, timezone: user.timezone },
     organization,
   };
 }
@@ -311,4 +321,117 @@ export async function confirmPasswordReset(input: {
   // A password reset is treated as "possible compromise" — every existing
   // session dies, not just the device the reset happened on.
   await authRepository.revokeAllForUser(authToken.userId);
+}
+
+/** Field-level 400s (the form shows the message under the right field), same shape as other validation errors. */
+const FIELD_ERROR = (field: string, message: string) =>
+  new AppError("validation_error", 400, message, { [field]: [message] });
+
+/** Is this a real IANA timezone name (what `Intl` accepts)? */
+function isRealTimezone(name: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: name });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getAccount(userId: string) {
+  const user = await authRepository.findUserById(userId);
+  if (!user) throw new AppError("unauthenticated", 401, "Your account no longer exists.");
+  return {
+    email: user.email,
+    emailVerified: user.emailVerifiedAt !== null,
+    pendingEmail: await authRepository.findPendingEmailChange(userId),
+    timezone: user.timezone,
+  };
+}
+
+export async function updateTimezone(userId: string, timezone: string | null) {
+  if (timezone !== null && !isRealTimezone(timezone)) {
+    throw FIELD_ERROR("timezone", "That is not a timezone name.");
+  }
+  await authRepository.updateUserTimezone(userId, timezone);
+}
+
+/**
+ * Changing the password while logged in. The CURRENT password is required (a stolen session alone must not be enough to
+ * take the account), the new one must differ, and afterwards every OTHER session is signed out: the one that made the
+ * change is found by the refresh cookie (its token family) and kept. With no usable cookie there is no "this device" to
+ * keep, so every session ends and the caller must log in again (`keptThisSession: false`).
+ */
+export async function changePassword(input: {
+  userId: string;
+  currentPassword: string;
+  newPassword: string;
+  refreshToken: string | undefined;
+}): Promise<{ keptThisSession: boolean }> {
+  const user = await authRepository.findUserById(input.userId);
+  if (!user) throw new AppError("unauthenticated", 401, "Your account no longer exists.");
+  if (!(await argon2.verify(user.passwordHash, input.currentPassword))) {
+    throw FIELD_ERROR("currentPassword", "Current password is incorrect.");
+  }
+  if (await argon2.verify(user.passwordHash, input.newPassword)) {
+    throw FIELD_ERROR("newPassword", "Choose a password you are not already using.");
+  }
+
+  await authRepository.updateUserPassword(user.id, await argon2.hash(input.newPassword, { type: argon2.argon2id }));
+
+  const session = input.refreshToken ? await authRepository.findSessionByTokenHash(hashToken(input.refreshToken)) : undefined;
+  const keptThisSession = Boolean(session && session.userId === user.id && !session.revokedAt);
+  if (keptThisSession && session) {
+    await authRepository.revokeOtherFamilies(user.id, session.familyId);
+  } else {
+    await authRepository.revokeAllForUser(user.id);
+  }
+  await sendPasswordChangedNotice(user.email);
+  return { keptThisSession };
+}
+
+/**
+ * Step one of changing the email: the person proves who they are (current password), and a confirmation link goes to
+ * the NEW address. Nothing changes until that link is opened, so a typo, or an address that is not theirs, can never
+ * lock them out. The OLD address is told about the request. A newer request replaces older pending ones.
+ *
+ * Telling the requester that an address is already registered is a deliberate trade-off (they are signed in, the
+ * route is rate limited, and "check your email" for an address that will never get one would just be confusing).
+ */
+export async function requestEmailChange(input: { userId: string; newEmail: string; password: string }) {
+  const user = await authRepository.findUserById(input.userId);
+  if (!user) throw new AppError("unauthenticated", 401, "Your account no longer exists.");
+  if (!(await argon2.verify(user.passwordHash, input.password))) {
+    throw FIELD_ERROR("password", "Password is incorrect.");
+  }
+  const newEmail = input.newEmail.toLowerCase().trim();
+  if (newEmail === user.email) throw FIELD_ERROR("newEmail", "That is already your email.");
+  if (await authRepository.findUserByEmail(newEmail)) throw EMAIL_TAKEN_ERROR();
+
+  await authRepository.invalidatePendingEmailChanges(user.id);
+  const token = await issueAuthToken(user.id, "email_change", EMAIL_CHANGE_TTL_MS, newEmail);
+  await sendEmailChangeConfirmationEmail(newEmail, token);
+  await sendEmailChangeRequestedNotice(user.email, newEmail);
+  return { pendingEmail: newEmail };
+}
+
+/** Step two: the link from the new address. Single use, expires, and re-checks that the address is still free. */
+export async function confirmEmailChange(token: string): Promise<void> {
+  const authToken = await authRepository.findValidAuthToken(hashToken(token), "email_change");
+  if (!authToken || !authToken.newEmail) {
+    throw INVALID_TOKEN_ERROR("This confirmation link is invalid or has expired.");
+  }
+  const user = await authRepository.findUserById(authToken.userId);
+  if (!user) throw INVALID_TOKEN_ERROR("This confirmation link is invalid or has expired.");
+  const existing = await authRepository.findUserByEmail(authToken.newEmail);
+  if (existing && existing.id !== user.id) throw EMAIL_TAKEN_ERROR();
+
+  const oldEmail = user.email;
+  try {
+    await authRepository.updateUserEmail(user.id, authToken.newEmail);
+  } catch (err) {
+    if (isUniqueViolation(err, "users_email_unique")) throw EMAIL_TAKEN_ERROR();
+    throw err;
+  }
+  await authRepository.invalidatePendingEmailChanges(user.id);
+  await sendEmailChangedNotice(oldEmail, authToken.newEmail);
 }

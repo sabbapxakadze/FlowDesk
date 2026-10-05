@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 
@@ -53,6 +54,21 @@ export async function addOrgMember(
   );
   if (rowCount !== 1)
     throw new Error(`No user ${existingEmail} to copy an organization from`);
+}
+
+/**
+ * An email-change confirmation link for a person, made directly: the raw token only ever exists in the email (the
+ * database keeps its sha256 hash), and e2e emails are never delivered. Returns the raw token for the link.
+ */
+export async function issueEmailChangeToken(userEmail: string, newEmail: string, expiresInMs = 60 * 60 * 1000): Promise<string> {
+  const raw = randomBytes(24).toString("base64url");
+  const { rowCount } = await pool.query(
+    `INSERT INTO auth_tokens (user_id, purpose, token_hash, expires_at, new_email)
+     SELECT id, 'email_change', $2, now() + ($3 || ' milliseconds')::interval, $4 FROM users WHERE email = $1`,
+    [userEmail, createHash("sha256").update(raw).digest("hex"), String(expiresInMs), newEmail],
+  );
+  if (rowCount !== 1) throw new Error(`No user ${userEmail}`);
+  return raw;
 }
 
 export async function closeDatabase() {

@@ -56,6 +56,8 @@ export const authSessionSchema = z.object({
     id: z.uuid(),
     email: z.email(),
     name: z.string(),
+    /** The person's own timezone (IANA name) or null for the browser's; times on screen use it. */
+    timezone: z.string().nullable(),
   }),
   organization: organizationSummarySchema,
 });

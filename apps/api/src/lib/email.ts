@@ -59,6 +59,41 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+export async function sendEmailChangeConfirmationEmail(to: string, token: string): Promise<void> {
+  const link = `${env.APP_URL}/confirm-email-change?token=${encodeURIComponent(token)}`;
+  await sendEmail({
+    to,
+    subject: "Confirm your new FlowDesk email",
+    html: `<p>Someone asked to use this address for a FlowDesk account. If that was you, confirm it to finish the change:</p><p><a href="${link}">Confirm new email</a></p><p>This link expires in 24 hours. If it was not you, ignore this email: nothing changes.</p>`,
+  });
+}
+
+/** Sent to the OLD address when a change is requested, so the owner of the account hears about it. */
+export async function sendEmailChangeRequestedNotice(to: string, newEmail: string): Promise<void> {
+  await sendEmail({
+    to,
+    subject: "A new email was requested for your FlowDesk account",
+    html: `<p>A change of this account's email to <strong>${escapeHtml(newEmail)}</strong> was requested. It only takes effect when the link sent to that address is opened.</p><p>If you did not ask for this, change your password.</p>`,
+  });
+}
+
+/** Sent to the OLD address when the change has happened. */
+export async function sendEmailChangedNotice(to: string, newEmail: string): Promise<void> {
+  await sendEmail({
+    to,
+    subject: "Your FlowDesk email was changed",
+    html: `<p>The email of this FlowDesk account is now <strong>${escapeHtml(newEmail)}</strong>. This address no longer signs in.</p><p>If you did not do this, contact the owner of your organization.</p>`,
+  });
+}
+
+export async function sendPasswordChangedNotice(to: string): Promise<void> {
+  await sendEmail({
+    to,
+    subject: "Your FlowDesk password was changed",
+    html: `<p>The password of this FlowDesk account was just changed, and other devices were signed out.</p><p>If it was not you, reset the password right away from the login page.</p>`,
+  });
+}
+
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
   const link = `${env.APP_URL}/reset-password?token=${encodeURIComponent(token)}`;
   await sendEmail({

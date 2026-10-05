@@ -148,10 +148,20 @@ export function Dropdown({
 
   // A search box takes the focus when the list opens; keep the highlighted row in view as it moves.
   useEffect(() => {
-    if (open && hasSearch) searchBox.current?.focus();
+    // preventScroll: focusing must never scroll the PAGE (the page scrolling closes the list, see below).
+    if (open && hasSearch) searchBox.current?.focus({ preventScroll: true });
   }, [open, hasSearch]);
   useEffect(() => {
-    if (open) document.getElementById(optionId(active))?.scrollIntoView({ block: "nearest" });
+    if (!open) return;
+    // Keep the highlighted row visible by scrolling the LIST only. scrollIntoView would also scroll the page when the
+    // page itself scrolls, and a page scroll closes the list.
+    const row = document.getElementById(optionId(active));
+    const box = list.current?.querySelector("ul");
+    if (!row || !box) return;
+    const r = row.getBoundingClientRect();
+    const b = box.getBoundingClientRect();
+    if (r.top < b.top) box.scrollTop -= b.top - r.top;
+    else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom;
   });
 
   // Close on a click outside, on a scroll elsewhere and on a resize: the fixed list would be left behind.
@@ -161,7 +171,11 @@ export function Dropdown({
       const target = event.target as Node;
       if (!root.current?.contains(target) && !list.current?.contains(target)) setOpen(false);
     }
+    // A scroll that was already under way when the list opened (the page settling after the click scrolled the box into
+    // view) reaches us just after it: ignore scrolls for a moment, or the list would close the instant it opens.
+    const openedAt = performance.now();
     function scrolled(event: Event) {
+      if (performance.now() - openedAt < 150) return;
       if (!list.current?.contains(event.target as Node)) setOpen(false);
     }
     const resized = () => setOpen(false);

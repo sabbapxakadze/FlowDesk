@@ -4,6 +4,7 @@ import { apiPost, apiPostVoid } from "../api/client";
 import { setStoredAccessToken } from "./token-store";
 import { AuthContext, type AuthOrganization, type AuthUser } from "./auth-context";
 import { connectSocket, disconnectSocket } from "../socket/socket-client";
+import { setTimezone } from "../lib/timezone";
 
 // Shared by every caller while a refresh is in flight. React StrictMode runs
 // the mount effect twice in development, which used to send two refresh
@@ -40,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(session.user);
     setOrganization(session.organization);
     setAccessToken(session.accessToken);
+    setTimezone(session.user.timezone); // times on screen use the person's own timezone
     // The React state above is what triggers re-renders; the token store
     // is what shared/api/client.ts's fetch wrapper actually reads — kept
     // in sync here, on every login, so the next API call carries it.
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOrganization(null);
     setAccessToken(null);
     setStoredAccessToken(null);
+    setTimezone(null);
     disconnectSocket();
     // Local state clears immediately either way; telling the server to
     // revoke the session is best-effort and shouldn't block the UI on it.

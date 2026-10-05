@@ -121,6 +121,8 @@ Addresses are readable (ADR 0030): `/projects/WEB`, `/projects/WEB/issues/WEB-12
 rewritten; ids remain the identity inside the app and the API.
 The app has a motion language (ADR 0029): page fade-and-rise, panel slide, dialog fade-and-grow, rows that open and close,
 button press/spinner/tick, theme cross-fade; all off under reduced motion, and the e2e suite runs with reduced motion on.
+`/account` is the private account page (email through a confirmation link to the new address, password with the other devices signed out,
+timezone; ADR 0031).
 `/` is the "My work" page (my open issues across projects and my unread notifications). The issue list carries each issue's labels and
 filters by several labels at once (an issue must have all of them).
 The assignee circle on an issue card shows the person's photo and is a profile link with the hover card (beside the card's issue link, never inside it).

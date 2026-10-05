@@ -2293,7 +2293,7 @@ The original plan for this slice, kept for the record:
    never stuttered, only its start and end.
    **Status check 2026-10-05 (everything still open, so nothing is assumed done).** Checked in the code and in the running app. Open product
    items: due dates; Markdown and @mentions. Open leftovers named earlier: the issue editor now WARNS when someone else changes the issue while its popup is open (it still
-   overwrites on Save; owner's choice); no audit log retention (the export is done, below); no way to change your email or timezone. Not verified: WebKit/Safari, a real
+   overwrites on Save; owner's choice); no audit log retention (the export is done, below). Not verified: WebKit/Safari, a real
    screen reader (the owner does not need it), and the cause of one full e2e run with 8 unrelated failures that has not repeated. Every other
    slice listed above is done. Phase 9 has not started except the e2e suite.
    **Three small items DONE 2026-10-05.** (1) `C` focuses the new-issue title on the issues page: a shared `useShortcut` hook that never steals a
@@ -2327,6 +2327,21 @@ The original plan for this slice, kept for the record:
    a label, the list closing after each choice, ANY instead of ALL, no de-duplication, no labels embedded. Not done: pills on the board and
    sprints cards (the filter exists only on the issues list); label colours are the label's own, so a very light colour is hard to read under
    white text (as in the editor today).
+   **Account page DONE 2026-10-05 (ADR 0031; owner's picks: a separate private page, confirm the new address first, other devices signed out).**
+   `/account` (from Edit profile) with three sections. EMAIL: new address plus current password, a confirmation link to the NEW address and a notice
+   to the old one, the email changes only when the link is opened (`/confirm-email-change`), single use, 24 hours, a newer request retires older
+   ones, the address is re-checked at confirmation. PASSWORD: current plus new typed twice, the other sessions are signed out and this one kept
+   (found through the refresh cookie, so the route is `/auth/change-password`), a notice is emailed, a link to the existing "forgot password"
+   flow. TIMEZONE: a searchable list with "Browser setting" first, saved at once, shown as the current time there, used for the exact time on hover
+   over a relative time (that is the only place it changes anything today; it is there for due dates later). New columns `users.timezone`,
+   `auth_tokens.new_email` and token purpose `email_change` (migration 0026). 8 API tests (`auth.account.http.test.ts`) and 5 e2e tests
+   (`account.spec.ts`); removed one at a time to see tests fail: keeping the other sessions, not checking the current password, not retiring a used
+   link, not validating the zone, the time ignoring the zone, the session not carrying the zone. Found on the way: the dropdown's list closed the
+   instant it opened when the PAGE was scrollable (focusing the search box and `scrollIntoView` scroll the page, and a page scroll closes the list), so
+   both now scroll only the list, and the list ignores scrolls for the first 150 ms. Not done: the emails are not delivered in tests (the tests
+   make the token themselves), changing the email does not sign other sessions out, no "sign out everywhere" button (the API for it exists).
+   One API test run right after generating the migration failed in several tests with database errors (the table reset itself failed) and did
+   not repeat in 5 later runs; the cause is unknown.
    **Bug fixed 2026-10-05 (found by the owner): removing a label in the editor closed it.** The pill's X was a button without `type`, which
    inside the editor's form is a submit button: it removed the label AND saved the form, so the popup closed. Now `type="button"` in `LabelBadge`
    (the only bare `<button>` in a form; the others are the shared Button, which sets its type, and the search palette, which is not in a form).

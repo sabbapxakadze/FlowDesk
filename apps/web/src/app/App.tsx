@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router";
 import { MyWorkPage } from "../pages/my-work/MyWorkPage";
+import { AccountPage } from "../pages/account/AccountPage";
+import { ConfirmEmailChangePage } from "../pages/confirm-email-change/ConfirmEmailChangePage";
 import { ProjectsPage } from "../pages/projects/ProjectsPage";
 import { ProjectDetailPage } from "../pages/project-detail/ProjectDetailPage";
 import { ProjectBoardPage } from "../pages/project-board/ProjectBoardPage";
@@ -60,11 +62,13 @@ export function App() {
             <Route path="/audit-log" element={<AuditLogPage />} />
             <Route path="/people/:userId" element={<ProfilePage />} />
             <Route path="/profile" element={<ProfileEditPage />} />
+            <Route path="/account" element={<AccountPage />} />
             </Route>
             <Route element={<AuthLayout />}>
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
               <Route path="/invite" element={<AcceptInvitePage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
