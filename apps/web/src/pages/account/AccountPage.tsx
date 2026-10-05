@@ -2,6 +2,7 @@ import { useAccount } from "../../entities/account";
 import { ChangeEmailForm } from "../../features/change-email";
 import { ChangePasswordForm } from "../../features/change-password";
 import { TimezoneForm } from "../../features/set-timezone";
+import { SignOutEverywhere } from "../../features/sign-out-everywhere";
 import { useAuth } from "../../shared/auth/useAuth";
 import { Card, ErrorText, Page, PageHeader, Skeleton } from "../../shared/ui";
 
@@ -50,6 +51,9 @@ export function AccountPage() {
           </Section>
           <Section title="Password" note="Other devices are signed out when you change it.">
             <ChangePasswordForm />
+          </Section>
+          <Section title="Devices" note="Ends every session of your account, this one too. Use it if a device is lost or you left yourself logged in somewhere.">
+            <SignOutEverywhere />
           </Section>
           <Section title="Timezone" note={"Used for the exact time you see when you point at a time like \u201c5 minutes ago\u201d."}>
             <TimezoneForm current={account.data.timezone} />

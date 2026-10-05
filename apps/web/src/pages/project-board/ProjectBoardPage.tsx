@@ -12,8 +12,9 @@ import {
   arrayMove,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { Issue, IssueStatus } from "@flowdesk/contracts";
+import type { IssueListItem, IssueStatus } from "@flowdesk/contracts";
 import { useCurrentProject } from "../../entities/project";
+import { LabelPills } from "../../entities/label";
 import { AssigneeAvatar } from "../../entities/member";
 import { SortableIssueCard, IssueSummary, useBoard, useLiveIssueUpdates } from "../../entities/issue";
 import { useMoveIssue } from "../../features/move-issue";
@@ -41,7 +42,7 @@ type ColumnMap = ListMap<IssueStatus>;
 // The drag model (lists, hovering, collision) is shared with the sprints page: shared/dnd/multiList.
 const { isListId: isColumnId, findContainer, moveAcrossLists: moveAcrossColumns } = createMultiList(COLUMNS);
 
-function buildColumns(issues: Issue[] | undefined): ColumnMap {
+function buildColumns(issues: IssueListItem[] | undefined): ColumnMap {
   const map: ColumnMap = { todo: [], in_progress: [], done: [] };
   for (const issue of issues ?? []) map[issue.status].push(issue.id);
   return map;
@@ -56,7 +57,7 @@ type DragState = {
   columns: ColumnMap;
   dragging: boolean;
   /** The board array at the moment of the drop, to tell when the cache changed. */
-  issuesAtDrop: Issue[] | undefined;
+  issuesAtDrop: IssueListItem[] | undefined;
 };
 
 function ColumnSkeleton() {
@@ -121,6 +122,9 @@ function BoardColumn({
  * card really moves into the hovered column and the cards there make room; the
  * drop then sends the final neighbours to the existing move endpoint.
  */
+/** The label pills on a card. A module-level function, so its identity never changes and the memoised card bodies stay put while dragging. */
+const renderLabels = (labels: IssueListItem["labels"]) => <LabelPills labels={labels} />;
+
 export function ProjectBoardPage() {
   const { organization } = useAuth();
   // Stable (only changes with the organization): the memoised card bodies must not be re-rendered by a new function.
@@ -137,7 +141,7 @@ export function ProjectBoardPage() {
   const moveMutation = useMoveIssue(organization!.id, projectId);
   useLiveIssueUpdates(projectId);
 
-  const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
+  const [activeIssue, setActiveIssue] = useState<IssueListItem | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const baseColumns = useMemo(() => buildColumns(issues), [issues]);
   const byId = useMemo(() => new Map((issues ?? []).map((issue) => [issue.id, issue])), [issues]);
@@ -292,6 +296,7 @@ export function ProjectBoardPage() {
                           projectKey={project.key}
                           assigneeId={issue.assigneeId}
                           renderAssignee={renderAssignee}
+                          renderLabels={renderLabels}
                           onOpen={panel.open}
                         />
                       ))}
@@ -315,7 +320,9 @@ export function ProjectBoardPage() {
                       <AssigneeAvatar organizationId={organization!.id} userId={activeIssue.assigneeId} interactive={false} />
                     ) : null
                   }
-                />
+                >
+                  {renderLabels(activeIssue.labels)}
+                </IssueSummary>
               </Card>
             )}
           </DragOverlay>

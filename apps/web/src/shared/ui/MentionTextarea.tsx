@@ -20,6 +20,11 @@ function findTrigger(text: string, caret: number): { start: number; query: strin
   return { start: at, query };
 }
 
+/** Whether a closed list should stay closed: the same `@`, with what follows it only extended since. */
+function stillDismissed(dismissed: { start: number; query: string } | null, now: { start: number; query: string } | null): boolean {
+  return dismissed !== null && now !== null && now.start === dismissed.start && now.query.startsWith(dismissed.query);
+}
+
 /**
  * A textarea where typing `@` opens a list of people under it (ADR 0033). The text holds a readable `@Name`; the people
  * actually picked are remembered in `refs`, so the caller can turn them into whatever it stores. A name typed by hand, or one
@@ -50,8 +55,9 @@ export function MentionTextarea({
   const [trigger, setTrigger] = useState<{ start: number; query: string } | null>(null);
   const [active, setActive] = useState(0);
   const [place, setPlace] = useState<CSSProperties>({});
-  // Esc (or a click away) closes the list for THIS `@` until the writer starts another one.
-  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
+  // Esc (or a click away) closes the list for THIS `@` and what was typed after it. It opens again once the text after the `@`
+  // is no longer an extension of that (another `@`, a shorter query, the text replaced or pasted over).
+  const [dismissed, setDismissed] = useState<{ start: number; query: string } | null>(null);
   const pendingCaret = useRef<number | null>(null);
 
   const query = trigger?.query.toLowerCase() ?? "";
@@ -61,12 +67,12 @@ export function MentionTextarea({
         .sort((a, b) => Number(b.name.toLowerCase().startsWith(query)) - Number(a.name.toLowerCase().startsWith(query)))
         .slice(0, MAX_SHOWN)
     : [];
-  const open = trigger !== null && matches.length > 0 && dismissedAt !== trigger.start;
+  const open = trigger !== null && matches.length > 0 && !stillDismissed(dismissed, trigger);
   const optionId = (index: number) => `${listId}-${index}`;
 
   function detect(text: string, caret: number) {
     const next = findTrigger(text, caret);
-    if (!next || next.start !== dismissedAt) setDismissedAt(null);
+    if (!stillDismissed(dismissed, next)) setDismissed(null);
     setTrigger(next);
     setActive(0);
   }
@@ -93,11 +99,10 @@ export function MentionTextarea({
     }
   }, [value]);
 
-  const triggerStart = trigger?.start ?? null;
   useEffect(() => {
     if (!open) return;
     function dismiss() {
-      setDismissedAt(triggerStart);
+      setDismissed(trigger);
     }
     function onPointerDown(event: PointerEvent) {
       const target = event.target as Node;
@@ -115,7 +120,7 @@ export function MentionTextarea({
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", dismiss);
     };
-  }, [open, triggerStart]);
+  }, [open, trigger]);
 
   function choose(candidate: MentionCandidate) {
     const el = box.current;
@@ -147,7 +152,7 @@ export function MentionTextarea({
         // Closes only the list: not a side panel or dialog behind it, and the text stays.
         event.preventDefault();
         event.stopPropagation();
-        setDismissedAt(triggerStart);
+        setDismissed(trigger);
         return;
       }
     }

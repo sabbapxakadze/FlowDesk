@@ -279,8 +279,14 @@ export async function removeComment(input: {
   return { status: "deleted" } as const;
 }
 
+/** Adds each issue's labels (one query for all of them) so a card can show its pills, like the issue list does. */
+async function withLabels<T extends { id: string }>(organizationId: string, items: T[]) {
+  const labelsByIssue = await issuesRepository.labelsForIssues(organizationId, items.map((item) => item.id));
+  return items.map((item) => ({ ...item, labels: labelsByIssue.get(item.id) ?? [] }));
+}
+
 export async function getBoard(organizationId: string, projectId: string) {
-  return issuesRepository.listForBoard(organizationId, projectId);
+  return withLabels(organizationId, await issuesRepository.listForBoard(organizationId, projectId));
 }
 
 export async function moveIssue(input: {
@@ -302,7 +308,12 @@ export async function moveIssue(input: {
 }
 
 export async function getBacklog(organizationId: string, projectId: string) {
-  return issuesRepository.getBacklog(organizationId, projectId);
+  const result = await issuesRepository.getBacklog(organizationId, projectId);
+  return {
+    ...result,
+    backlog: await withLabels(organizationId, result.backlog),
+    activeSprintIssues: await withLabels(organizationId, result.activeSprintIssues),
+  };
 }
 
 export async function assignSprint(input: {

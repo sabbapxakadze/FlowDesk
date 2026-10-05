@@ -12,8 +12,9 @@ import {
   arrayMove,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { GetBacklogResponse, Issue } from "@flowdesk/contracts";
+import type { GetBacklogResponse, IssueListItem } from "@flowdesk/contracts";
 import { useCurrentProject } from "../../entities/project";
+import { LabelPills } from "../../entities/label";
 import { AssigneeAvatar } from "../../entities/member";
 import { IssueSummary, SortableIssueCard, useBacklog } from "../../entities/issue";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
@@ -36,6 +37,9 @@ const LISTS = ["backlog", "active-sprint"] as const;
 type ListId = (typeof LISTS)[number];
 type IssueLists = ListMap<ListId>;
 const { isListId, findContainer, moveAcrossLists } = createMultiList(LISTS);
+
+/** The label pills on a card. A module-level function, so its identity never changes and the memoised card bodies stay put while dragging. */
+const renderLabels = (labels: IssueListItem["labels"]) => <LabelPills labels={labels} />;
 
 function buildLists(data: GetBacklogResponse | undefined): IssueLists {
   return {
@@ -128,7 +132,7 @@ export function ProjectSprintsPage() {
   );
   const baseLists = useMemo(() => buildLists(backlogData), [backlogData]);
 
-  const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
+  const [activeIssue, setActiveIssue] = useState<IssueListItem | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
 
   // Keep the preview while dragging and, after the drop, until the optimistic cache update has landed.
@@ -373,6 +377,7 @@ export function ProjectSprintsPage() {
                           projectKey={project.key}
                           assigneeId={issue.assigneeId}
                           renderAssignee={renderAssignee}
+                          renderLabels={renderLabels}
                           onOpen={panel.open}
                           dragLabel="Drag to reorder or move between backlog and sprint"
                         />
@@ -397,7 +402,9 @@ export function ProjectSprintsPage() {
                       <AssigneeAvatar organizationId={organization!.id} userId={activeIssue.assigneeId} interactive={false} />
                     ) : null
                   }
-                />
+                >
+                  {renderLabels(activeIssue.labels)}
+                </IssueSummary>
               </Card>
             )}
           </DragOverlay>

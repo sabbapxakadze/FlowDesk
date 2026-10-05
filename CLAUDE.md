@@ -126,6 +126,7 @@ timezone; ADR 0031).
 Issues have an optional due date (a calendar day, ADR 0032): a chip with an "Overdue" marker on cards, My work and the issue page, set in the edit popup, and an
 Overdue / No due date filter on the Issues page.
 Comments support @mentions (ADR 0033): type `@` and pick a member; the mentioned person is notified (also by an edit that adds them) and shown as a profile link.
+Board and sprint cards show label pills; the Account page has a "Sign out of all devices" button.
 `/` is the "My work" page (my open issues across projects and my unread notifications). The issue list carries each issue's labels and
 filters by several labels at once (an issue must have all of them).
 The assignee circle on an issue card shows the person's photo and is a profile link with the hover card (beside the card's issue link, never inside it).

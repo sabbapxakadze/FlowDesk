@@ -1732,8 +1732,14 @@ The original plan for this slice, kept for the record:
    sidebar, filter the issue list by label (click a label), a proper "not found"
    for bad links without the 7-second skeleton. **Checked 2026-10-05:** the visible Ctrl+K button is DONE (the sidebar's Search row shows
    `Ctrl K`), and a bad link says "not found" in under a second is DONE (polish slice 2026-10-01). **`C` to create an issue: DONE 2026-10-05** (it
-   focuses the new-issue title on the issues page). **STILL OPEN:** filtering the list by clicking a label (labels are not shown on the
-   cards or on the issue page at all, only in the editor's picker and on the Labels page, so there is nothing to click yet).
+   focuses the new-issue title on the issues page). Clicking a label to filter the list was DONE earlier (labels slice: pills on the list cards are buttons, `labels-filter.spec.ts`; this line was stale until 2026-10-05).
+   **Leftovers batch DONE 2026-10-05 (owner: "do them in one go"):** (a) label pills (three, then +n, plain not clickable) on BOARD and SPRINTS cards, the board and backlog
+   responses now carry each issue's labels (one extra query each, like the list), 2 API tests (`board-labels.http.test.ts`) and 2 e2e tests (`board-labels.spec.ts`);
+   (b) "Sign out of all devices" on the Account page (a "Devices" section; asks first, ends every session including this one through the existing `POST /auth/logout-all`;
+   other devices stop working when their access token runs out, a few minutes), 1 e2e test; (c) the mention list now reopens after Esc when the text after the `@` is replaced
+   or pasted over (it stays closed while the same mention is only extended), 1 e2e test. Removed one at a time to see tests fail: board without labels, Esc closing for
+   good, sign-out not calling the server. **Not done, on purpose:** audit-log retention (the owner chose to leave it open), Markdown and description mentions (own slices),
+   Safari/WebKit (no WebKit browser in the test setup and installing one changes the machine; still unverified). Not mutation-checked: the backlog half of (a) in e2e.
 6. **@mentions in comments DONE 2026-10-05 (ADR 0033; owner's picks: comments only, mentioned people are told even if they never touched the issue and also by an edit that adds them, the list opens under the box).**
    Type `@` in the comment box and a list of members opens under it (filters as you type, arrows/Enter/Tab choose, Esc closes only the list); the box shows `@Name`, the stored body holds
    `@[Name](user:<id>)`; the posted comment shows each mention as a person link with the hover card; editing keeps them. The server keeps only CURRENT members of the organization (a made-up

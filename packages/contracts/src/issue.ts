@@ -95,7 +95,8 @@ export type GetIssueResponse = z.infer<typeof getIssueResponseSchema>;
 // issueSchema — see ADR 0007: the client only ever expresses "put this
 // issue relative to that one," never touches a rank value directly.
 export const getBoardResponseSchema = z.object({
-  data: z.array(issueSchema),
+  // With labels (id, name, colour) so a card can show its pills; one query for the whole board, not one per card.
+  data: z.array(issueListItemSchema),
 });
 
 export type GetBoardResponse = z.infer<typeof getBoardResponseSchema>;

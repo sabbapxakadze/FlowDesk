@@ -33,7 +33,7 @@ flow existed), or choose a timezone. The owner asked for all three, on a private
 - Asking for a new address that already has an account answers 409 "already exists". That tells a signed-in, rate-limited
   person that an address is registered; "check your email" for an address that will never get one would be worse.
 - Email delivery is not tested end to end: the e2e and API tests create the token themselves, as the recovery tests do.
-- Changing the email does not sign other sessions out (the password change does).
+- Changing the email does not sign other sessions out (the password change does). A separate "Sign out of all devices" button on the page (added 2026-10-05) ends every session through the existing `POST /auth/logout-all`.
 
 ## Alternatives rejected
 

@@ -2,7 +2,7 @@ import { memo, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Issue } from "@flowdesk/contracts";
+import type { IssueListItem } from "@flowdesk/contracts";
 import { issueKey, issuePath } from "../../../shared/lib/paths";
 import { Card } from "../../../shared/ui";
 import { pointerListeners, useDragClickGuard } from "../lib/dragHelpers";
@@ -37,16 +37,20 @@ export function SortableIssueCard({
   projectKey,
   assigneeId,
   renderAssignee,
+  renderLabels,
   onOpen,
   dragLabel = "Drag to reorder or move",
 }: {
-  issue: Issue;
+  issue: IssueListItem;
   projectKey: string;
   /** Who it is assigned to; `renderAssignee` turns the id into the picture. */
   assigneeId?: string | null;
   /** Builds the assignee's picture (a profile link with a hover card) for an id. It must keep its identity between renders
    *  (useCallback) or the memoised card body re-renders on every drag event. Beside the issue link, never inside it. */
   renderAssignee?: (userId: string) => ReactNode;
+  /** Builds the label pills from the issue's labels (entities cannot import each other, so the page supplies it). Like
+   *  `renderAssignee` it must keep its identity between renders. */
+  renderLabels?: (labels: IssueListItem["labels"]) => ReactNode;
   /** Open the issue in the side panel instead of navigating (modified clicks still navigate). */
   onOpen?: (issueId: string) => void;
   /** The grip button's accessible name. */
@@ -69,6 +73,7 @@ export function SortableIssueCard({
         projectKey={projectKey}
         assigneeId={assigneeId}
         renderAssignee={renderAssignee}
+        renderLabels={renderLabels}
         onOpen={onOpen}
         dragLabel={dragLabel}
         attributes={attributes}
@@ -84,16 +89,18 @@ const SortableCardBody = memo(function SortableCardBody({
   projectKey,
   assigneeId,
   renderAssignee,
+  renderLabels,
   onOpen,
   dragLabel,
   attributes,
   listeners,
   guardClick,
 }: {
-  issue: Issue;
+  issue: IssueListItem;
   projectKey: string;
   assigneeId?: string | null;
   renderAssignee?: (userId: string) => ReactNode;
+  renderLabels?: (labels: IssueListItem["labels"]) => ReactNode;
   onOpen?: (issueId: string) => void;
   dragLabel: string;
   attributes: ReturnType<typeof useSortable>["attributes"];
@@ -113,7 +120,9 @@ const SortableCardBody = memo(function SortableCardBody({
         }}
         className="block min-w-0 flex-1"
       >
-        <IssueSummary issue={issue} projectKey={projectKey} />
+        <IssueSummary issue={issue} projectKey={projectKey}>
+          {renderLabels?.(issue.labels)}
+        </IssueSummary>
       </Link>
       {assigneeId && renderAssignee && <span className="shrink-0">{renderAssignee(assigneeId)}</span>}
     </Card>

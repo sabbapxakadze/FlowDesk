@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { AssignIssueSprintRequest, GetBacklogResponse, Issue } from "@flowdesk/contracts";
+import type { AssignIssueSprintRequest, GetBacklogResponse } from "@flowdesk/contracts";
 import { issueKeys } from "../../entities/issue";
 import { ApiError } from "../../shared/api/client";
 import { assignIssueSprint } from "./api/assignIssueSprint";
@@ -35,7 +35,7 @@ export function useAssignIssueSprint(organizationId: string, projectId: string) 
             (issue) => issue.id !== variables.issueId,
           );
           // Placed where the drop said (before nextIssueId), else at the end of the target list, as the server does.
-          const insertInto = (list: Issue[]) => {
+          const insertInto = (list: GetBacklogResponse["backlog"]) => {
             const at = variables.nextIssueId ? list.findIndex((issue) => issue.id === variables.nextIssueId) : -1;
             return at === -1 ? [...list, moved] : [...list.slice(0, at), moved, ...list.slice(at)];
           };

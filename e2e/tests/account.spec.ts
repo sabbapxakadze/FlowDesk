@@ -85,6 +85,26 @@ test("\"Forgot it?\" on the Password section opens a popup for the signed-in add
   await expect(page).toHaveURL(/\/account$/);
 });
 
+test("Sign out of all devices asks first, then ends this session and every other one", async ({ loggedInPage: page, browser }) => {
+  // Why: the API existed with no button. It must ask before acting, and end the OTHER devices too (not only this one).
+  const otherContext = await browser.newContext();
+  const other = await otherContext.newPage();
+  await logInThroughForm(other); // the same person on another device
+
+  await page.goto("/account");
+  const devices = section(page, "Devices");
+  await devices.getByRole("button", { name: "Sign out of all devices" }).click();
+  await devices.getByRole("button", { name: "Cancel" }).click(); // asking first: nothing happened yet
+  await expect(page).toHaveURL(/\/account$/);
+  await devices.getByRole("button", { name: "Sign out of all devices" }).click();
+  await devices.getByRole("button", { name: "Yes, sign out everywhere" }).click();
+  await expect(page).toHaveURL(/\/login/);
+
+  await other.reload(); // the other device's session is gone: it cannot refresh
+  await expect(other).toHaveURL(/\/login/);
+  await otherContext.close();
+});
+
 test("changing the email: the form asks for the password, says the link was sent, and the email changes only when the link is opened", async ({
   loggedInPage: page,
   browser,

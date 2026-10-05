@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { issueSchema } from "./issue.js";
+import { issueListItemSchema } from "./issue.js";
 
 export const sprintStatusSchema = z.enum(["planned", "active", "completed"]);
 export type SprintStatus = z.infer<typeof sprintStatusSchema>;
@@ -81,8 +81,8 @@ export type SprintResponse = z.infer<typeof sprintResponseSchema>;
 // project is currently active.
 export const getBacklogResponseSchema = z.object({
   activeSprint: sprintSchema.nullable(),
-  backlog: z.array(issueSchema),
-  activeSprintIssues: z.array(issueSchema),
+  backlog: z.array(issueListItemSchema),
+  activeSprintIssues: z.array(issueListItemSchema),
 });
 
 export type GetBacklogResponse = z.infer<typeof getBacklogResponseSchema>;

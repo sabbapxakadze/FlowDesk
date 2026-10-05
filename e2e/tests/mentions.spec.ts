@@ -44,6 +44,23 @@ test("typing @ lists matching people under the box; Esc closes only the list; ke
   await expect(box).toHaveValue("Hi @Second Person ");
 });
 
+test("after Esc the list stays closed while you keep typing, and opens again when the text after the @ is replaced", async ({ loggedInPage: page }) => {
+  // Why: Esc used to close the list for that @ position for good, so replacing or pasting text there never reopened it.
+  await setup(page);
+  const box = page.getByPlaceholder("Add a comment…");
+  const list = page.getByRole("listbox", { name: "Mention a person" });
+  await box.click();
+  await box.pressSequentially("Hi @s");
+  await expect(list).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(list).toHaveCount(0);
+  await box.pressSequentially("e"); // still the same mention, only longer: stays closed
+  await expect(list).toHaveCount(0);
+
+  await box.fill("Hi @"); // the text replaced in one go (a paste): a different query, so it opens again
+  await expect(list.getByRole("option")).toHaveCount(3);
+});
+
 test("a posted mention is a link to the person; editing the comment keeps it", async ({ loggedInPage: page }) => {
   // Why: the stored body holds a token, the box shows @Name. Posting encodes, editing decodes, and both must round-trip,
   // otherwise an edit would silently turn the mention into text (or show the raw token).
