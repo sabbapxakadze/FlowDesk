@@ -1,3 +1,4 @@
+import { useImperativeHandle, type Ref } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -5,6 +6,8 @@ import { createIssueRequestSchema, type CreateIssueRequest } from "@flowdesk/con
 import { issueKeys } from "../../../entities/issue";
 import { Button, ErrorText, Field, FieldRowAction, Input } from "../../../shared/ui";
 import { createIssue } from "../api/createIssue";
+
+export type CreateIssueFormHandle = { focus: () => void };
 
 /**
  * Gated server-side by requirePermission("manage_issue") — Owner/Admin/
@@ -14,17 +17,23 @@ import { createIssue } from "../api/createIssue";
 export function CreateIssueForm({
   organizationId,
   projectId,
+  ref,
 }: {
   organizationId: string;
   projectId: string;
+  /** `focus()` puts the cursor in the Title field (the "C" shortcut on the issues page). */
+  ref?: Ref<CreateIssueFormHandle>;
 }) {
   const queryClient = useQueryClient();
   const {
     register,
     handleSubmit,
     reset,
+    setFocus,
     formState: { errors },
   } = useForm<CreateIssueRequest>({ resolver: zodResolver(createIssueRequestSchema) });
+
+  useImperativeHandle(ref, () => ({ focus: () => setFocus("title") }), [setFocus]);
 
   const mutation = useMutation({
     mutationFn: (data: CreateIssueRequest) => createIssue(organizationId, projectId, data),
@@ -40,7 +49,7 @@ export function CreateIssueForm({
       className="mb-6 flex flex-wrap items-end gap-3 rounded-[var(--radius-card)] bg-[var(--color-bg-surface)] p-4 shadow-sm"
     >
       <Field reserveErrorSpace label="Title" error={errors.title?.message} className="flex-1">
-        <Input {...register("title")} placeholder="Something to do" />
+        <Input {...register("title")} placeholder="Something to do" aria-keyshortcuts="c" />
       </Field>
 
       <Field reserveErrorSpace label="Description" error={errors.description?.message} className="flex-1">

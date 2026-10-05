@@ -1719,14 +1719,18 @@ The original plan for this slice, kept for the record:
      mobile width. **Known gaps:** a person redirected by a deleted project is not
      told why; no audit trail of who deleted what. **Phase 8.5 slice 3 (rename and
      delete) is complete.**
-3. **Invite teammates** by email with roles (the roles enum already exists).
-4. **Due dates** with an overdue marker.
+3. **Invite teammates** by email with roles (the roles enum already exists). **DONE** (collaborators slices A and B, ADR 0024).
+4. **Due dates** with an overdue marker. **STILL OPEN (checked 2026-10-05: no due date in the schema, the API or the UI).**
 5. **Small UI wins:** `C` to create an issue, a visible Ctrl+K button in the
    sidebar, filter the issue list by label (click a label), a proper "not found"
-   for bad links without the 7-second skeleton.
-6. **Markdown and @mentions** in descriptions and comments.
+   for bad links without the 7-second skeleton. **Checked 2026-10-05:** the visible Ctrl+K button is DONE (the sidebar's Search row shows
+   `Ctrl K`), and a bad link says "not found" in under a second is DONE (polish slice 2026-10-01). **`C` to create an issue: DONE 2026-10-05** (it
+   focuses the new-issue title on the issues page). **STILL OPEN:** filtering the list by clicking a label (labels are not shown on the
+   cards or on the issue page at all, only in the editor's picker and on the Labels page, so there is nothing to click yet).
+6. **Markdown and @mentions** in descriptions and comments. **STILL OPEN (checked 2026-10-05: descriptions and comments are plain text; the
+   description keeps its line breaks since 2026-10-05, nothing more).**
 7. **A "my work" home** (assigned to me, recent activity, unread notifications)
-   instead of `/` redirecting to the project list.
+   instead of `/` redirecting to the project list. **STILL OPEN (checked 2026-10-05: `/` still lands on /projects).**
    **Added 2026-09-30 (owner idea): search as a popup, not a separate page.**
    Today the sidebar "Search" link goes to a `/search` page, while Ctrl+K already
    opens a search popup (the command palette). Proposal: the sidebar Search entry
@@ -2287,6 +2291,20 @@ The original plan for this slice, kept for the record:
    worst frame 233 to 50 ms. `drag-performance.spec.ts` fails above 150 ms; with the sensors inline it measured 190 ms and with the memo
    removed 249 ms. Not changed: the remaining ~70 ms (the first render at drag start); the median frame was already 16.7 ms, so the drag itself
    never stuttered, only its start and end.
+   **Status check 2026-10-05 (everything still open, so nothing is assumed done).** Checked in the code and in the running app. Open product
+   items: due dates; filtering the list by label (and showing labels on cards and the issue page); Markdown and @mentions;
+   the "my work" home. Open leftovers named earlier: the issue editor overwrites a change someone else made while its popup is open (proven
+   2026-10-05); no audit log export or retention; no way to change your email or timezone; the label picker adds one label at a time. Not verified: WebKit/Safari, a real
+   screen reader (the owner does not need it), and the cause of one full e2e run with 8 unrelated failures that has not repeated. Every other
+   slice listed above is done. Phase 9 has not started except the e2e suite.
+   **Three small items DONE 2026-10-05.** (1) `C` focuses the new-issue title on the issues page: a shared `useShortcut` hook that never steals a
+   letter (not while typing in a field or a dropdown, not with Ctrl/Cmd/Alt, not with a dialog open or focus inside one, so not with the issue
+   panel focused); `CreateIssueForm` exposes `focus()` through a ref. (2) The sort offers "Lowest priority first" (`?sort=priority&order=asc`;
+   the API flips the whole key, so issues without a priority come first, then low to urgent, oldest first within each; going back to Highest
+   drops `order`). (3) The audit log's rows scroll inside a raised panel capped to the room in the window, with Load more pinned as its
+   footer (same as the issues list and the profile). 3 e2e tests (`quick-wins.spec.ts`); each guard was removed one at a time to see them fail
+   (the field, dialog and modifier guards, the sort mapping, the panel cap). Not done: a visible hint for `C` (the title field has
+   `aria-keyshortcuts="c"`, nothing on screen).
    **Assignee photos DONE 2026-10-05 (owner's request).** The small circle on an issue card (list, board, sprints) shows the assignee's photo
    (initials without one) and, like every other picture of a person, opens the person card on hover and goes to the profile on click. It sits
    BESIDE the card's issue link, not inside it (a link cannot hold a link): `IssueCard` and `SortableIssueCard` take an `assignee` node built by
@@ -2333,6 +2351,13 @@ prioritise work, discuss it with edits and files, and see when things happened.
     fake the email sender in the test setup, so tests need no network and
     can assert "a verification email was requested".
 - [ ] GitHub Actions: lint → typecheck → test → build
+  - **Speed up the e2e suite (noted 2026-10-05, owner agreed to do it with this item).** A full run takes about 10 minutes
+    (about 150 tests, one at a time: all tests share one database that is reset before each test, `workers: 1` in
+    `e2e/playwright.config.ts`). Options, in the order I would try them: (1) 3 or 4 workers, each with its own database and its own api and
+    web ports (roughly a third or quarter of the time; real work, because the reset, the seed and the servers are all shared today);
+    (2) the full suite only in CI, and a small smoke set in the pre-push hook (the decision already noted under the e2e item below);
+    (3) look for the slowest tests and trim their waits (not measured yet: start with `--reporter=list` timings). Until then,
+    run only the specs of the area you changed (under a minute) and the full suite once at the end of a slice.
 - [ ] Playwright e2e on 3–4 critical flows
   - **Started 2026-10-01 (ADR 0020), pulled ahead of Phase 9 by the owner's choice:**
     setup plus 6 tests are in `e2e/` (register through the form and log in, wrong

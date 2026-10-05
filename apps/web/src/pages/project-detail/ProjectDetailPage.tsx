@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
 import { useCurrentProject } from "../../entities/project";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
 import { AssigneeAvatar, memberOptions, useMembers } from "../../entities/member";
 import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
-import { CreateIssueForm } from "../../features/create-issue";
+import { CreateIssueForm, type CreateIssueFormHandle } from "../../features/create-issue";
 import { EditIssueDialog } from "../../features/edit-issue";
 import { useAuth } from "../../shared/auth/useAuth";
+import { useShortcut } from "../../shared/lib/useShortcut";
 import {
   Button,
   Card,
@@ -77,8 +78,10 @@ export function ProjectDetailPage() {
   const sort = searchParams.get("sort") === "priority" ? "priority" : undefined;
   const order = searchParams.get("order") === "asc" ? "asc" : undefined;
   // The three choices the dropdown offers: newest first (the default, nothing in the URL),
-  // oldest first (?order=asc) and highest priority first (?sort=priority).
-  const sortChoice = sort === "priority" ? "priority" : order === "asc" ? "oldest" : "newest";
+  // oldest first (?order=asc), highest priority first (?sort=priority) and lowest priority first (?sort=priority&order=asc:
+  // the API flips the whole key, so "no priority" comes first, then low, medium, high, urgent, oldest first within each).
+  const sortChoice =
+    sort === "priority" ? (order === "asc" ? "priority-low" : "priority") : order === "asc" ? "oldest" : "newest";
 
   const {
     data,
@@ -109,6 +112,9 @@ export function ProjectDetailPage() {
   const panel = useIssuePanel();
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
   const [showConflictNotice, setShowConflictNotice] = useState(false);
+  // "C" (create) puts the cursor in the new-issue title, like in most trackers; ignored while typing or with a dialog open.
+  const createForm = useRef<CreateIssueFormHandle>(null);
+  useShortcut("c", () => createForm.current?.focus());
   const editingIssue = issueRows.find(({ item }) => item.id === editingIssueId)?.item;
 
   function setStatusFilter(value: string) {
@@ -154,6 +160,10 @@ export function ProjectDetailPage() {
       next.delete("order");
       if (value === "oldest") next.set("order", "asc");
       if (value === "priority") next.set("sort", "priority");
+      if (value === "priority-low") {
+        next.set("sort", "priority");
+        next.set("order", "asc");
+      }
       return next;
     });
   }
@@ -165,7 +175,7 @@ export function ProjectDetailPage() {
       <div className="flex flex-col sm:h-[calc(100dvh-4rem)] sm:min-h-[28rem]">
       <PageHeader eyebrow={project.name} title="Issues" />
 
-      <CreateIssueForm organizationId={organization!.id} projectId={project.id} />
+      <CreateIssueForm ref={createForm} organizationId={organization!.id} projectId={project.id} />
 
       {/* data-panel-trigger: working the filters while an issue is open in the side panel must not
           close it (the panel ignores clicks here), and the list changes behind it. */}
@@ -212,6 +222,7 @@ export function ProjectDetailPage() {
             { value: "newest", label: "Newest first" },
             { value: "oldest", label: "Oldest first" },
             { value: "priority", label: "Highest priority first" },
+    { value: "priority-low", label: "Lowest priority first" },
           ]}
         />
       </div>

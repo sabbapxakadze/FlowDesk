@@ -11,7 +11,7 @@ import type { AuditEvent, AuditTargetType } from "@flowdesk/contracts";
 import { auditTone, describeAuditEvent, useAuditEvents, type AuditFilters } from "../../entities/audit";
 import { memberOptions, PersonName, useMembers, useMyRole } from "../../entities/member";
 import { useAuth } from "../../shared/auth/useAuth";
-import { Button, Card, Dropdown, EmptyState, ErrorText, Page, PageHeader, Skeleton, Time } from "../../shared/ui";
+import { Button, Card, Dropdown, EmptyState, ErrorText, Page, PageHeader, ScrollPanel, Skeleton, Time } from "../../shared/ui";
 
 const KINDS: { value: AuditTargetType; label: string }[] = [
   { value: "project", label: "Projects" },
@@ -138,18 +138,25 @@ export function AuditLogPage() {
       ) : events.length === 0 ? (
         <EmptyState block>{filters.actor || filters.kind ? "Nothing matches these filters." : "Nothing has been recorded yet."}</EmptyState>
       ) : (
-        <>
+        // "Load more" adds rows inside the panel (capped to the room left in the window), the page keeps its height.
+        <ScrollPanel
+          label="Audit log entries"
+          fitWindow
+          className="max-h-[75dvh]"
+          footer={
+            hasNextPage && (
+              <Button type="button" variant="secondary" disabled={isFetchingNextPage} onClick={() => void fetchNextPage()}>
+                {isFetchingNextPage ? "Loading…" : "Load more"}
+              </Button>
+            )
+          }
+        >
           <ul aria-label="Audit log" className="flex flex-col gap-2">
             {events.map((event, index) => (
               <AuditRow key={event.id} event={event} organizationId={organizationId} index={index} />
             ))}
           </ul>
-          {hasNextPage && (
-            <Button type="button" variant="secondary" className="mt-3" disabled={isFetchingNextPage} onClick={() => void fetchNextPage()}>
-              {isFetchingNextPage ? "Loading…" : "Load more"}
-            </Button>
-          )}
-        </>
+        </ScrollPanel>
       )}
     </Page>
   );

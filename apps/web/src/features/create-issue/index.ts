@@ -1,1 +1,1 @@
-export { CreateIssueForm } from "./ui/CreateIssueForm";
+export { CreateIssueForm, type CreateIssueFormHandle } from "./ui/CreateIssueForm";
