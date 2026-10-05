@@ -50,6 +50,7 @@ export function Dropdown({
   id,
   placeholder = "Select…",
   searchable,
+  keepOpen = false,
   size = "md",
   disabled = false,
   className,
@@ -63,6 +64,8 @@ export function Dropdown({
   placeholder?: string;
   /** Default: a search box when there are more than 7 options. */
   searchable?: boolean;
+  /** Stay open after a choice, for adding several things in one go (the label picker); Esc, a click outside or Tab closes it. */
+  keepOpen?: boolean;
   size?: "md" | "sm";
   disabled?: boolean;
   className?: string;
@@ -115,6 +118,11 @@ export function Dropdown({
 
   function choose(option: DropdownOption) {
     onChange(option.value);
+    if (keepOpen) {
+      // The chosen row usually leaves the list: keep the highlight on a row that still exists.
+      setActive((i) => Math.min(i, Math.max(0, shown.length - 2)));
+      return;
+    }
     close(true);
   }
 

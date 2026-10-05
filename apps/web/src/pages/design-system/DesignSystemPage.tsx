@@ -292,6 +292,106 @@ function DemoEditForm({ onCancel }: { onCancel: () => void }) {
   );
 }
 
+function ConcurrentBanner({ children }: { children: ReactNode }) {
+  return (
+    <div
+      role="status"
+      className="mb-3 rounded-[var(--radius-control)] border border-[var(--color-text-warning)] px-3 py-2 text-sm text-[var(--color-text-warning)]"
+    >
+      {children}
+    </div>
+  );
+}
+
+function ConcurrentPanel({ name, note, children }: { name: string; note: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1 text-sm font-medium">{name}</p>
+      <p className="mb-2 text-xs text-[var(--color-text-muted)]">{note}</p>
+      <Card className="p-4">
+        <p className="mb-3 font-display text-lg">Edit WEB-1</p>
+        {children}
+      </Card>
+    </div>
+  );
+}
+
+/** Draft (design pass): what the issue editor could do when someone else changes the issue while it is open. */
+function ConcurrentEditDemo() {
+  const theirs = <span className="font-medium">&ldquo;Fix the footer, v2&rdquo;</span>;
+  return (
+    <div className="grid max-w-6xl grid-cols-1 gap-5 lg:grid-cols-3">
+      <ConcurrentPanel
+        name="A. Banner + merge (recommended)"
+        note="Untouched fields update by themselves; yours keep your text; Save sends only what you changed. The same-field case (title) says so, and shows their text."
+      >
+        <ConcurrentBanner>Ada changed this issue while you were editing: <b>status</b>, <b>title</b>. Your own changes are kept.</ConcurrentBanner>
+        <div className="flex flex-col gap-3">
+          <Field label="Title">
+            <Input defaultValue="Fix the footer layout (my edit)" />
+          </Field>
+          <p className="-mt-2 text-xs text-[var(--color-text-warning)]">
+            Ada also changed the title to {theirs}. Save will replace their text with yours.
+          </p>
+          <Field label="Status">
+            <Dropdown value="done" onChange={() => undefined} options={STATUS_OPTIONS} />
+          </Field>
+          <p className="-mt-2 text-xs text-[var(--color-text-muted)]">Updated to Ada&apos;s change (you had not touched it).</p>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary">Cancel</Button>
+            <Button type="button" variant="success">Save</Button>
+          </div>
+          <p className="text-xs text-[var(--color-text-muted)]">Save sends only: title.</p>
+        </div>
+      </ConcurrentPanel>
+
+      <ConcurrentPanel
+        name="B. Block and re-open"
+        note="Save is refused once anything changed. You keep your text to copy, or drop it and load their version. Safe, but any change by anyone costs you your edits."
+      >
+        <ConcurrentBanner>
+          This issue changed while you were editing. Review it before saving.
+          <div className="mt-2 flex gap-2">
+            <Button type="button" size="sm" variant="secondary">Reload their version</Button>
+            <Button type="button" size="sm" variant="secondary">Copy my text</Button>
+          </div>
+        </ConcurrentBanner>
+        <div className="flex flex-col gap-3">
+          <Field label="Title">
+            <Input defaultValue="Fix the footer layout (my edit)" />
+          </Field>
+          <Field label="Status">
+            <Dropdown value="todo" onChange={() => undefined} options={STATUS_OPTIONS} />
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary">Cancel</Button>
+            <Button type="button" variant="success" disabled>Save</Button>
+          </div>
+        </div>
+      </ConcurrentPanel>
+
+      <ConcurrentPanel
+        name="C. Warn only"
+        note="The smallest change: it says what changed, nothing is merged, and Save can still overwrite."
+      >
+        <ConcurrentBanner>Ada changed this issue: <b>status</b>, <b>title</b>. Saving will overwrite their change.</ConcurrentBanner>
+        <div className="flex flex-col gap-3">
+          <Field label="Title">
+            <Input defaultValue="Fix the footer layout (my edit)" />
+          </Field>
+          <Field label="Status">
+            <Dropdown value="todo" onChange={() => undefined} options={STATUS_OPTIONS} />
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary">Cancel</Button>
+            <Button type="button" variant="success">Save</Button>
+          </div>
+        </div>
+      </ConcurrentPanel>
+    </div>
+  );
+}
+
 function DialogDemo() {
   const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState(false);
@@ -651,6 +751,13 @@ export function DesignSystemPage() {
         note="A list that grows inside its own scrolling area instead of stretching the page, with the slim always-visible scrollbar. Both looks keep the surface's own background. Raised: a thin outline and a soft outer shadow, so the list floats above the page; used by the Issues list (the owner tried a pressed-in version first and did not like it). Edges: no box; a soft shadow and a thin line fade in at the top once scrolled and at the bottom while more rows are hidden, used by a person's Recent activity and by an issue's comments and activity on the full page (scroll the second one)."
       >
         <ScrollPanelDemo />
+      </Section>
+
+      <Section
+        title="Concurrent edit"
+        note="What the issue editor does when someone else changes the issue while its popup is open. Save resends the values the popup opened with, so it would silently overwrite their change. The owner chose C (2026-10-05): a banner that names what changed and says Save will overwrite it; nothing is merged. A and B are kept here as the alternatives that were considered (A: merge untouched fields and send only what you changed; B: block Save)."
+      >
+        <ConcurrentEditDemo />
       </Section>
 
       <Section

@@ -15,3 +15,12 @@ auditRouter.get(
   requirePermission("view_audit_log"),
   auditController.list,
 );
+
+// The same rows as a CSV file (same permission, same filters, newest first, capped).
+auditRouter.get(
+  "/organizations/:organizationId/audit-events/export",
+  requireAuth,
+  requireOrgMembership,
+  requirePermission("view_audit_log"),
+  auditController.exportCsv,
+);

@@ -49,7 +49,17 @@ export function CreateIssueForm({
       className="mb-6 flex flex-wrap items-end gap-3 rounded-[var(--radius-card)] bg-[var(--color-bg-surface)] p-4 shadow-sm"
     >
       <Field reserveErrorSpace label="Title" error={errors.title?.message} className="flex-1">
-        <Input {...register("title")} placeholder="Something to do" aria-keyshortcuts="c" />
+        {/* The "C" key badge sits inside the empty, unfocused field and goes away once you focus it or type: it only says the
+            shortcut exists. Hidden on a phone (no keyboard) and for assistive tech (the field has aria-keyshortcuts). */}
+        <div className="relative">
+          <Input {...register("title")} placeholder="Something to do" aria-keyshortcuts="c" className="peer w-full pr-10" />
+          <kbd
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-[var(--radius-control)] border border-[var(--color-border-default)] px-1.5 text-xs text-[var(--color-text-muted)] peer-focus:hidden peer-[:not(:placeholder-shown)]:hidden max-sm:hidden"
+          >
+            C
+          </kbd>
+        </div>
       </Field>
 
       <Field reserveErrorSpace label="Description" error={errors.description?.message} className="flex-1">

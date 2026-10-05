@@ -75,6 +75,7 @@ export function LabelPicker({
           aria-label="Add label"
           value=""
           placeholder="+ Add label"
+          keepOpen // several labels in one go: each chosen one leaves the list, Esc closes it
           className="w-auto"
           onChange={(id) => {
             if (id) attachMutation.mutate(id);

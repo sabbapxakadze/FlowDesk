@@ -142,3 +142,29 @@ test("the description box can only be resized vertically, between a minimum and 
   });
   expect(style).toEqual({ resize: "vertical", min: "72px", max: "256px" });
 });
+
+test("when someone else changes the issue while the popup is open, a banner says what changed and that Save will overwrite it", async ({
+  loggedInPage: page,
+}) => {
+  // Why: Save resends the values the popup opened with, so it silently overwrote a change made in the meantime (proven
+  // 2026-10-05). The owner chose to warn (nothing is merged): the banner names the fields and the consequence.
+  const { projectId, issueIds } = await setup(page);
+  await page.goto("/projects/WEB");
+  await row(page, "Alpha").getByRole("button", { name: "Edit" }).click();
+  const dialog = dialogOf(page);
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("status")).toHaveCount(0); // nothing changed yet: no banner
+
+  const { headers, base } = await apiSession(page.request);
+  const other = await page.request.patch(`${base}/projects/${projectId}/issues/${issueIds[0]}`, {
+    headers,
+    data: { version: 1, title: "Changed elsewhere", status: "done" },
+  });
+  expect(other.status()).toBe(200);
+
+  const banner = dialog.getByRole("status");
+  await expect(banner).toContainText("Someone changed this issue while you were editing");
+  await expect(banner).toContainText("title, status");
+  await expect(banner).toContainText("Saving will overwrite their change");
+  await expect(banner).not.toContainText("priority"); // only what really changed
+});

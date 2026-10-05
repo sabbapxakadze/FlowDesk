@@ -8,7 +8,7 @@ import { combobox, expectValue, pick } from "../support/dropdown";
  * Load more growing inside its own panel.
  */
 
-const title = (page: Page) => page.getByLabel("Title", { exact: true });
+const title = (page: Page) => page.getByPlaceholder("Something to do"); // (not by label: the badge sits inside the label)
 const titlesOf = (page: Page) =>
   page.locator('ul > li a[href*="/issues/"] p.font-medium').allInnerTexts().then((texts) => texts.map((t) => t.trim()));
 
@@ -115,4 +115,35 @@ test("audit log: Load more adds rows inside the panel, and the page keeps its he
   await button.click();
   await expect(panel.getByRole("listitem")).toHaveCount(30);
   expect(await height()).toBe(before);
+});
+
+test("a small C badge in the empty title field says the shortcut exists, and goes away on focus or typing", async ({
+  loggedInPage: page,
+}) => {
+  // Why: the shortcut worked but nothing on the page mentioned it.
+  await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: ["Alpha"] });
+  await page.goto("/projects/WEB");
+  const badge = page.locator("kbd", { hasText: /^C$/ });
+  await expect(badge).toBeVisible();
+  // The badge's wrapper must not shrink the field: Title and Description are the same width (both flex-1).
+  const titleWidth = (await title(page).boundingBox())!.width;
+  const descriptionWidth = (await page.getByPlaceholder("Optional").boundingBox())!.width;
+  expect(Math.abs(titleWidth - descriptionWidth)).toBeLessThan(1);
+
+  await page.keyboard.press("c"); // the shortcut focuses the field...
+  await expect(title(page)).toBeFocused();
+  await expect(badge).toBeHidden(); // ...and the badge steps aside
+
+  await page.keyboard.type("x");
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  await expect(title(page)).toHaveValue("x");
+  await expect(badge).toBeHidden(); // text in the field: still no badge
+
+  await title(page).fill(""); // (filling focuses the field)
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  await expect(badge).toBeVisible(); // empty and not focused again
+
+  // A phone has no keyboard: no badge.
+  await page.setViewportSize({ width: 400, height: 800 });
+  await expect(badge).toBeHidden();
 });

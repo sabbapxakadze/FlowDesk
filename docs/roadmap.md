@@ -2293,8 +2293,8 @@ The original plan for this slice, kept for the record:
    never stuttered, only its start and end.
    **Status check 2026-10-05 (everything still open, so nothing is assumed done).** Checked in the code and in the running app. Open product
    items: due dates; filtering the list by label (and showing labels on cards and the issue page); Markdown and @mentions;
-   the "my work" home. Open leftovers named earlier: the issue editor overwrites a change someone else made while its popup is open (proven
-   2026-10-05); no audit log export or retention; no way to change your email or timezone; the label picker adds one label at a time. Not verified: WebKit/Safari, a real
+   the "my work" home. Open leftovers named earlier: the issue editor now WARNS when someone else changes the issue while its popup is open (it still
+   overwrites on Save; owner's choice); no audit log retention (the export is done, below); no way to change your email or timezone. Not verified: WebKit/Safari, a real
    screen reader (the owner does not need it), and the cause of one full e2e run with 8 unrelated failures that has not repeated. Every other
    slice listed above is done. Phase 9 has not started except the e2e suite.
    **Three small items DONE 2026-10-05.** (1) `C` focuses the new-issue title on the issues page: a shared `useShortcut` hook that never steals a
@@ -2305,6 +2305,30 @@ The original plan for this slice, kept for the record:
    footer (same as the issues list and the profile). 3 e2e tests (`quick-wins.spec.ts`); each guard was removed one at a time to see them fail
    (the field, dialog and modifier guards, the sort mapping, the panel cap). Not done: a visible hint for `C` (the title field has
    `aria-keyshortcuts="c"`, nothing on screen).
+   **Audit log CSV export DONE 2026-10-05.** An "Export CSV" button on the audit log page (owners and admins, like the log itself) downloads the
+   rows that match the person and kind filters, newest first: `GET /organizations/:id/audit-events/export` (same `view_audit_log` permission,
+   same organization scoping), columns `time, who, action, target_type, target, details` (raw fields; `details` is JSON, the web page's
+   sentence is not duplicated on the server), capped at 10,000 rows with a last line saying so when there were more (`AUDIT_EXPORT_MAX_ROWS` in
+   contracts). CRLF line ends and a UTF-8 byte order mark so Excel reads accents; a cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage
+   return gets an apostrophe in front (spreadsheet formula injection: names are typed by people). The browser fetches with the access token and
+   saves the Blob (`apiDownload` and `saveBlob` in `shared/api/client.ts`), because a plain link cannot send the header. 7 API tests
+   (`audit-export.http.test.ts`: the file and its order, a member and a signed-out request refused, another organization's rows and address
+   refused, filters and bad filters, formula and quote handling, the CSV helpers, the cap) and 2 e2e tests (the download with and without a
+   filter; no button for a member). Removed one at a time to see tests fail: the permission check, the organization scope, the formula prefix,
+   the truncation flag, and the filters in the button. Not done: retention (deleting old rows is a policy decision, deliberately left open);
+   the export was not clicked in the owner's running app (the browser tool's session was logged out): checked in the clean test browser.
+   **Concurrent edit: WARNING DONE 2026-10-05 (owner chose option C of three in the design system).** While the editor popup is open, a banner
+   names the fields someone else changed ("title, status") and says Saving will overwrite their change. Nothing is merged and Save still resends
+   what it always did; A (merge untouched fields, send only what you changed) and B (block Save) were not chosen and are in `/design-system` as
+   the alternatives. The banner compares the issue as the popup opened with it against the live one (title, description, status, priority,
+   assignee; labels are not watched). Who changed it is not shown ("Someone"; the form does not know). 1 e2e test; removing the banner fails it.
+   Checked in a clean browser only: triggering it in your dev data would have meant editing a real issue.
+   **Two more small items DONE 2026-10-05.** (1) A small `C` key badge sits inside the empty, unfocused Title field of the new-issue form: it
+   disappears on focus or when text is typed, is not shown on a phone, and is hidden from assistive tech (the field has `aria-keyshortcuts`).
+   Its wrapper briefly made the field narrower than Description (caught by looking, now a test). (2) The label picker stays open after a choice
+   (`Dropdown` has a `keepOpen` prop), so several labels go on in one go; each chosen label leaves the list and Esc closes it. Tests in
+   `quick-wins.spec.ts` and `dropdown.spec.ts`, each behaviour removed once to see them fail; checked in the running app (the badge, and the
+   picker opening with the editor's labels) without adding labels to dev data.
    **Assignee photos DONE 2026-10-05 (owner's request).** The small circle on an issue card (list, board, sprints) shows the assignee's photo
    (initials without one) and, like every other picture of a person, opens the person card on hover and goes to the profile on click. It sits
    BESIDE the card's issue link, not inside it (a link cannot hold a link): `IssueCard` and `SortableIssueCard` take an `assignee` node built by

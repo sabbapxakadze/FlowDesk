@@ -121,3 +121,46 @@ test("on a phone-sized screen the log does not scroll sideways", async ({ logged
   await expect(rows(page).first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test("Export CSV downloads the rows that match the filters, as a spreadsheet file", async ({ loggedInPage: page }) => {
+  // Why: the feature end to end in the real UI: the button, the authenticated download (the token is a header, so a plain
+  // link would not work), the file name, and that the chosen filter changes what is in the file.
+  await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: [] });
+  const { headers, base } = await apiSession(page.request);
+  await page.request.post(`${base}/invitations`, { headers, data: { email: "new@example.com", role: "member" } });
+  await page.goto("/audit-log");
+  await expect(rows(page)).toHaveCount(2);
+
+  const readDownload = async () => {
+    const download = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export CSV" }).click()]).then(
+      ([d]) => d,
+    );
+    expect(download.suggestedFilename()).toMatch(/^audit-log-\d{4}-\d{2}-\d{2}\.csv$/);
+    const { readFile } = await import("node:fs/promises");
+    return (await readFile((await download.path())!, "utf8")).replace(/^\uFEFF/, "").split("\r\n").filter((l) => l !== "");
+  };
+
+  const everything = await readDownload();
+  expect(everything[0]).toBe("time,who,action,target_type,target,details");
+  expect(everything).toHaveLength(3);
+  expect(everything.join("\n")).toContain("project.created");
+  expect(everything.join("\n")).toContain("member.invited");
+
+  await pick(combobox(page, "Filter by kind"), "Members");
+  await expect(rows(page)).toHaveCount(1);
+  const members = await readDownload();
+  expect(members).toHaveLength(2); // the header and the one member row
+  expect(members.join("\n")).toContain("member.invited");
+  expect(members.join("\n")).not.toContain("project.created");
+});
+
+test("a plain member has no Export button (the page only explains)", async ({ loggedInPage: page }) => {
+  // Why: the export is for the people who can read the log; the server refuses anyone else too (API tests).
+  await addOrgMember("e2e-user@example.com", { email: "e2e-second@example.com", name: "Second Person" });
+  const second = await page.context().browser()!.newContext();
+  const secondPage = await second.newPage();
+  await logInThroughForm(secondPage, "e2e-second@example.com");
+  await secondPage.goto("/audit-log");
+  await expect(secondPage.getByRole("button", { name: "Export CSV" })).toHaveCount(0);
+  await second.close();
+});

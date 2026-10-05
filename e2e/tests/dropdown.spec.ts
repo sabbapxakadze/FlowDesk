@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "../support/fixtures";
-import { createIssueViaApi } from "../support/api";
+import { createIssueViaApi, createLabelViaApi } from "../support/api";
 import { addOrgMember } from "../support/db";
 import { combobox, editField, editor, expectValue, pick } from "../support/dropdown";
 
@@ -160,4 +160,30 @@ test("every dropdown in the issue editor has an accessible name", async ({ logge
     await expect(editor(page).getByRole("combobox", { name: new RegExp(name, "i") })).toBeVisible();
   }
   await expect(editor(page).getByRole("combobox")).toHaveCount(4);
+});
+
+test("the label picker stays open so several labels can be added in one go", async ({ loggedInPage: page }) => {
+  // Why: it used to close after each label, so three labels meant opening it three times. Each chosen label leaves the list;
+  // Esc closes it.
+  await setup(page);
+  for (const [name, color] of [["bug", "#cc0000"], ["design", "#0066cc"], ["docs", "#008800"]] as const) {
+    await createLabelViaApi(page.request, name, color);
+  }
+  await page.goto("/projects/WEB");
+  await page.getByRole("listitem").filter({ hasText: "Alpha" }).getByRole("button", { name: "Edit" }).click();
+  const picker = combobox(editor(page), "Add label");
+  await picker.click();
+  await expect(page.getByRole("option")).toHaveCount(3);
+
+  await page.getByRole("option", { name: "bug", exact: true }).click();
+  await expect(page.getByRole("option")).toHaveCount(2); // bug left the list...
+  await expect(page.getByRole("listbox")).toBeVisible(); // ...and the list is still open
+  await page.getByRole("option", { name: "design", exact: true }).click();
+  await expect(page.getByRole("option")).toHaveCount(1);
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(editor(page)).toBeVisible(); // Esc closed only the list
+  await expect(editor(page).getByText("bug", { exact: true })).toBeVisible(); // both are on the issue
+  await expect(editor(page).getByText("design", { exact: true })).toBeVisible();
 });

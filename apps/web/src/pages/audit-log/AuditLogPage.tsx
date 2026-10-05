@@ -10,6 +10,7 @@ import {
 import type { AuditEvent, AuditTargetType } from "@flowdesk/contracts";
 import { auditTone, describeAuditEvent, useAuditEvents, type AuditFilters } from "../../entities/audit";
 import { memberOptions, PersonName, useMembers, useMyRole } from "../../entities/member";
+import { ExportAuditLogButton } from "../../features/export-audit-log";
 import { useAuth } from "../../shared/auth/useAuth";
 import { Button, Card, Dropdown, EmptyState, ErrorText, Page, PageHeader, ScrollPanel, Skeleton, Time } from "../../shared/ui";
 
@@ -125,6 +126,7 @@ export function AuditLogPage() {
           onChange={(value) => setFilter("kind", value)}
           options={[{ value: "", label: "Everything" }, ...KINDS.map((kind) => ({ value: kind.value, label: kind.label }))]}
         />
+        {canView && <ExportAuditLogButton organizationId={organizationId} filters={filters} />}
       </div>
 
       {!canView || isPending ? (

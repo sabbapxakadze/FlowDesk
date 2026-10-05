@@ -59,6 +59,27 @@ function decodeCursor(cursor: string): { createdAt: Date; id: string } | null {
 }
 
 /**
+ * The newest events for a CSV export, with the same filters and the same organization scoping as `list`. Asks for one
+ * row more than `limit` so the caller can tell "exactly limit rows" from "more than limit rows" (`truncated`).
+ */
+export async function listForExport(
+  organizationId: string,
+  options: { actor?: string; kind?: AuditTargetType },
+  limit: number,
+): Promise<{ items: Row[]; truncated: boolean }> {
+  const conditions = [eq(auditEvents.organizationId, organizationId)];
+  if (options.actor) conditions.push(eq(auditEvents.actorId, options.actor));
+  if (options.kind) conditions.push(eq(auditEvents.targetType, options.kind));
+  const rows = await db
+    .select()
+    .from(auditEvents)
+    .where(and(...conditions))
+    .orderBy(desc(auditEvents.createdAt), desc(auditEvents.id))
+    .limit(limit + 1);
+  return { items: rows.slice(0, limit), truncated: rows.length > limit };
+}
+
+/**
  * One organization's events, newest first, keyset-paged on (created_at, id) like the issue list,
  * served by audit_events_organization_id_created_at_id_idx. Always scoped by organizationId in
  * the query itself.

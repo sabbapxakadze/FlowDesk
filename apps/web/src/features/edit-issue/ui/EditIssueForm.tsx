@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Issue, IssuePriority, IssueStatus } from "@flowdesk/contracts";
@@ -26,6 +26,18 @@ type FormValues = {
   // "" means unassigned (a <select> value is always a string).
   assigneeId: string;
 };
+
+const WATCHED_FIELDS = [
+  ["title", "title"],
+  ["description", "description"],
+  ["status", "status"],
+  ["priority", "priority"],
+  ["assigneeId", "assignee"],
+] as const;
+
+/** Compares one field of the issue as the popup opened with it and as it is now ("" and no description are the same). */
+const valueOf = (issue: Issue, field: (typeof WATCHED_FIELDS)[number][0]) =>
+  field === "description" ? (issue.description ?? "") : (issue[field] ?? "");
 
 /**
  * version isn't a form field — it's the version the caller already has
@@ -71,6 +83,10 @@ export function EditIssueForm({
     },
   });
   const { data: members } = useMembers(organizationId);
+  // The issue as it was when the popup opened. `issue` keeps following live updates, the form's fields do not, so a save
+  // resends the opening values and overwrites whatever someone else changed in the meantime. We only say so (no merge).
+  const [openedWith] = useState(issue);
+  const changedMeanwhile = WATCHED_FIELDS.filter(([field]) => valueOf(issue, field) !== valueOf(openedWith, field)).map(([, label]) => label);
   useEffect(() => {
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
@@ -121,6 +137,14 @@ export function EditIssueForm({
       onSubmit={handleSubmit((data) => mutation.mutate(data))}
       className="flex flex-col gap-3"
     >
+      {changedMeanwhile.length > 0 && (
+        <p
+          role="status"
+          className="rounded-[var(--radius-control)] border border-[var(--color-text-warning)] px-3 py-2 text-sm text-[var(--color-text-warning)]"
+        >
+          Someone changed this issue while you were editing: <b>{changedMeanwhile.join(", ")}</b>. Saving will overwrite their change.
+        </p>
+      )}
       <Field label="Title">
         <Input data-autofocus {...register("title", { required: true })} />
       </Field>

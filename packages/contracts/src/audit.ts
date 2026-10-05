@@ -58,6 +58,13 @@ export const listAuditEventsQuerySchema = z.object({
 });
 export type ListAuditEventsQuery = z.infer<typeof listAuditEventsQuerySchema>;
 
+// The CSV export takes the same two filters as the list (no paging: it is one file, newest first, capped).
+export const exportAuditEventsQuerySchema = listAuditEventsQuerySchema.pick({ actor: true, kind: true });
+export type ExportAuditEventsQuery = z.infer<typeof exportAuditEventsQuerySchema>;
+
+/** The most rows one export holds; the file says so on its last line when there were more. */
+export const AUDIT_EXPORT_MAX_ROWS = 10_000;
+
 export const listAuditEventsResponseSchema = z.object({
   data: z.array(auditEventSchema),
   nextCursor: z.string().nullable(),

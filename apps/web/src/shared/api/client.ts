@@ -63,6 +63,31 @@ export async function apiGet<T>(path: string, schema: z.ZodType<T>): Promise<T> 
   return schema.parse(await res.json());
 }
 
+/**
+ * Fetches a file the API protects (the access token is a header, not a cookie, so a plain <a href> cannot ask for it)
+ * and returns it as a Blob with the file name the server suggested. The caller saves it (see `saveBlob`).
+ */
+export async function apiDownload(path: string): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetch(`/api${path}`, { headers: authHeaders() });
+  if (!res.ok) {
+    throw await toApiError(res, path, "GET");
+  }
+  const filename = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? "download";
+  return { blob: await res.blob(), filename };
+}
+
+/** Saves a Blob to the person's computer through a temporary link, the standard way to start a download from code. */
+export function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 /** Multipart upload — no Content-Type header set explicitly, unlike
  * every other helper here. The browser computes the multipart boundary
  * itself and needs to set the header to include it; setting it by hand
