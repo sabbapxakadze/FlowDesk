@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { IssueEvent } from "@flowdesk/contracts";
 import { describeEvent } from "../../entities/issue";
 import { PersonName } from "../../entities/member";
+import { formatDueDate, todayKey } from "../../shared/lib/dueDate";
 import {
   PRIORITY_LABELS,
   PriorityBadge,
@@ -109,6 +110,12 @@ function partsOf(event: IssueEvent, organizationId: string): Part[] {
               },
         );
       }
+      if ("dueDate" in p)
+        parts.push(
+          p.dueDate
+            ? { verb: "set the due date to", object: <span className={STRONG}>{formatDueDate(String(p.dueDate), todayKey(null))}</span> }
+            : { verb: "removed the due date" },
+        );
       if ("priority" in p)
         parts.push({
           verb: "changed priority to",

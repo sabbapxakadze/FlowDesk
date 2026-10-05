@@ -23,6 +23,7 @@ import { issuePath, projectPath } from "../../shared/lib/paths";
 import {
   Button,
   buttonVariants,
+  DueDate,
   IconButton,
   Page,
   PageHeader,
@@ -314,6 +315,7 @@ export function IssueDetail({
           <div className="flex items-center gap-3">
             <StatusBadge status={issue.status} />
             <PriorityBadge priority={issue.priority} />
+            <DueDate dueDate={issue.dueDate} done={issue.status === "done"} />
             {nameOf(issue.assigneeId) && (
               <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
                 <PersonName

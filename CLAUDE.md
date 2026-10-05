@@ -123,6 +123,8 @@ The app has a motion language (ADR 0029): page fade-and-rise, panel slide, dialo
 button press/spinner/tick, theme cross-fade; all off under reduced motion, and the e2e suite runs with reduced motion on.
 `/account` is the private account page (email through a confirmation link to the new address, password with the other devices signed out,
 timezone; ADR 0031).
+Issues have an optional due date (a calendar day, ADR 0032): a chip with an "Overdue" marker on cards, My work and the issue page, set in the edit popup, and an
+Overdue / No due date filter on the Issues page.
 `/` is the "My work" page (my open issues across projects and my unread notifications). The issue list carries each issue's labels and
 filters by several labels at once (an issue must have all of them).
 The assignee circle on an issue card shows the person's photo and is a profile link with the hover card (beside the card's issue link, never inside it).

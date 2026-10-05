@@ -17,6 +17,8 @@ export const issueSchema = z.object({
   description: z.string().nullable(),
   status: issueStatusSchema,
   priority: issuePrioritySchema,
+  // A calendar day ("YYYY-MM-DD"), not a moment; null = no due date (ADR 0032).
+  dueDate: z.iso.date().nullable(),
   // Null = unassigned. The id only, not a name: lists stay free of a user join
   // and the web app resolves names from the organization's member list.
   assigneeId: z.uuid().nullable(),
@@ -64,6 +66,10 @@ export const listIssuesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(25),
   status: issueStatusSchema.optional(),
   priority: issuePrioritySchema.optional(),
+  // "overdue": due before `today` and not done. "none": no due date. `today` is the CALLER's calendar day (their timezone), so the
+  // list and the overdue marker agree; without it the server's UTC day is used (ADR 0032).
+  due: z.enum(["overdue", "none"]).optional(),
+  today: z.iso.date().optional(),
   // A user id, or "unassigned". ("Assigned to me" is the client sending its own id.)
   assignee: z.union([z.uuid(), z.literal("unassigned")]).optional(),
   // Only issues that have ALL of these labels. Repeat the parameter (?label=a&label=b); one value is a list of one.
@@ -118,6 +124,8 @@ export const updateIssueRequestSchema = z
     description: z.string().max(10000, "Description is too long").nullable().optional(),
     status: issueStatusSchema.optional(),
     priority: issuePrioritySchema.optional(),
+    // null removes the due date; absent leaves it alone.
+    dueDate: z.iso.date().nullable().optional(),
     // null unassigns; absent leaves it alone.
     assigneeId: z.uuid().nullable().optional(),
   })
@@ -127,9 +135,10 @@ export const updateIssueRequestSchema = z
       data.description !== undefined ||
       data.status !== undefined ||
       data.priority !== undefined ||
+      data.dueDate !== undefined ||
       data.assigneeId !== undefined,
     {
-      message: "At least one of title, description, status, priority, or assignee must be provided.",
+      message: "At least one of title, description, status, priority, due date, or assignee must be provided.",
     },
   );
 

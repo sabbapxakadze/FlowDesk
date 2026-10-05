@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, ne, sql, type SQL } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import {
   attachments,
@@ -102,6 +102,10 @@ export async function listByProject(
     cursor?: string;
     status?: IssueStatus;
     priority?: IssuePriority;
+    /** "overdue": due before `today` and not done. "none": no due date (ADR 0032). */
+    due?: "overdue" | "none";
+    /** The caller's calendar day ("YYYY-MM-DD"); the server's UTC day when absent. */
+    today?: string;
     // A user id, or "unassigned".
     assignee?: string;
     /** Only issues that have ALL of these labels. */
@@ -122,6 +126,13 @@ export async function listByProject(
   // project_id equality, no dedicated index.
   if (options.priority) {
     conditions.push(eq(issues.priority, options.priority));
+  }
+
+  // Like priority: a filter on top of the selective project_id equality, no dedicated index (ADR 0032).
+  if (options.due === "overdue") {
+    conditions.push(lt(issues.dueDate, options.today ?? new Date().toISOString().slice(0, 10)), ne(issues.status, "done"));
+  } else if (options.due === "none") {
+    conditions.push(isNull(issues.dueDate));
   }
 
   if (options.assignee === "unassigned") {
@@ -538,6 +549,7 @@ export async function update(input: {
     description: string | null;
     status: IssueStatus;
     priority: IssuePriority;
+    dueDate: string | null;
     assigneeId: string | null;
   }>;
   // Extra, human-readable facts for the event payload that are not columns,

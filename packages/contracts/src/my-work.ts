@@ -12,6 +12,7 @@ export const assignedIssueSchema = z.object({
   title: z.string(),
   status: issueStatusSchema,
   priority: issuePrioritySchema,
+  dueDate: z.iso.date().nullable(),
   projectId: z.uuid(),
   projectKey: z.string(),
   projectName: z.string(),

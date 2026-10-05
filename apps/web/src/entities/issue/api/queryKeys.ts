@@ -4,6 +4,9 @@ import { projectKeys } from "../../project";
 export type IssueListFilters = {
   status?: IssueStatus;
   priority?: IssuePriority;
+  /** "overdue" needs `today`, the caller's own calendar day ("YYYY-MM-DD"), so the list agrees with the overdue marker. */
+  due?: "overdue" | "none";
+  today?: string;
   // A user id or "unassigned".
   assignee?: string;
   /** Only issues that have ALL of these labels (ids). */

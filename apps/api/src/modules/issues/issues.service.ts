@@ -34,6 +34,8 @@ export async function listIssues(
     cursor?: string;
     status?: IssueStatus;
     priority?: IssuePriority;
+    due?: "overdue" | "none";
+    today?: string;
     assignee?: string;
     labelIds?: string[];
     sort?: "created" | "priority";
@@ -77,6 +79,7 @@ export async function updateIssue(input: {
     description: string | null;
     status: IssueStatus;
     priority: IssuePriority;
+    dueDate: string | null;
     assigneeId: string | null;
   }>;
   actorId: string;

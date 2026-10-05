@@ -1720,7 +1720,14 @@ The original plan for this slice, kept for the record:
      told why; no audit trail of who deleted what. **Phase 8.5 slice 3 (rename and
      delete) is complete.**
 3. **Invite teammates** by email with roles (the roles enum already exists). **DONE** (collaborators slices A and B, ADR 0024).
-4. **Due dates** with an overdue marker. **STILL OPEN (checked 2026-10-05: no due date in the schema, the API or the UI).**
+4. **Due dates** with an overdue marker. **DONE 2026-10-05 (ADR 0032; owner's picks: set in the edit popup only, an Overdue / No due date filter, a change notifies like other edits).**
+   `issues.due_date` (Postgres `date`, migration 0027), a calendar day never a timestamp. Edit popup gets a Due date field; a chip (calendar icon, date, "Overdue" in red when the
+   day is before today in the person's timezone and the issue is not done) shows on list, board and sprint cards, My work and the issue page; the activity says "set the due
+   date to ..." / "removed the due date"; the Issues page has an "Any due date / Overdue / No due date" filter (`?due=`, the browser sends its own `today`). 5 API tests
+   (`due-date.http.test.ts`) and 2 e2e tests (`due-date.spec.ts`, including the same date overdue in `Pacific/Kiritimati` and not in `Pacific/Pago_Pago`); removed one at a
+   time to see tests fail: the marker ignoring done, "today" ignoring the zone, the server filter ignoring done. **Not done:** a date at creation, a due sort, "due soon",
+   reminder emails (no background jobs). Not tested: the profile activity allow-list change (no test reads a due-date line there), the notification for a due-date edit (the
+   existing mechanism, no new code), the seed data has no due dates. Not verified in the user's browser yet.
 5. **Small UI wins:** `C` to create an issue, a visible Ctrl+K button in the
    sidebar, filter the issue list by label (click a label), a proper "not found"
    for bad links without the 7-second skeleton. **Checked 2026-10-05:** the visible Ctrl+K button is DONE (the sidebar's Search row shows
@@ -1729,6 +1736,12 @@ The original plan for this slice, kept for the record:
    cards or on the issue page at all, only in the editor's picker and on the Labels page, so there is nothing to click yet).
 6. **Markdown and @mentions** in descriptions and comments. **STILL OPEN (checked 2026-10-05: descriptions and comments are plain text; the
    description keeps its line breaks since 2026-10-05, nothing more).**
+   **Two navigation bugs noted 2026-10-05 (owner), NOT fixed yet.** (1) An issue opened from My work shows "<- {project name}", not "Back": `IssueDetail`
+   passes a fixed back link without `history: true` (the `PageHeader` option the profile page already uses), so Back should return to the page the
+   person came from (My work, the board, search, a notification), with the project as the fallback for a first page or a new tab. (2) Profile then
+   Edit profile then "Your profile" then Back goes round in a circle: the edit page's back link is a plain link that PUSHES a new history entry, so
+   history grows profile, edit, profile, edit. Proposed: the edit page's link goes back through history (`history: true`) so it pops to the profile, and
+   Account's link to Edit profile the same way. Check every other back link for the same pattern when fixing.
 7. **A "my work" home** (assigned to me, recent activity, unread notifications)
    instead of `/` redirecting to the project list. **STILL OPEN (checked 2026-10-05: `/` still lands on /projects).**
    **Added 2026-09-30 (owner idea): search as a popup, not a separate page.**

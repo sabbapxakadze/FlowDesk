@@ -71,7 +71,7 @@ function publicPayload(type: string, payload: Record<string, unknown>): Record<s
       return {};
     case "issue.updated": {
       const kept: Record<string, unknown> = {};
-      for (const key of ["title", "status", "priority", "assigneeId", "assigneeName"]) {
+      for (const key of ["title", "status", "priority", "dueDate", "assigneeId", "assigneeName"]) {
         if (key in payload) kept[key] = payload[key];
       }
       if ("description" in payload) kept.description = true;

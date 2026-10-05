@@ -23,6 +23,8 @@ type FormValues = {
   description: string;
   status: IssueStatus;
   priority: IssuePriority;
+  // "YYYY-MM-DD", or "" for no due date (a date input's value is always a string).
+  dueDate: string;
   // "" means unassigned (a <select> value is always a string).
   assigneeId: string;
 };
@@ -32,6 +34,7 @@ const WATCHED_FIELDS = [
   ["description", "description"],
   ["status", "status"],
   ["priority", "priority"],
+  ["dueDate", "due date"],
   ["assigneeId", "assignee"],
 ] as const;
 
@@ -79,6 +82,7 @@ export function EditIssueForm({
       description: issue.description ?? "",
       status: issue.status,
       priority: issue.priority,
+      dueDate: issue.dueDate ?? "",
       assigneeId: issue.assigneeId ?? "",
     },
   });
@@ -102,6 +106,8 @@ export function EditIssueForm({
         // (existing behaviour), but a priority that did not change should not
         // write a "changed priority" line into the activity timeline.
         ...(data.priority !== issue.priority ? { priority: data.priority } : {}),
+        // Same rule: only when it changed. An emptied date input is sent as null (remove the due date).
+        ...(data.dueDate !== (issue.dueDate ?? "") ? { dueDate: data.dueDate === "" ? null : data.dueDate } : {}),
         // Same rule as priority: only when it changed. "" is sent as null (unassign).
         ...(data.assigneeId !== (issue.assigneeId ?? "")
           ? { assigneeId: data.assigneeId === "" ? null : data.assigneeId }
@@ -153,7 +159,7 @@ export function EditIssueForm({
         <Textarea rows={4} {...register("description")} />
       </Field>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Status">
           <Controller
             control={control}
@@ -168,6 +174,10 @@ export function EditIssueForm({
             name="priority"
             render={({ field }) => <Dropdown value={field.value} onChange={field.onChange} options={PRIORITY_OPTIONS} />}
           />
+        </Field>
+
+        <Field label="Due date">
+          <Input type="date" {...register("dueDate")} />
         </Field>
 
         <Field label="Assignee">

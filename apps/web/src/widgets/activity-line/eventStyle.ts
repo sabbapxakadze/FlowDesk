@@ -1,5 +1,6 @@
 import {
   ArrowRightLeft,
+  CalendarDays,
   ArrowUpDown,
   Circle,
   FilePlus2,
@@ -71,6 +72,7 @@ export function eventStyle(event: Pick<IssueEvent, "type" | "payload">): EventSt
       if ("assigneeId" in p)
         return p.assigneeId ? { Icon: UserPlus, color: CHANGED } : { Icon: UserMinus, color: REMOVED };
       if ("priority" in p) return { Icon: Flag, color: CHANGED };
+      if ("dueDate" in p) return { Icon: CalendarDays, color: CHANGED };
       return { Icon: Pencil, color: CHANGED };
     default:
       return { Icon: Circle, color: CHANGED };

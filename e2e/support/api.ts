@@ -85,3 +85,17 @@ export async function setIssuePriorityViaApi(
   });
   expect(res.status()).toBe(200);
 }
+
+/** Sets an issue's due date ("YYYY-MM-DD") through the API. The issue must be untouched (version 1). */
+export async function setIssueDueDateViaApi(request: APIRequestContext, projectId: string, issueId: string, dueDate: string) {
+  const { headers, base } = await apiSession(request);
+  const res = await request.patch(`${base}/projects/${projectId}/issues/${issueId}`, { headers, data: { version: 1, dueDate } });
+  expect(res.status()).toBe(200);
+}
+
+/** Sets the test user's timezone through the API (an IANA name, or null for the browser's). */
+export async function setTimezoneViaApi(request: APIRequestContext, timezone: string | null) {
+  const { headers } = await apiSession(request);
+  const res = await request.patch("/api/v1/users/me/timezone", { headers, data: { timezone } });
+  expect(res.status()).toBe(200);
+}

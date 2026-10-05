@@ -28,6 +28,7 @@ export { ScrollPanel } from "./ScrollPanel";
 export { ThemeSwitch } from "./ThemeSwitch";
 export { Time } from "./Time";
 export { PriorityBadge, PriorityIcon } from "./PriorityBadge";
+export { DueDate } from "./DueDate";
 export { PRIORITY_LABELS, PRIORITY_ORDER } from "./priorityLabels";
 export { Avatar } from "./Avatar";
 export { ConfirmDelete } from "./ConfirmDelete";

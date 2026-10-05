@@ -8,6 +8,7 @@ import {
   integer,
   numeric,
   timestamp,
+  date,
   index,
   uniqueIndex,
   customType,
@@ -65,6 +66,9 @@ export const issues = pgTable(
     description: text("description"),
     status: issueStatus("status").notNull().default("todo"),
     priority: issuePriority("priority").notNull().default("none"),
+    // A calendar day, not a moment (ADR 0032): Postgres `date`, read back as "YYYY-MM-DD", never converted to a timestamp,
+    // so it cannot move a day with timezones. Null = no due date.
+    dueDate: date("due_date"),
     // Nullable = unassigned. set null (not cascade): deleting a user must not
     // delete their issues. That the assignee belongs to THIS organization is
     // not expressible as a foreign key (the link is through

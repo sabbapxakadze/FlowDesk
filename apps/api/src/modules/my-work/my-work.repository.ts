@@ -17,6 +17,7 @@ export async function listAssignedTo(organizationId: string, userId: string, lim
         title: issues.title,
         status: issues.status,
         priority: issues.priority,
+        dueDate: issues.dueDate,
         projectId: issues.projectId,
         projectKey: projects.key,
         projectName: projects.name,

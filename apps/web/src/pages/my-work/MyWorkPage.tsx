@@ -8,7 +8,7 @@ import {
 } from "../../entities/notification";
 import { useAuth } from "../../shared/auth/useAuth";
 import { issuePath, projectPath } from "../../shared/lib/paths";
-import { Button, Card, EmptyState, ErrorText, Page, PageHeader, PriorityBadge, Skeleton, StatusBadge } from "../../shared/ui";
+import { Button, Card, EmptyState, DueDate, ErrorText, Page, PageHeader, PriorityBadge, Skeleton, StatusBadge } from "../../shared/ui";
 
 const ASSIGNED_SHOWN = 10;
 const UNREAD_SHOWN = 5;
@@ -71,6 +71,7 @@ export function MyWorkPage() {
                       <p className="truncate font-medium">{issue.title}</p>
                     </Link>
                     <PriorityBadge priority={issue.priority} />
+                    <DueDate dueDate={issue.dueDate} done={issue.status === "done"} />
                     <StatusBadge status={issue.status} />
                   </Card>
                 </li>

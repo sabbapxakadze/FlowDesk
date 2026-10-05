@@ -10,6 +10,8 @@ import { CreateIssueForm, type CreateIssueFormHandle } from "../../features/crea
 import { EditIssueDialog } from "../../features/edit-issue";
 import { useAuth } from "../../shared/auth/useAuth";
 import { isUuid } from "../../shared/lib/paths";
+import { todayKey } from "../../shared/lib/dueDate";
+import { useTimezone } from "../../shared/lib/timezone";
 import { useShortcut } from "../../shared/lib/useShortcut";
 import {
   Button,
@@ -73,6 +75,11 @@ export function ProjectDetailPage() {
   const status = isIssueStatus(statusParam) ? statusParam : undefined;
   const priorityParam = searchParams.get("priority");
   const priority = isIssuePriority(priorityParam) ? priorityParam : undefined;
+  const dueParam = searchParams.get("due");
+  const due = dueParam === "overdue" || dueParam === "none" ? dueParam : undefined;
+  // "Overdue" is judged against the person's own calendar day, the same one the overdue marker on each card uses.
+  const timezone = useTimezone();
+  const today = due === "overdue" ? todayKey(timezone) : undefined;
   // A user id or "unassigned". Not validated against the member list: an id that
   // matches nobody simply returns an empty list, and the API rejects a non-uuid.
   const assigneeParam = searchParams.get("assignee");
@@ -95,7 +102,7 @@ export function ProjectDetailPage() {
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useIssues(organization!.id, projectId, { status, priority, assignee, labels: labelIds, sort, order });
+  } = useIssues(organization!.id, projectId, { status, priority, due, today, assignee, labels: labelIds, sort, order });
   const { data: members } = useMembers(organization!.id);
   const { data: orgLabels } = useLabels(organization!.id);
   useLiveIssueUpdates(projectId);
@@ -109,7 +116,7 @@ export function ProjectDetailPage() {
   // results is not a change (it is part of the reset key), so those rows just rise in.
   const issueRows = useAnimatedList(issues, (issue) => issue.id, {
     ready: !issuesPending,
-    resetKey: `${status}|${priority}|${assignee}|${labelIds.join(",")}|${sort}|${order}|${data?.pages.length ?? 0}`,
+    resetKey: `${status}|${priority}|${due}|${assignee}|${labelIds.join(",")}|${sort}|${order}|${data?.pages.length ?? 0}`,
   });
 
   // Which issue (if any) is open in the edit popup: page-level state because IssueCard (entities layer) can't
@@ -141,6 +148,18 @@ export function ProjectDetailPage() {
         next.delete("priority");
       } else {
         next.set("priority", value);
+      }
+      return next;
+    });
+  }
+
+  function setDueFilter(value: string) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value === "") {
+        next.delete("due");
+      } else {
+        next.set("due", value);
       }
       return next;
     });
@@ -216,6 +235,17 @@ export function ProjectDetailPage() {
           options={[{ value: "", label: "All priorities" }, ...PRIORITY_OPTIONS]}
         />
         <Dropdown
+          aria-label="Filter by due date"
+          className="w-auto"
+          value={due ?? ""}
+          onChange={setDueFilter}
+          options={[
+            { value: "", label: "Any due date" },
+            { value: "overdue", label: "Overdue" },
+            { value: "none", label: "No due date" },
+          ]}
+        />
+        <Dropdown
           aria-label="Filter by assignee"
           className="w-auto"
           value={assignee ?? ""}
@@ -268,7 +298,7 @@ export function ProjectDetailPage() {
         <ErrorText>Failed to load issues: {error.message}</ErrorText>
       ) : issueRows.length === 0 ? (
         <EmptyState block>
-          {status || priority || assignee || labelIds.length > 0
+          {status || priority || due || assignee || labelIds.length > 0
             ? "No issues match these filters."
             : "No issues yet."}
         </EmptyState>

@@ -28,6 +28,9 @@ export function describeEvent(event: IssueEvent): string {
             : "unassigned this issue",
         );
       }
+      if ("dueDate" in event.payload) {
+        parts.push(event.payload.dueDate ? `set the due date to ${String(event.payload.dueDate)}` : "removed the due date");
+      }
       if ("priority" in event.payload) {
         const value = String(event.payload.priority);
         parts.push(`changed priority to ${PRIORITY_LABELS[value as keyof typeof PRIORITY_LABELS] ?? value}`);
