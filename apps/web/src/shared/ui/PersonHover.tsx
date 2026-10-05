@@ -65,11 +65,11 @@ export function PersonHover({
   const [place, setPlace] = useState<CSSProperties>({});
   function measure(element: HTMLElement) {
     const rect = element.getBoundingClientRect();
-    setPlace(
-      align === "right"
-        ? { top: rect.bottom, right: window.innerWidth - rect.right }
-        : { top: rect.bottom, left: rect.left },
-    );
+    // The card is 16rem wide (or the window minus 2rem). A name near the right edge of the window would push it off
+    // screen, so its left edge is held back far enough to keep the whole card in view.
+    const cardWidth = Math.min(256, window.innerWidth - 32);
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - cardWidth - 8));
+    setPlace(align === "right" ? { top: rect.bottom, right: window.innerWidth - rect.right } : { top: rect.bottom, left });
   }
   return (
     <span
@@ -79,7 +79,7 @@ export function PersonHover({
     >
       {profileHref ? (
         // The name and the picture are one link to the profile; the card above it only previews.
-        <Link to={profileHref} aria-describedby={cardId} className={TRIGGER_CLASSES}>
+        <Link to={profileHref} draggable={false} aria-describedby={cardId} className={TRIGGER_CLASSES}>
           {children ?? name}
         </Link>
       ) : (

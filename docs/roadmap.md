@@ -2278,6 +2278,21 @@ The original plan for this slice, kept for the record:
    became a `pick` helper (`e2e/support/dropdown.ts`); 6 new tests (`dropdown.spec.ts`) and 5 behaviours removed one at a time to see them fail.
    Named limits: the list is not virtualised (fine for the longest list here, the members); no multi-select (the label picker adds one at a
    time, as before); a screen reader was not run, the semantics follow the pattern.
+   **Assignee photos DONE 2026-10-05 (owner's request).** The small circle on an issue card (list, board, sprints) shows the assignee's photo
+   (initials without one) and, like every other picture of a person, opens the person card on hover and goes to the profile on click. It sits
+   BESIDE the card's issue link, not inside it (a link cannot hold a link): `IssueCard` and `SortableIssueCard` take an `assignee` node built by
+   the page from `entities/member`'s new `AssigneeAvatar` (entities cannot import each other); `IssueSummary` shows a plain one for the drag
+   overlay. 3 e2e tests (`assignee-photo.spec.ts`: photo, link, hover card kept inside the window, title still opens the panel; board drag from
+   the circle; a drag ending on the circle does not open the profile). Found on the way: `PersonHover`'s card ran off the right edge of the
+   window for a name or picture at the right end of a row, so it is now held inside the window (removing that put the card 130px outside it).
+   Not proven necessary, kept anyway: `draggable={false}` on the profile link (dnd-kit already cancels a native link drag). An extra click
+   guard on the circle was removed: the drag overlay is under the pointer, so the click after a drag never lands on it.
+   **Verified 2026-10-05 (the items marked unverified before):** the dropdown's accessibility tree (Playwright aria snapshot: combobox, listbox,
+   options, aria-selected, aria-activedescendant pointing at a real option) which found the label picker's box had no name (fixed, with a test);
+   dark mode on the raised list, the timeline edges and both dropdowns (looked at; the edge line is faint in dark); Firefox 155 (the dialog fades
+   in, the dropdown and Esc behave, the edit flow works); the concurrent-edit overwrite really happens (a save after someone else's title change
+   put the old title back); type-ahead and search each fail a test when removed. "No priority" no longer carries a blank mark that indented it.
+   **Still not verified:** a real screen reader, WebKit/Safari, and the cause of the one full e2e run that had 8 unrelated failures.
    **Readable URLs DONE 2026-10-04 (ADR 0030).** Projects and issues are named by their keys in the address:
    `/projects/WEB`, `/projects/WEB/issues/WEB-12`, `/projects/WEB?issue=WEB-12`. New endpoint
    `GET .../issues/by-number/:number`; a `ProjectRoute` layout resolves the key once from the cached project list and the

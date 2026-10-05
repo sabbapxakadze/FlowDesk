@@ -149,3 +149,15 @@ test("a click elsewhere closes it", async ({ loggedInPage: page }) => {
   await page.getByRole("heading", { level: 1, name: "Issues" }).click();
   await expect(listbox(page)).toHaveCount(0);
 });
+
+test("every dropdown in the issue editor has an accessible name", async ({ loggedInPage: page }) => {
+  // Why: a screen reader announces "combobox" and nothing else for a box with no name. The label picker's box had
+  // none (found by reading the accessibility tree).
+  await setup(page);
+  await page.goto("/projects/WEB");
+  await page.getByRole("listitem").filter({ hasText: "Alpha" }).getByRole("button", { name: "Edit" }).click();
+  for (const name of ["Status", "Priority", "Assignee", "Add label"]) {
+    await expect(editor(page).getByRole("combobox", { name: new RegExp(name, "i") })).toBeVisible();
+  }
+  await expect(editor(page).getByRole("combobox")).toHaveCount(4);
+});

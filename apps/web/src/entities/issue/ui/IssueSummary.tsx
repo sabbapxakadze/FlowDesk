@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Avatar, PriorityBadge } from "../../../shared/ui";
+import { PriorityBadge } from "../../../shared/ui";
 import type { Issue } from "../model";
 
 /**
@@ -10,13 +10,14 @@ import type { Issue } from "../model";
 export function IssueSummary({
   issue,
   projectKey,
-  assigneeName,
+  assignee,
   children,
 }: {
   issue: Pick<Issue, "number" | "title" | "priority">;
   projectKey: string;
-  /** Resolved by the page (issues carry only an assignee id); null/absent = unassigned. */
-  assigneeName?: string | null;
+  /** The assignee's picture, built by the page (it knows the members; entities cannot import each other). Shown at the right of
+   *  the first line. Cards that are links leave it out and render the interactive one beside the link instead. */
+  assignee?: ReactNode;
   children?: ReactNode;
 }) {
   return (
@@ -24,11 +25,7 @@ export function IssueSummary({
       <p className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
         {projectKey}-{issue.number}
         <PriorityBadge priority={issue.priority} />
-        {assigneeName && (
-          <span className="ml-auto">
-            <Avatar name={assigneeName} label={`Assigned to ${assigneeName}`} />
-          </span>
-        )}
+        {assignee && <span className="ml-auto">{assignee}</span>}
       </p>
       <p className="font-medium">{issue.title}</p>
       {children}

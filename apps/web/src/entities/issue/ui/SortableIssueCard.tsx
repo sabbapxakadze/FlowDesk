@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -30,13 +31,14 @@ import { IssueSummary } from "./IssueSummary";
 export function SortableIssueCard({
   issue,
   projectKey,
-  assigneeName,
+  assignee,
   onOpen,
   dragLabel = "Drag to reorder or move",
 }: {
   issue: Issue;
   projectKey: string;
-  assigneeName?: string | null;
+  /** The assignee's picture (a profile link with a hover card), built by the page; beside the issue link, not inside it. */
+  assignee?: ReactNode;
   /** Open the issue in the side panel instead of navigating (modified clicks still navigate). */
   onOpen?: (issueId: string) => void;
   /** The grip button's accessible name. */
@@ -66,8 +68,9 @@ export function SortableIssueCard({
           }}
           className="block min-w-0 flex-1"
         >
-          <IssueSummary issue={issue} projectKey={projectKey} assigneeName={assigneeName} />
+          <IssueSummary issue={issue} projectKey={projectKey} />
         </Link>
+        {assignee && <span className="shrink-0">{assignee}</span>}
       </Card>
     </li>
   );

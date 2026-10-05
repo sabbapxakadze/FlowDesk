@@ -72,6 +72,7 @@ export function LabelPicker({
 
       <div className="flex items-center gap-2 text-sm">
         <Dropdown
+          aria-label="Add label"
           value=""
           placeholder="+ Add label"
           className="w-auto"

@@ -20,7 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import type { Issue, IssueStatus } from "@flowdesk/contracts";
 import { useCurrentProject } from "../../entities/project";
-import { useMemberNames } from "../../entities/member";
+import { AssigneeAvatar } from "../../entities/member";
 import { SortableIssueCard, IssueSummary, useBoard, useLiveIssueUpdates } from "../../entities/issue";
 import { useMoveIssue } from "../../features/move-issue";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
@@ -129,7 +129,6 @@ function BoardColumn({
 export function ProjectBoardPage() {
   const { organization } = useAuth();
   const panel = useIssuePanel();
-  const nameOf = useMemberNames(organization!.id);
   const project = useCurrentProject();
   const projectId = project.id;
 
@@ -294,7 +293,7 @@ export function ProjectBoardPage() {
                           key={issue.id}
                           issue={issue}
                           projectKey={project.key}
-                          assigneeName={nameOf(issue.assigneeId)}
+                          assignee={issue.assigneeId ? <AssigneeAvatar organizationId={organization!.id} userId={issue.assigneeId} /> : null}
                           onOpen={panel.open}
                         />
                       ))}
@@ -313,7 +312,11 @@ export function ProjectBoardPage() {
                 <IssueSummary
                   issue={activeIssue}
                   projectKey={project.key}
-                  assigneeName={nameOf(activeIssue.assigneeId)}
+                  assignee={
+                    activeIssue.assigneeId ? (
+                      <AssigneeAvatar organizationId={organization!.id} userId={activeIssue.assigneeId} interactive={false} />
+                    ) : null
+                  }
                 />
               </Card>
             )}

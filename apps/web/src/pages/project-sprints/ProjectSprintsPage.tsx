@@ -20,7 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import type { GetBacklogResponse, Issue } from "@flowdesk/contracts";
 import { useCurrentProject } from "../../entities/project";
-import { useMemberNames } from "../../entities/member";
+import { AssigneeAvatar } from "../../entities/member";
 import { IssueSummary, SortableIssueCard, useBacklog } from "../../entities/issue";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
 import { SprintStatusBadge, useSprints } from "../../entities/sprint";
@@ -109,7 +109,6 @@ function SprintList({
 export function ProjectSprintsPage() {
   const { organization } = useAuth();
   const panel = useIssuePanel();
-  const nameOf = useMemberNames(organization!.id);
   const project = useCurrentProject();
   const projectId = project.id;
 
@@ -375,7 +374,7 @@ export function ProjectSprintsPage() {
                           key={issue.id}
                           issue={issue}
                           projectKey={project.key}
-                          assigneeName={nameOf(issue.assigneeId)}
+                          assignee={issue.assigneeId ? <AssigneeAvatar organizationId={organization!.id} userId={issue.assigneeId} /> : null}
                           onOpen={panel.open}
                           dragLabel="Drag to reorder or move between backlog and sprint"
                         />
@@ -395,7 +394,11 @@ export function ProjectSprintsPage() {
                 <IssueSummary
                   issue={activeIssue}
                   projectKey={project.key}
-                  assigneeName={nameOf(activeIssue.assigneeId)}
+                  assignee={
+                    activeIssue.assigneeId ? (
+                      <AssigneeAvatar organizationId={organization!.id} userId={activeIssue.assigneeId} interactive={false} />
+                    ) : null
+                  }
                 />
               </Card>
             )}

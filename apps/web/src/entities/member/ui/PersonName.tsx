@@ -17,6 +17,7 @@ export function PersonName({
   name,
   withAvatar = false,
   avatarOnly = false,
+  avatarLabel,
   avatarSize = "sm",
   align,
 }: {
@@ -26,6 +27,8 @@ export function PersonName({
   withAvatar?: boolean;
   /** Just the picture (for a list row that writes the name separately); same card, same link. */
   avatarOnly?: boolean;
+  /** The picture's accessible name when it should say more than the person's name ("Assigned to Ada"). */
+  avatarLabel?: string;
   avatarSize?: "sm" | "md";
   /** "right" for a name at the right end of a row, so its card opens leftwards. */
   align?: "left" | "right";
@@ -46,7 +49,7 @@ export function PersonName({
       align={align}
     >
       {avatarOnly ? (
-        <Avatar name={shownName} src={member?.avatarUrl} size={avatarSize} />
+        <Avatar name={shownName} label={avatarLabel} src={member?.avatarUrl} size={avatarSize} />
       ) : withAvatar ? (
         <>
           <Avatar name={shownName} src={member?.avatarUrl} size={avatarSize} />

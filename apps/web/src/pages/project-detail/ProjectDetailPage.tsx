@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
 import { useCurrentProject } from "../../entities/project";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
-import { memberOptions, useMembers, useMemberNames } from "../../entities/member";
+import { AssigneeAvatar, memberOptions, useMembers } from "../../entities/member";
 import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
 import { CreateIssueForm } from "../../features/create-issue";
 import { EditIssueDialog } from "../../features/edit-issue";
@@ -90,7 +90,6 @@ export function ProjectDetailPage() {
     fetchNextPage,
   } = useIssues(organization!.id, projectId, { status, priority, assignee, sort, order });
   const { data: members } = useMembers(organization!.id);
-  const nameOf = useMemberNames(organization!.id);
   useLiveIssueUpdates(projectId);
   // useInfiniteQuery's data is { pages: Page[], pageParams }, not a flat
   // list — flatten once here so the rest of this page (and IssueCard)
@@ -243,7 +242,7 @@ export function ProjectDetailPage() {
               rowIndex={index}
               issue={issue}
               projectKey={project.key}
-              assigneeName={nameOf(issue.assigneeId)}
+              assignee={issue.assigneeId ? <AssigneeAvatar organizationId={organization!.id} userId={issue.assigneeId} /> : null}
               onOpen={panel.open}
               onEdit={() => {
                 setShowConflictNotice(false);

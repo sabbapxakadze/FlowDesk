@@ -16,5 +16,6 @@ export const STATUS_OPTIONS: DropdownOption[] = STATUSES.map((status) => ({
 export const PRIORITY_OPTIONS: DropdownOption[] = PRIORITY_ORDER.map((priority) => ({
   value: priority,
   label: PRIORITY_LABELS[priority],
-  icon: <PriorityIcon priority={priority} />,
+  // "No priority" has no mark (a blank one would indent its text in the box).
+  icon: priority === "none" ? undefined : <PriorityIcon priority={priority} />,
 }));

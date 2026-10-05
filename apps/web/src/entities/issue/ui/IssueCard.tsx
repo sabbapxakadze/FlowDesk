@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { issueKey, issuePath } from "../../../shared/lib/paths";
 import { Button, Card, StatusBadge, type RowState } from "../../../shared/ui";
@@ -19,7 +20,7 @@ import { IssueSummary } from "./IssueSummary";
 export function IssueCard({
   issue,
   projectKey,
-  assigneeName,
+  assignee,
   onEdit,
   onOpen,
   rowState,
@@ -27,7 +28,9 @@ export function IssueCard({
 }: {
   issue: Issue;
   projectKey: string;
-  assigneeName?: string | null;
+  /** The assignee's picture (a profile link with a hover card), built by the page. It sits beside the issue link, not inside it:
+   *  a link cannot hold another link. */
+  assignee?: ReactNode;
   onEdit?: () => void;
   /** Open the issue in the side panel instead of navigating (modified clicks still navigate). */
   onOpen?: (issueId: string) => void;
@@ -43,12 +46,13 @@ export function IssueCard({
         onClick={(event) => openIssueOnClick(event, onOpen, issueKey(projectKey, issue.number))}
         className="block min-w-0 flex-1"
       >
-        <IssueSummary issue={issue} projectKey={projectKey} assigneeName={assigneeName}>
+        <IssueSummary issue={issue} projectKey={projectKey}>
           <div className="mt-1.5">
             <StatusBadge status={issue.status} />
           </div>
         </IssueSummary>
       </Link>
+      {assignee && <span className="shrink-0">{assignee}</span>}
       {onEdit && (
         <Button type="button" variant="link" className="shrink-0" onClick={onEdit}>
           Edit
