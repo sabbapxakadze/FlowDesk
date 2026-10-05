@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { cn } from "./lib/cn";
 
 export type DropdownOption = {
@@ -42,11 +42,19 @@ function Mark({ children }: { children: ReactNode }) {
  * The box is as wide as its widest option (every label is laid out invisibly in the same spot), so choosing
  * another option never makes a row of filters jump. `placeholder` shows when `value` matches no option (the
  * "+ Add label" box, which never keeps a value). Domain-free: the caller supplies options and their marks.
+ *
+ * `multiple` (the label filter): several options can be chosen at once. The caller passes `values` and `onToggle(value)`
+ * instead of `value` and `onChange`; the list stays open while choosing, each chosen row shows a check, the box
+ * summarises the choice ("bug +2") and `onClear` adds a "Clear selection" row under the list.
  */
 export function Dropdown({
   options,
-  value,
+  value = "",
   onChange,
+  multiple = false,
+  values = [],
+  onToggle,
+  onClear,
   id,
   placeholder = "Select…",
   searchable,
@@ -58,8 +66,13 @@ export function Dropdown({
   "aria-invalid": ariaInvalid,
 }: {
   options: DropdownOption[];
-  value: string;
-  onChange: (value: string) => void;
+  value?: string;
+  onChange?: (value: string) => void;
+  /** Several choices at once: use `values`, `onToggle` and (optionally) `onClear` instead of `value` and `onChange`. */
+  multiple?: boolean;
+  values?: string[];
+  onToggle?: (value: string) => void;
+  onClear?: () => void;
   id?: string;
   placeholder?: string;
   /** Default: a search box when there are more than 7 options. */
@@ -89,6 +102,8 @@ export function Dropdown({
   const hasSearch = searchable ?? options.length > SEARCH_THRESHOLD;
   const shown = hasSearch ? options.filter((o) => o.label.toLowerCase().includes(query.trim().toLowerCase())) : options;
   const selected = options.find((o) => o.value === value);
+  const chosenValues = new Set(values);
+  const chosen = multiple ? options.filter((o) => chosenValues.has(o.value)) : [];
 
   function openList() {
     if (disabled) return;
@@ -117,7 +132,12 @@ export function Dropdown({
   }
 
   function choose(option: DropdownOption) {
-    onChange(option.value);
+    if (multiple) {
+      // Toggling: the list stays open so several can be chosen; the highlight stays where it is.
+      onToggle?.(option.value);
+      return;
+    }
+    onChange?.(option.value);
     if (keepOpen) {
       // The chosen row usually leaves the list: keep the highlight on a row that still exists.
       setActive((i) => Math.min(i, Math.max(0, shown.length - 2)));
@@ -216,7 +236,11 @@ export function Dropdown({
     }
   }
 
-  const sizer = options.length > 0 ? options : [{ value: "", label: placeholder }];
+  const sizer: DropdownOption[] = options.length > 0 ? [...options] : [{ value: "", label: placeholder }];
+  if (multiple && options.length > 0) {
+    const longest = options.reduce((a, b) => (b.label.length > a.label.length ? b : a));
+    sizer.push({ value: "\u0000summary", label: `${longest.label} +9` });
+  }
   return (
     <div ref={root} className={cn("relative", className)} onKeyDown={onKeyDown}>
       <button
@@ -224,7 +248,7 @@ export function Dropdown({
         id={id}
         type="button"
         role="combobox"
-        data-value={value}
+        data-value={multiple ? values.join(",") : value}
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-controls={open ? listId : undefined}
@@ -247,7 +271,12 @@ export function Dropdown({
             </span>
           ))}
           <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-2">
-            {selected ? (
+            {multiple && chosen.length > 0 ? (
+              <span className="truncate">
+                {chosen[0]!.label}
+                {chosen.length > 1 && <span className="text-[var(--color-text-muted)]"> +{chosen.length - 1}</span>}
+              </span>
+            ) : selected && !multiple ? (
               <>
                 <Mark>{selected.icon}</Mark>
                 <span className="truncate">{selected.label}</span>
@@ -292,9 +321,15 @@ export function Dropdown({
               className="mb-1 w-full shrink-0 rounded-[var(--radius-control)] border border-[var(--color-border-input)] bg-[var(--color-bg-surface)] px-2 py-1 text-sm placeholder:text-[var(--color-text-muted)] focus-visible:outline-2 focus-visible:outline-[var(--color-border-focus)]"
             />
           )}
-          <ul id={listId} role="listbox" aria-label={ariaLabel} className="scrollbar-list-always min-h-0 overflow-y-auto">
+          <ul
+            id={listId}
+            role="listbox"
+            aria-label={ariaLabel}
+            aria-multiselectable={multiple || undefined}
+            className="scrollbar-list-always min-h-0 overflow-y-auto"
+          >
             {shown.map((option, index) => {
-              const isSelected = option.value === value;
+              const isSelected = multiple ? chosenValues.has(option.value) : option.value === value;
               return (
                 <li
                   key={option.value}
@@ -311,6 +346,7 @@ export function Dropdown({
                 >
                   <Mark>{option.icon}</Mark>
                   <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                  {multiple && isSelected && <Check size={14} aria-hidden="true" className="shrink-0" />}
                 </li>
               );
             })}
@@ -320,6 +356,15 @@ export function Dropdown({
               </li>
             )}
           </ul>
+          {multiple && values.length > 0 && onClear && (
+            <button
+              type="button"
+              onClick={() => onClear()}
+              className="mt-1 w-full shrink-0 rounded-[var(--radius-control)] px-2 py-1 text-left text-xs text-[var(--color-text-link)] hover:bg-[var(--color-border-default)]"
+            >
+              Clear selection ({values.length})
+            </button>
+          )}
         </div>
       )}
     </div>

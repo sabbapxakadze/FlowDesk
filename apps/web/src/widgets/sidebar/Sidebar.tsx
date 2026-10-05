@@ -81,7 +81,7 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
     <div className="flex h-full flex-col gap-1 border-r border-[var(--color-border-sidebar)] bg-[var(--color-bg-sidebar)] p-3">
       <div className="flex items-center justify-between px-1 pb-3">
         <NavLink
-          to="/projects"
+          to="/"
           className="font-display text-2xl text-[var(--color-text-sidebar-active)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text-sidebar-active)]"
         >
           FlowDesk
@@ -90,6 +90,9 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
       </div>
 
       <nav aria-label="Main" className="scrollbar-sidebar flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
+        <SideLink to="/" end>
+          My work
+        </SideLink>
         <SideLink to="/projects" end>
           Projects
         </SideLink>

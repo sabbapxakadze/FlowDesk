@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router";
-import { HomeRedirect } from "../pages/home/HomeRedirect";
+import { MyWorkPage } from "../pages/my-work/MyWorkPage";
 import { ProjectsPage } from "../pages/projects/ProjectsPage";
 import { ProjectDetailPage } from "../pages/project-detail/ProjectDetailPage";
 import { ProjectBoardPage } from "../pages/project-board/ProjectBoardPage";
@@ -35,7 +35,6 @@ export function App() {
         <CommandPalette />
         <ErrorBoundary>
           <Routes>
-            <Route path="/" element={<HomeRedirect />} />
             <Route
               element={
                 <RequireAuth>
@@ -43,6 +42,7 @@ export function App() {
                 </RequireAuth>
               }
             >
+              <Route path="/" element={<MyWorkPage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               {/* Every project page lives under the project's KEY (ADR 0030): ProjectRoute turns the key
                   (or an old id) into the project once and shows these pages only when it exists. */}

@@ -2292,8 +2292,7 @@ The original plan for this slice, kept for the record:
    removed 249 ms. Not changed: the remaining ~70 ms (the first render at drag start); the median frame was already 16.7 ms, so the drag itself
    never stuttered, only its start and end.
    **Status check 2026-10-05 (everything still open, so nothing is assumed done).** Checked in the code and in the running app. Open product
-   items: due dates; filtering the list by label (and showing labels on cards and the issue page); Markdown and @mentions;
-   the "my work" home. Open leftovers named earlier: the issue editor now WARNS when someone else changes the issue while its popup is open (it still
+   items: due dates; Markdown and @mentions. Open leftovers named earlier: the issue editor now WARNS when someone else changes the issue while its popup is open (it still
    overwrites on Save; owner's choice); no audit log retention (the export is done, below); no way to change your email or timezone. Not verified: WebKit/Safari, a real
    screen reader (the owner does not need it), and the cause of one full e2e run with 8 unrelated failures that has not repeated. Every other
    slice listed above is done. Phase 9 has not started except the e2e suite.
@@ -2305,7 +2304,38 @@ The original plan for this slice, kept for the record:
    footer (same as the issues list and the profile). 3 e2e tests (`quick-wins.spec.ts`); each guard was removed one at a time to see them fail
    (the field, dialog and modifier guards, the sort mapping, the panel cap). Not done: a visible hint for `C` (the title field has
    `aria-keyshortcuts="c"`, nothing on screen).
-   **Audit log CSV export DONE 2026-10-05.** An "Export CSV" button on the audit log page (owners and admins, like the log itself) downloads the
+   **"My work" home DONE 2026-10-05 (owner's pick: layout C of three, in the design system).** `/` is now a page instead of a redirect: "Assigned to me"
+   (my open issues across all projects, newest change first, up to 10, with the real count and the project named on each row) and "Unread
+   notifications" (the bell's own list, up to 5, click opens the issue and marks it read, Mark all read). New endpoint
+   `GET /organizations/:id/my-work/issues?limit=` (own module `my-work`: any member, scoped by the project's organization and by the caller's
+   id, "open" is not done); sidebar link "My work" first and the logo goes there. A login now lands on My work (it lands on `/`, which used to
+   bounce to /projects): the e2e fixture still takes its page to /projects afterwards, because most specs start there. 4 API tests (mine across
+   projects and nobody else's, a viewer can read it and signed-out cannot, another organization never appears even for a person in both (this
+   needed a person in both: the first version of that test was too weak), limit/total) and 5 e2e tests; the person filter, the organization
+   scope and the done filter were each removed to see the API tests fail. Named limits: the assigned list is re-read when the page opens, not live;
+   the notifications section has no activity feed (that was layout A/B, not chosen).
+   **Labels on cards and a multi-label filter DONE 2026-10-05 (owner's pick: pills, click to filter, several at once).** The issue LIST now
+   carries each issue's labels (`labels: [{id, name, color}]`, one extra query per page; this reverses the old Phase 3 decision "labels are not
+   embedded in the list", for the list only: every other endpoint still returns the plain issue) and accepts `?label=<id>` repeated: an issue must
+   have ALL the chosen labels (my reading of "choose many labels together"; changing it to "any" is the one `HAVING` clause in
+   `listByProject`). Repeating the same id counts once (found by a test: it returned nothing). New index `issue_labels_label_id_issue_id_idx` (migration
+   0025) for the filter's lookup by label; not measured at 20,000 issues. Web: up to three pills under each card then "+n" (they are buttons:
+   click to choose, again to remove, the chosen ones ringed), a "Label" multi-select dropdown in the filter row (the dropdown gained a
+   `multiple` mode: stays open, checks, summary "bug +1", Clear selection), the choice lives in the address (`?label=...&label=...`, a
+   non-id is ignored), the issue page and panel show the labels, and adding a label in the editor updates the card at once. 4 API tests and 6 e2e
+   tests; removed to see them fail: the filter not being sent, a click replacing instead of adding, the card not refreshing after the picker adds
+   a label, the list closing after each choice, ANY instead of ALL, no de-duplication, no labels embedded. Not done: pills on the board and
+   sprints cards (the filter exists only on the issues list); label colours are the label's own, so a very light colour is hard to read under
+   white text (as in the editor today).
+   **Bug fixed 2026-10-05 (found by the owner): removing a label in the editor closed it.** The pill's X was a button without `type`, which
+   inside the editor's form is a submit button: it removed the label AND saved the form, so the popup closed. Now `type="button"` in `LabelBadge`
+   (the only bare `<button>` in a form; the others are the shared Button, which sets its type, and the search palette, which is not in a form).
+   1 e2e test (removing a label keeps the editor open and what was typed unsaved; it fails without the fix); checked in the running app with
+   the delete request blocked: the form no longer submits.
+   **Design-system cleanup 2026-10-05.** Removed the draft sections that simulated pages or compared options (My work home, Labels on cards,
+   Concurrent edit, the empty Page and PageHeader note, the Navigation shell preview) and their helpers: the real pages exist now and the choices
+   are recorded here. Added "Label pills and multi-select". 1,012 lines became 725; the one test that reads the page (Button hover colours) still passes.
+   **Audit log CSV export DONE 2026-10-05. An "Export CSV" button on the audit log page (owners and admins, like the log itself) downloads the
    rows that match the person and kind filters, newest first: `GET /organizations/:id/audit-events/export` (same `view_audit_log` permission,
    same organization scoping), columns `time, who, action, target_type, target, details` (raw fields; `details` is JSON, the web page's
    sentence is not duplicated on the server), capped at 10,000 rows with a last line saying so when there were more (`AUDIT_EXPORT_MAX_ROWS` in

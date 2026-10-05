@@ -70,14 +70,15 @@ export async function listIssues(req: Request, res: Response) {
     );
   }
 
-  const result = await issuesService.listIssues(req.ctx.organizationId, req.ctx.projectId, parsedQuery.data);
+  const { label: labelIds, ...rest } = parsedQuery.data;
+  const result = await issuesService.listIssues(req.ctx.organizationId, req.ctx.projectId, { ...rest, labelIds });
 
   if (result.status === "invalid_cursor") {
     throw new AppError("invalid_cursor", 400, "Invalid pagination cursor.");
   }
 
   const body = listIssuesResponseSchema.parse({
-    data: result.items.map(toWireFormat),
+    data: result.items.map((item) => ({ ...toWireFormat(item), labels: item.labels })),
     nextCursor: result.nextCursor,
   });
   res.json(body);

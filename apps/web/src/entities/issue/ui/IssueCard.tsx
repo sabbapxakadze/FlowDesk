@@ -21,6 +21,7 @@ export function IssueCard({
   issue,
   projectKey,
   assignee,
+  labels,
   onEdit,
   onOpen,
   rowState,
@@ -31,6 +32,8 @@ export function IssueCard({
   /** The assignee's picture (a profile link with a hover card), built by the page. It sits beside the issue link, not inside it:
    *  a link cannot hold another link. */
   assignee?: ReactNode;
+  /** The card's label pills, built by the page (they are buttons that filter the list: not inside the issue link either). */
+  labels?: ReactNode;
   onEdit?: () => void;
   /** Open the issue in the side panel instead of navigating (modified clicks still navigate). */
   onOpen?: (issueId: string) => void;
@@ -40,18 +43,21 @@ export function IssueCard({
 }) {
   return (
     <Card as="li" hoverable rowState={rowState} rowIndex={rowIndex} className="flex items-start justify-between gap-2">
-      <Link
-        to={issuePath(projectKey, issue.number)}
-        data-panel-trigger
-        onClick={(event) => openIssueOnClick(event, onOpen, issueKey(projectKey, issue.number))}
-        className="block min-w-0 flex-1"
-      >
-        <IssueSummary issue={issue} projectKey={projectKey}>
-          <div className="mt-1.5">
-            <StatusBadge status={issue.status} />
-          </div>
-        </IssueSummary>
-      </Link>
+      <div className="min-w-0 flex-1">
+        <Link
+          to={issuePath(projectKey, issue.number)}
+          data-panel-trigger
+          onClick={(event) => openIssueOnClick(event, onOpen, issueKey(projectKey, issue.number))}
+          className="block"
+        >
+          <IssueSummary issue={issue} projectKey={projectKey}>
+            <div className="mt-1.5">
+              <StatusBadge status={issue.status} />
+            </div>
+          </IssueSummary>
+        </Link>
+        {labels}
+      </div>
       {assignee && <span className="shrink-0">{assignee}</span>}
       {onEdit && (
         <Button type="button" variant="link" className="shrink-0" onClick={onEdit}>

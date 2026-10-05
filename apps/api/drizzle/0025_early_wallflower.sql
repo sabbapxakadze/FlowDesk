@@ -1,0 +1,1 @@
+CREATE INDEX "issue_labels_label_id_issue_id_idx" ON "issue_labels" USING btree ("label_id","issue_id");

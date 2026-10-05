@@ -14,3 +14,4 @@ export * from "./analytics.js";
 export * from "./invitation.js";
 export * from "./audit.js";
 export * from "./profile.js";
+export * from "./my-work.js";

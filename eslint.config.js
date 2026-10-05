@@ -145,6 +145,8 @@ export default tseslint.config(
       "apps/web/src/widgets/command-palette/CommandPalette.tsx", // result rows and the open trigger
       "apps/web/src/widgets/notification-bell/NotificationBell.tsx", // the bell and the notification rows
       "apps/web/src/widgets/sidebar/Sidebar.tsx", // sidebar items and Log out use the sidebar colours
+      "apps/web/src/entities/label/ui/LabelPills.tsx", // a coloured pill that is also a filter button, not a Button look
+      "apps/web/src/pages/my-work/MyWorkPage.tsx", // notification rows: a whole row is the button, like the bell's
       "apps/web/src/pages/design-system/**", // documents raw controls on purpose
     ],
     rules: { "no-restricted-syntax": "off" },

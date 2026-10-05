@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { IssueStatus } from "@flowdesk/contracts";
+import { LabelPills } from "../../entities/label";
 import {
   Avatar,
   Button,
@@ -292,106 +293,6 @@ function DemoEditForm({ onCancel }: { onCancel: () => void }) {
   );
 }
 
-function ConcurrentBanner({ children }: { children: ReactNode }) {
-  return (
-    <div
-      role="status"
-      className="mb-3 rounded-[var(--radius-control)] border border-[var(--color-text-warning)] px-3 py-2 text-sm text-[var(--color-text-warning)]"
-    >
-      {children}
-    </div>
-  );
-}
-
-function ConcurrentPanel({ name, note, children }: { name: string; note: string; children: ReactNode }) {
-  return (
-    <div>
-      <p className="mb-1 text-sm font-medium">{name}</p>
-      <p className="mb-2 text-xs text-[var(--color-text-muted)]">{note}</p>
-      <Card className="p-4">
-        <p className="mb-3 font-display text-lg">Edit WEB-1</p>
-        {children}
-      </Card>
-    </div>
-  );
-}
-
-/** Draft (design pass): what the issue editor could do when someone else changes the issue while it is open. */
-function ConcurrentEditDemo() {
-  const theirs = <span className="font-medium">&ldquo;Fix the footer, v2&rdquo;</span>;
-  return (
-    <div className="grid max-w-6xl grid-cols-1 gap-5 lg:grid-cols-3">
-      <ConcurrentPanel
-        name="A. Banner + merge (recommended)"
-        note="Untouched fields update by themselves; yours keep your text; Save sends only what you changed. The same-field case (title) says so, and shows their text."
-      >
-        <ConcurrentBanner>Ada changed this issue while you were editing: <b>status</b>, <b>title</b>. Your own changes are kept.</ConcurrentBanner>
-        <div className="flex flex-col gap-3">
-          <Field label="Title">
-            <Input defaultValue="Fix the footer layout (my edit)" />
-          </Field>
-          <p className="-mt-2 text-xs text-[var(--color-text-warning)]">
-            Ada also changed the title to {theirs}. Save will replace their text with yours.
-          </p>
-          <Field label="Status">
-            <Dropdown value="done" onChange={() => undefined} options={STATUS_OPTIONS} />
-          </Field>
-          <p className="-mt-2 text-xs text-[var(--color-text-muted)]">Updated to Ada&apos;s change (you had not touched it).</p>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary">Cancel</Button>
-            <Button type="button" variant="success">Save</Button>
-          </div>
-          <p className="text-xs text-[var(--color-text-muted)]">Save sends only: title.</p>
-        </div>
-      </ConcurrentPanel>
-
-      <ConcurrentPanel
-        name="B. Block and re-open"
-        note="Save is refused once anything changed. You keep your text to copy, or drop it and load their version. Safe, but any change by anyone costs you your edits."
-      >
-        <ConcurrentBanner>
-          This issue changed while you were editing. Review it before saving.
-          <div className="mt-2 flex gap-2">
-            <Button type="button" size="sm" variant="secondary">Reload their version</Button>
-            <Button type="button" size="sm" variant="secondary">Copy my text</Button>
-          </div>
-        </ConcurrentBanner>
-        <div className="flex flex-col gap-3">
-          <Field label="Title">
-            <Input defaultValue="Fix the footer layout (my edit)" />
-          </Field>
-          <Field label="Status">
-            <Dropdown value="todo" onChange={() => undefined} options={STATUS_OPTIONS} />
-          </Field>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary">Cancel</Button>
-            <Button type="button" variant="success" disabled>Save</Button>
-          </div>
-        </div>
-      </ConcurrentPanel>
-
-      <ConcurrentPanel
-        name="C. Warn only"
-        note="The smallest change: it says what changed, nothing is merged, and Save can still overwrite."
-      >
-        <ConcurrentBanner>Ada changed this issue: <b>status</b>, <b>title</b>. Saving will overwrite their change.</ConcurrentBanner>
-        <div className="flex flex-col gap-3">
-          <Field label="Title">
-            <Input defaultValue="Fix the footer layout (my edit)" />
-          </Field>
-          <Field label="Status">
-            <Dropdown value="todo" onChange={() => undefined} options={STATUS_OPTIONS} />
-          </Field>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary">Cancel</Button>
-            <Button type="button" variant="success">Save</Button>
-          </div>
-        </div>
-      </ConcurrentPanel>
-    </div>
-  );
-}
-
 function DialogDemo() {
   const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState(false);
@@ -424,6 +325,42 @@ function DialogDemo() {
 }
 
 const DEMO_PEOPLE = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson", "Linus Torvalds", "Margaret Hamilton", "Dennis Ritchie", "Barbara Liskov"];
+
+const DEMO_LABEL_OPTIONS = [
+  { id: "1", name: "bug", color: "#b91c1c" },
+  { id: "2", name: "design", color: "#6d28d9" },
+  { id: "3", name: "tech-debt", color: "#475569" },
+  { id: "4", name: "docs", color: "#15803d" },
+];
+
+function LabelPillsDemo() {
+  const [active, setActive] = useState<string[]>(["1"]);
+  const toggle = (id: string) => setActive((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
+  return (
+    <div className="flex max-w-md flex-col gap-4">
+      <div>
+        <p className="mb-1 text-sm font-medium">Pills that filter (on a card): click to choose, again to remove</p>
+        <LabelPills labels={DEMO_LABEL_OPTIONS} activeIds={active} onToggle={toggle} />
+      </div>
+      <div>
+        <p className="mb-1 text-sm font-medium">Plain pills (more than three: +n)</p>
+        <LabelPills labels={DEMO_LABEL_OPTIONS} />
+      </div>
+      <div>
+        <p className="mb-1 text-sm font-medium">Several at once in a dropdown (the label filter)</p>
+        <Dropdown
+          aria-label="Labels demo"
+          multiple
+          placeholder="All labels"
+          values={active}
+          onToggle={toggle}
+          onClear={() => setActive([])}
+          options={DEMO_LABEL_OPTIONS.map((l) => ({ value: l.id, label: l.name, icon: <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: l.color }} /> }))}
+        />
+      </div>
+    </div>
+  );
+}
 
 function DropdownDemo() {
   const [status, setStatus] = useState("todo");
@@ -720,13 +657,6 @@ export function DesignSystemPage() {
       </Section>
 
       <Section
-        title="Page and PageHeader"
-        note="Every logged-in page renders inside Page (the one main landmark, responsive padding, a reading or wide width) and starts with PageHeader (an eyebrow, the serif title, an optional back link and a meta row). They are used on every screen of the app, so they are described here rather than duplicated as a second h1."
-      >
-        <div />
-      </Section>
-
-      <Section
         title="Lane"
         note="The panel a board column or a sprints-page list sits in: a shade apart from the page (--color-bg-lane; lighter than the cards in dark mode, so they sit in it like wells), a fixed header, and a body that scrolls inside with the slim always-visible scrollbar. Chosen by the owner in the scroll design pass (2026-10-04)."
       >
@@ -754,10 +684,10 @@ export function DesignSystemPage() {
       </Section>
 
       <Section
-        title="Concurrent edit"
-        note="What the issue editor does when someone else changes the issue while its popup is open. Save resends the values the popup opened with, so it would silently overwrite their change. The owner chose C (2026-10-05): a banner that names what changed and says Save will overwrite it; nothing is merged. A and B are kept here as the alternatives that were considered (A: merge untouched fields and send only what you changed; B: block Save)."
+        title="Label pills and multi-select"
+        note="A label's name on its own colour (the colour is the label's own data, so it stays a raw colour). On an issue card the pills are buttons that pick the label as a filter (several at once: an issue must have all of them); the chosen ones are ringed. The dropdown has a multiple mode for the same job: the list stays open, each chosen row shows a check, the box summarises the choice, and Clear selection empties it. The pills and the dropdown below share one state."
       >
-        <ConcurrentEditDemo />
+        <LabelPillsDemo />
       </Section>
 
       <Section
@@ -789,15 +719,6 @@ export function DesignSystemPage() {
         </ul>
       </Section>
 
-      <Section title="Navigation shell preview" note="The sidebar's tokens in use: one inactive item, one active item.">
-        <div className="w-56 rounded-[var(--radius-card)] border border-[var(--color-border-sidebar)] bg-[var(--color-bg-sidebar)] p-3">
-          <p className="mb-2 px-2.5 font-display text-2xl text-[var(--color-text-sidebar-active)]">FlowDesk</p>
-          <p className="rounded-[var(--radius-control)] px-2.5 py-1.5 text-sm text-[var(--color-text-sidebar)]">Projects</p>
-          <p className="rounded-[var(--radius-control)] bg-[var(--color-bg-sidebar-active)] px-2.5 py-1.5 text-sm text-[var(--color-text-sidebar-active)]">
-            Board
-          </p>
-        </div>
-      </Section>
     </Page>
   );
 }

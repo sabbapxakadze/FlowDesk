@@ -33,6 +33,8 @@ export function LabelPicker({
     mutationFn: (labelId: string) => attachLabel(organizationId, projectId, issueId, labelId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: issueKeys.labels(issueId) });
+      // The list's cards carry each issue's labels.
+      void queryClient.invalidateQueries({ queryKey: issueKeys.list(projectId) });
       // Attaching just wrote an issue.label_added event.
       void queryClient.invalidateQueries({ queryKey: issueKeys.events(issueId) });
     },
@@ -42,6 +44,7 @@ export function LabelPicker({
     mutationFn: (labelId: string) => detachLabel(organizationId, projectId, issueId, labelId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: issueKeys.labels(issueId) });
+      void queryClient.invalidateQueries({ queryKey: issueKeys.list(projectId) });
       void queryClient.invalidateQueries({ queryKey: issueKeys.events(issueId) });
     },
   });
@@ -55,6 +58,7 @@ export function LabelPicker({
       setNewName("");
       void queryClient.invalidateQueries({ queryKey: labelKeys.list(organizationId) });
       void queryClient.invalidateQueries({ queryKey: issueKeys.labels(issueId) });
+      void queryClient.invalidateQueries({ queryKey: issueKeys.list(projectId) });
       void queryClient.invalidateQueries({ queryKey: issueKeys.events(issueId) });
     },
   });

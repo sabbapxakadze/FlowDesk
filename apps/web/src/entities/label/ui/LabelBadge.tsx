@@ -10,7 +10,7 @@ export function LabelBadge({
   label,
   onRemove,
 }: {
-  label: Label;
+  label: Pick<Label, "name" | "color">;
   onRemove?: () => void;
 }) {
   return (
@@ -20,7 +20,8 @@ export function LabelBadge({
     >
       {label.name}
       {onRemove && (
-        <button onClick={onRemove} aria-label={`Remove ${label.name}`} className="leading-none">
+        // type="button": inside the issue editor's form a bare button is a SUBMIT button, and removing a label saved and closed the editor
+        <button type="button" onClick={onRemove} aria-label={`Remove ${label.name}`} className="leading-none">
           <X size={12} aria-hidden="true" />
         </button>
       )}

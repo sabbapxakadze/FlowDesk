@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import {
   attachments,
@@ -104,6 +104,8 @@ export async function listByProject(
     priority?: IssuePriority;
     // A user id, or "unassigned".
     assignee?: string;
+    /** Only issues that have ALL of these labels. */
+    labelIds?: string[];
     /** Defaults to "created" (newest or oldest first by creation time). */
     sort?: ListSort;
     order: "asc" | "desc";
@@ -126,6 +128,17 @@ export async function listByProject(
     conditions.push(isNull(issues.assigneeId));
   } else if (options.assignee) {
     conditions.push(eq(issues.assigneeId, options.assignee));
+  }
+
+  if (options.labelIds && options.labelIds.length > 0) {
+    // An issue qualifies when it carries every chosen label: the junction rows for those labels, counted per issue.
+    // Served by issue_labels_label_id_issue_id_idx. The issues side is already scoped to this organization and
+    // project, so a label id from elsewhere simply matches nothing.
+    // De-duplicated: the same label sent twice must not make the count (distinct labels) disagree with the list's length.
+    const ids = [...new Set(options.labelIds)];
+    conditions.push(
+      sql`${issues.id} IN (SELECT ${issueLabels.issueId} FROM ${issueLabels} WHERE ${inArray(issueLabels.labelId, ids)} GROUP BY ${issueLabels.issueId} HAVING count(DISTINCT ${issueLabels.labelId}) = ${ids.length})`,
+    );
   }
 
   if (options.cursor) {
@@ -732,6 +745,23 @@ export async function listLabelsForIssue(organizationId: string, issueId: string
     .from(issueLabels)
     .innerJoin(labels, eq(issueLabels.labelId, labels.id))
     .where(and(eq(issueLabels.issueId, issueId), eq(labels.organizationId, organizationId)));
+}
+
+/**
+ * The labels of a page of issues in ONE query (name order), keyed by issue id, for the list cards. Scoped by the
+ * label's organization like listLabelsForIssue (issue_labels has no organization column of its own).
+ */
+export async function labelsForIssues(organizationId: string, issueIds: string[]) {
+  const byIssue = new Map<string, { id: string; name: string; color: string }[]>();
+  if (issueIds.length === 0) return byIssue;
+  const rows = await db
+    .select({ issueId: issueLabels.issueId, id: labels.id, name: labels.name, color: labels.color })
+    .from(issueLabels)
+    .innerJoin(labels, eq(issueLabels.labelId, labels.id))
+    .where(and(inArray(issueLabels.issueId, issueIds), eq(labels.organizationId, organizationId)))
+    .orderBy(asc(labels.name), asc(labels.id));
+  for (const { issueId, ...label } of rows) byIssue.set(issueId, [...(byIssue.get(issueId) ?? []), label]);
+  return byIssue;
 }
 
 /**

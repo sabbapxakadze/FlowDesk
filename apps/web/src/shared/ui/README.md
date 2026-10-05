@@ -57,5 +57,8 @@ form with unsaved text from closing on a stray click. `Textarea` is resizable on
 near the bottom, as wide as its widest option, Esc closes only the list. Forms use it through `Controller`; `entities/member`'s `memberOptions` builds people lists;
 `STATUS_OPTIONS` and `PRIORITY_OPTIONS` carry the status dot and priority icon. In e2e tests use `pick(combobox(page, name), label)` from `e2e/support/dropdown.ts`.
 
+`Dropdown` has a `multiple` mode (`values`, `onToggle`, `onClear`): the list stays open, each chosen row shows a check, the box says "bug +1", and a
+"Clear selection" row empties it. `entities/label`'s `LabelPills` is the matching pill row for a card.
+
 `PersonHover`'s card is also held inside the window (its left edge is pulled back when the name is near the right edge), so a picture at the right end of a row
 (the assignee circle on a card) never opens off screen.

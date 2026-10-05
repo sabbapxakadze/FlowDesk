@@ -1,5 +1,6 @@
 export type { Issue } from "./model";
 export { useIssues } from "./api/useIssues";
+export { useAssignedIssues } from "./api/useAssignedIssues";
 export { useIssue } from "./api/useIssue";
 export { useIssueByNumber } from "./api/useIssueByNumber";
 export { useIssueLabels } from "./api/useIssueLabels";

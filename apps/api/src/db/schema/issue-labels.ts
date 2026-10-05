@@ -1,4 +1,4 @@
-import { pgTable, uuid, timestamp, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, uuid, timestamp, primaryKey, index } from "drizzle-orm/pg-core";
 import { issues } from "./issues.js";
 import { labels } from "./labels.js";
 
@@ -18,5 +18,10 @@ export const issueLabels = pgTable(
       .references(() => labels.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.issueId, table.labelId] })],
+  (table) => [
+    primaryKey({ columns: [table.issueId, table.labelId] }),
+    // The list's label filter starts from the chosen labels (WHERE label_id IN (...)), which the primary key (issue_id first)
+    // cannot serve; this one can, and it also covers the per-issue count.
+    index("issue_labels_label_id_issue_id_idx").on(table.labelId, table.issueId),
+  ],
 );

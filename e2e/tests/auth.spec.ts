@@ -1,7 +1,7 @@
 import { test, expect, TEST_USER, logInThroughForm } from "../support/fixtures";
 
 test.describe("auth", () => {
-  test("registers through the form, then logs in and sees the projects page", async ({
+  test("registers through the form, then logs in and lands on My work", async ({
     page,
   }) => {
     // Why: the whole front door in one pass, through the real forms and the real API.
@@ -13,8 +13,8 @@ test.describe("auth", () => {
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page.getByText("Account created for")).toBeVisible();
 
-    await logInThroughForm(page);
-    await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
+    await logInThroughForm(page); // ends on /, the My work page
+    await expect(page.getByRole("heading", { level: 1, name: "My work" })).toBeVisible();
   });
 
   test("a wrong password shows an error and stays on the login page", async ({

@@ -5,9 +5,11 @@ import { useCurrentProject } from "../../entities/project";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
 import { AssigneeAvatar, memberOptions, useMembers } from "../../entities/member";
 import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
+import { LabelPills, useLabels } from "../../entities/label";
 import { CreateIssueForm, type CreateIssueFormHandle } from "../../features/create-issue";
 import { EditIssueDialog } from "../../features/edit-issue";
 import { useAuth } from "../../shared/auth/useAuth";
+import { isUuid } from "../../shared/lib/paths";
 import { useShortcut } from "../../shared/lib/useShortcut";
 import {
   Button,
@@ -75,6 +77,8 @@ export function ProjectDetailPage() {
   // matches nobody simply returns an empty list, and the API rejects a non-uuid.
   const assigneeParam = searchParams.get("assignee");
   const assignee = assigneeParam && assigneeParam !== "" ? assigneeParam : undefined;
+  // The chosen labels (?label=a&label=b): an issue must have ALL of them. Anything that is not an id is ignored.
+  const labelIds = [...new Set(searchParams.getAll("label").filter(isUuid))];
   const sort = searchParams.get("sort") === "priority" ? "priority" : undefined;
   const order = searchParams.get("order") === "asc" ? "asc" : undefined;
   // The three choices the dropdown offers: newest first (the default, nothing in the URL),
@@ -91,8 +95,9 @@ export function ProjectDetailPage() {
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useIssues(organization!.id, projectId, { status, priority, assignee, sort, order });
+  } = useIssues(organization!.id, projectId, { status, priority, assignee, labels: labelIds, sort, order });
   const { data: members } = useMembers(organization!.id);
+  const { data: orgLabels } = useLabels(organization!.id);
   useLiveIssueUpdates(projectId);
   // useInfiniteQuery's data is { pages: Page[], pageParams }, not a flat
   // list — flatten once here so the rest of this page (and IssueCard)
@@ -104,7 +109,7 @@ export function ProjectDetailPage() {
   // results is not a change (it is part of the reset key), so those rows just rise in.
   const issueRows = useAnimatedList(issues, (issue) => issue.id, {
     ready: !issuesPending,
-    resetKey: `${status}|${priority}|${assignee}|${sort}|${order}|${data?.pages.length ?? 0}`,
+    resetKey: `${status}|${priority}|${assignee}|${labelIds.join(",")}|${sort}|${order}|${data?.pages.length ?? 0}`,
   });
 
   // Which issue (if any) is open in the edit popup: page-level state because IssueCard (entities layer) can't
@@ -152,6 +157,16 @@ export function ProjectDetailPage() {
       return next;
     });
   }
+
+  function setLabelIds(next: string[]) {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.delete("label");
+      for (const id of next) params.append("label", id);
+      return params;
+    });
+  }
+  const toggleLabel = (id: string) => setLabelIds(labelIds.includes(id) ? labelIds.filter((x) => x !== id) : [...labelIds, id]);
 
   function setSortChoice(value: string) {
     setSearchParams((prev) => {
@@ -214,6 +229,20 @@ export function ProjectDetailPage() {
           ]}
         />
         <Dropdown
+          aria-label="Filter by label"
+          multiple
+          className="w-auto"
+          placeholder="All labels"
+          values={labelIds}
+          onToggle={toggleLabel}
+          onClear={() => setLabelIds([])}
+          options={(orgLabels ?? []).map((label) => ({
+            value: label.id,
+            label: label.name,
+            icon: <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: label.color }} />,
+          }))}
+        />
+        <Dropdown
           aria-label="Sort"
           className="w-auto"
           value={sortChoice}
@@ -239,7 +268,7 @@ export function ProjectDetailPage() {
         <ErrorText>Failed to load issues: {error.message}</ErrorText>
       ) : issueRows.length === 0 ? (
         <EmptyState block>
-          {status || priority || assignee
+          {status || priority || assignee || labelIds.length > 0
             ? "No issues match these filters."
             : "No issues yet."}
         </EmptyState>
@@ -254,6 +283,7 @@ export function ProjectDetailPage() {
               issue={issue}
               projectKey={project.key}
               assignee={issue.assigneeId ? <AssigneeAvatar organizationId={organization!.id} userId={issue.assigneeId} /> : null}
+              labels={<LabelPills labels={issue.labels} activeIds={labelIds} onToggle={toggleLabel} />}
               onOpen={panel.open}
               onEdit={() => {
                 setShowConflictNotice(false);

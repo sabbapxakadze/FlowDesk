@@ -35,11 +35,16 @@ export async function listIssues(
     status?: IssueStatus;
     priority?: IssuePriority;
     assignee?: string;
+    labelIds?: string[];
     sort?: "created" | "priority";
     order: "asc" | "desc";
   },
 ) {
-  return issuesRepository.listByProject(organizationId, projectId, options);
+  const result = await issuesRepository.listByProject(organizationId, projectId, options);
+  if (result.status !== "ok") return result;
+  // The cards show each issue's labels: one more query for the whole page, not one per issue.
+  const labelsByIssue = await issuesRepository.labelsForIssues(organizationId, result.items.map((item) => item.id));
+  return { ...result, items: result.items.map((item) => ({ ...item, labels: labelsByIssue.get(item.id) ?? [] })) };
 }
 
 export async function getIssue(organizationId: string, projectId: string, issueId: string) {

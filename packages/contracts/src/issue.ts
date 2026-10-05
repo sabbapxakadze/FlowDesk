@@ -29,11 +29,22 @@ export const issueSchema = z.object({
 
 export type Issue = z.infer<typeof issueSchema>;
 
+/**
+ * What a card in the issue list shows besides the issue itself: its labels (id, name, colour; the organization and
+ * the timestamps are not needed to draw a pill). Only the LIST carries them: every other endpoint returns the plain
+ * issue, and the issue page asks for the labels separately.
+ */
+export const issueLabelSummarySchema = z.object({ id: z.uuid(), name: z.string(), color: z.string() });
+export type IssueLabelSummary = z.infer<typeof issueLabelSummarySchema>;
+
+export const issueListItemSchema = issueSchema.extend({ labels: z.array(issueLabelSummarySchema) });
+export type IssueListItem = z.infer<typeof issueListItemSchema>;
+
 // Same envelope convention as project.ts's list response — { data: [...] }
 // left room for pagination metadata without changing the shape; nextCursor
 // is that metadata, added in Phase 4 slice 1. null means no further pages.
 export const listIssuesResponseSchema = z.object({
-  data: z.array(issueSchema),
+  data: z.array(issueListItemSchema),
   nextCursor: z.string().nullable(),
 });
 
@@ -55,6 +66,11 @@ export const listIssuesQuerySchema = z.object({
   priority: issuePrioritySchema.optional(),
   // A user id, or "unassigned". ("Assigned to me" is the client sending its own id.)
   assignee: z.union([z.uuid(), z.literal("unassigned")]).optional(),
+  // Only issues that have ALL of these labels. Repeat the parameter (?label=a&label=b); one value is a list of one.
+  label: z.preprocess(
+    (value) => (value === undefined ? [] : Array.isArray(value) ? value : [value]),
+    z.array(z.uuid()).max(10, "At most 10 labels at once"),
+  ),
   sort: z.enum(["created", "priority"]).default("created"),
   order: z.enum(["asc", "desc"]).default("desc"),
 });

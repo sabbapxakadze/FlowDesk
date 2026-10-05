@@ -3,12 +3,14 @@ import { ArrowUpRight, X } from "lucide-react";
 import { Link } from "react-router";
 import type { Attachment, IssueEvent } from "@flowdesk/contracts";
 import { useProjects } from "../../entities/project";
+import { LabelBadge } from "../../entities/label";
 import { PersonName, useMemberNames, useMyRole } from "../../entities/member";
 import {
   AttachmentList,
   useAttachments,
   useIssue,
   useIssueEvents,
+  useIssueLabels,
   useLiveIssueDetailUpdates,
 } from "../../entities/issue";
 import { DeleteIssueButton } from "../../features/delete-issue";
@@ -247,6 +249,8 @@ export function IssueDetail({
     issueId,
   );
   const { data: attachments } = useAttachments(organization!.id, projectId, issueId);
+  // The same query the editor's label picker uses, so a label added there shows here at once.
+  const { data: issueLabels } = useIssueLabels(organization!.id, projectId, issueId);
   // Timeline entries that arrive later (a comment, a status change, from anyone) open up with a flash.
   // The API sends oldest first (analytics and history depend on it); the screen shows newest first.
   const newestFirst = useMemo(() => [...(events ?? [])].reverse(), [events]);
@@ -331,6 +335,13 @@ export function IssueDetail({
               Edit
             </Button>
           </div>
+          {issueLabels && issueLabels.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1" aria-label="Labels" role="group">
+              {issueLabels.map((label) => (
+                <LabelBadge key={label.id} label={label} />
+              ))}
+            </div>
+          )}
           {otherViewers.length > 0 && (
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               <Viewers viewers={otherViewers} organizationId={organization!.id} />
