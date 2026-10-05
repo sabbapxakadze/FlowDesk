@@ -2278,6 +2278,15 @@ The original plan for this slice, kept for the record:
    became a `pick` helper (`e2e/support/dropdown.ts`); 6 new tests (`dropdown.spec.ts`) and 5 behaviours removed one at a time to see them fail.
    Named limits: the list is not virtualised (fine for the longest list here, the members); no multi-select (the label picker adds one at a
    time, as before); a screen reader was not run, the semantics follow the pattern.
+   **Drag stalls FIXED 2026-10-05.** Measured with 80 cards (frame timing and long tasks during a real mouse drag, dev build): a 200 to
+   280 ms main-thread stall at the start and at the drop, because dnd-kit re-renders EVERY sortable item on every drag-over event (2,100 to
+   2,750 card renders per drag). Two causes, both fixed: the card body is now memoised (only a thin `<li>` follows dnd-kit; the cards take
+   `assigneeId` plus a stable `renderAssignee` instead of a ready-made element, and `useDragClickGuard` returns a stable function), and the
+   sensors' options were inline objects, new on every page render, which made dnd-kit rebuild every card's pointer listeners (now constants in
+   `shared/dnd/sensors.ts`, shared by the board and the sprints page). Result: 22 to 168 card renders per drag, longest stall about 70 ms,
+   worst frame 233 to 50 ms. `drag-performance.spec.ts` fails above 150 ms; with the sensors inline it measured 190 ms and with the memo
+   removed 249 ms. Not changed: the remaining ~70 ms (the first render at drag start); the median frame was already 16.7 ms, so the drag itself
+   never stuttered, only its start and end.
    **Assignee photos DONE 2026-10-05 (owner's request).** The small circle on an issue card (list, board, sprints) shows the assignee's photo
    (initials without one) and, like every other picture of a person, opens the person card on hover and goes to the profile on click. It sits
    BESIDE the card's issue link, not inside it (a link cannot hold a link): `IssueCard` and `SortableIssueCard` take an `assignee` node built by

@@ -1,13 +1,8 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
   useDroppable,
-  useSensor,
-  useSensors,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -15,7 +10,6 @@ import {
 import {
   SortableContext,
   arrayMove,
-  sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import type { GetBacklogResponse, Issue } from "@flowdesk/contracts";
@@ -28,6 +22,7 @@ import { CreateSprintForm } from "../../features/create-sprint";
 import { useStartSprint, useCompleteSprint } from "../../features/manage-sprint";
 import { DeleteSprintButton } from "../../features/delete-sprint";
 import { RenameSprintForm } from "../../features/rename-sprint";
+import { useDragSensors } from "../../shared/dnd/sensors";
 import { useAssignIssueSprint } from "../../features/assign-issue-sprint";
 import { useAuth } from "../../shared/auth/useAuth";
 import { createMultiList, useMultiListCollision, type ListMap } from "../../shared/dnd/multiList";
@@ -108,6 +103,12 @@ function SprintList({
  */
 export function ProjectSprintsPage() {
   const { organization } = useAuth();
+  // Stable (only changes with the organization): the memoised card bodies must not be re-rendered by a new function.
+  const organizationId = organization!.id;
+  const renderAssignee = useCallback(
+    (userId: string) => <AssigneeAvatar organizationId={organizationId} userId={userId} />,
+    [organizationId],
+  );
   const panel = useIssuePanel();
   const project = useCurrentProject();
   const projectId = project.id;
@@ -145,11 +146,7 @@ export function ProjectSprintsPage() {
   }, [activeIssue]);
 
   // distance 6 keeps a plain click a click; touch needs a short press so the page still scrolls.
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  const sensors = useDragSensors();
 
   const { collisionDetection, insertedNextToRef, resetGuards } = useMultiListCollision(lists, isListId);
 
@@ -374,7 +371,8 @@ export function ProjectSprintsPage() {
                           key={issue.id}
                           issue={issue}
                           projectKey={project.key}
-                          assignee={issue.assigneeId ? <AssigneeAvatar organizationId={organization!.id} userId={issue.assigneeId} /> : null}
+                          assigneeId={issue.assigneeId}
+                          renderAssignee={renderAssignee}
                           onOpen={panel.open}
                           dragLabel="Drag to reorder or move between backlog and sprint"
                         />

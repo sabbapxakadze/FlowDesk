@@ -1,13 +1,8 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
   useDroppable,
-  useSensor,
-  useSensors,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -15,7 +10,6 @@ import {
 import {
   SortableContext,
   arrayMove,
-  sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import type { Issue, IssueStatus } from "@flowdesk/contracts";
@@ -26,6 +20,7 @@ import { useMoveIssue } from "../../features/move-issue";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
 import { useAuth } from "../../shared/auth/useAuth";
 import { createMultiList, useMultiListCollision, type ListMap } from "../../shared/dnd/multiList";
+import { useDragSensors } from "../../shared/dnd/sensors";
 import {
   Card,
   ColumnHeader,
@@ -128,6 +123,12 @@ function BoardColumn({
  */
 export function ProjectBoardPage() {
   const { organization } = useAuth();
+  // Stable (only changes with the organization): the memoised card bodies must not be re-rendered by a new function.
+  const organizationId = organization!.id;
+  const renderAssignee = useCallback(
+    (userId: string) => <AssigneeAvatar organizationId={organizationId} userId={userId} />,
+    [organizationId],
+  );
   const panel = useIssuePanel();
   const project = useCurrentProject();
   const projectId = project.id;
@@ -160,11 +161,7 @@ export function ProjectBoardPage() {
 
   // distance 6: a plain click stays under it and navigates via the card's
   // <Link>; touch needs a short press so scrolling the page still works.
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  const sensors = useDragSensors();
 
   const { collisionDetection, insertedNextToRef, resetGuards } = useMultiListCollision(columns, isColumnId);
 
@@ -293,7 +290,8 @@ export function ProjectBoardPage() {
                           key={issue.id}
                           issue={issue}
                           projectKey={project.key}
-                          assignee={issue.assigneeId ? <AssigneeAvatar organizationId={organization!.id} userId={issue.assigneeId} /> : null}
+                          assigneeId={issue.assigneeId}
+                          renderAssignee={renderAssignee}
                           onOpen={panel.open}
                         />
                       ))}

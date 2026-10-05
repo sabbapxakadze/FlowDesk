@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { memo, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -27,18 +27,26 @@ import { IssueSummary } from "./IssueSummary";
  * - The sortable transform/transition live on the <li>, and the Card inside
  *   keeps its own transition-shadow, so the hover shadow still animates
  *   (an inline `transition` on the Card itself would replace it).
+ * - Speed (2026-10-05): dnd-kit re-renders EVERY sortable item on every drag-over event (2,000+ card renders in one
+ *   drag with 80 cards, a 250 ms hitch at the start and at the drop). Only the thin <li> follows dnd-kit now; the card
+ *   body is memoised and receives props that keep their identity between renders (hence `assigneeId` plus a stable
+ *   `renderAssignee` instead of a ready-made element, which would be new on every render).
  */
 export function SortableIssueCard({
   issue,
   projectKey,
-  assignee,
+  assigneeId,
+  renderAssignee,
   onOpen,
   dragLabel = "Drag to reorder or move",
 }: {
   issue: Issue;
   projectKey: string;
-  /** The assignee's picture (a profile link with a hover card), built by the page; beside the issue link, not inside it. */
-  assignee?: ReactNode;
+  /** Who it is assigned to; `renderAssignee` turns the id into the picture. */
+  assigneeId?: string | null;
+  /** Builds the assignee's picture (a profile link with a hover card) for an id. It must keep its identity between renders
+   *  (useCallback) or the memoised card body re-renders on every drag event. Beside the issue link, never inside it. */
+  renderAssignee?: (userId: string) => ReactNode;
   /** Open the issue in the side panel instead of navigating (modified clicks still navigate). */
   onOpen?: (issueId: string) => void;
   /** The grip button's accessible name. */
@@ -56,22 +64,58 @@ export function SortableIssueCard({
       className={isDragging ? "opacity-40" : ""}
       {...pointerListeners(listeners)}
     >
-      <Card hoverable className="flex items-start gap-2 select-none">
-        <DragHandle aria-label={dragLabel} {...attributes} {...listeners} />
-        <Link
-          to={issuePath(projectKey, issue.number)}
-          draggable={false}
-          data-panel-trigger
-          onClick={(event) => {
-            guardClick(event);
-            openIssueOnClick(event, onOpen, issueKey(projectKey, issue.number));
-          }}
-          className="block min-w-0 flex-1"
-        >
-          <IssueSummary issue={issue} projectKey={projectKey} />
-        </Link>
-        {assignee && <span className="shrink-0">{assignee}</span>}
-      </Card>
+      <SortableCardBody
+        issue={issue}
+        projectKey={projectKey}
+        assigneeId={assigneeId}
+        renderAssignee={renderAssignee}
+        onOpen={onOpen}
+        dragLabel={dragLabel}
+        attributes={attributes}
+        listeners={listeners}
+        guardClick={guardClick}
+      />
     </li>
   );
 }
+
+const SortableCardBody = memo(function SortableCardBody({
+  issue,
+  projectKey,
+  assigneeId,
+  renderAssignee,
+  onOpen,
+  dragLabel,
+  attributes,
+  listeners,
+  guardClick,
+}: {
+  issue: Issue;
+  projectKey: string;
+  assigneeId?: string | null;
+  renderAssignee?: (userId: string) => ReactNode;
+  onOpen?: (issueId: string) => void;
+  dragLabel: string;
+  attributes: ReturnType<typeof useSortable>["attributes"];
+  listeners: ReturnType<typeof useSortable>["listeners"];
+  guardClick: (event: MouseEvent) => void;
+}) {
+  return (
+    <Card hoverable className="flex items-start gap-2 select-none">
+      <DragHandle aria-label={dragLabel} {...attributes} {...listeners} />
+      <Link
+        to={issuePath(projectKey, issue.number)}
+        draggable={false}
+        data-panel-trigger
+        onClick={(event) => {
+          guardClick(event);
+          openIssueOnClick(event, onOpen, issueKey(projectKey, issue.number));
+        }}
+        className="block min-w-0 flex-1"
+      >
+        <IssueSummary issue={issue} projectKey={projectKey} />
+      </Link>
+      {assigneeId && renderAssignee && <span className="shrink-0">{renderAssignee(assigneeId)}</span>}
+    </Card>
+  );
+});

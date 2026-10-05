@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, type MouseEvent } from "react";
 
 /**
  * Lets the whole card be dragged while the title link still works as a link.
@@ -26,9 +26,11 @@ export function useDragClickGuard(isDragging: boolean) {
     return () => clearTimeout(timeout);
   }, [isDragging]);
 
-  return (event: MouseEvent) => {
+  // One function for the life of the card (it only reads a ref): a memoised child that receives it is not re-rendered
+  // by it.
+  return useCallback((event: MouseEvent) => {
     if (blockRef.current) event.preventDefault();
-  };
+  }, []);
 }
 
 /**
