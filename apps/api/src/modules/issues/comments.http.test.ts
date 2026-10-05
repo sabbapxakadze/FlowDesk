@@ -196,6 +196,20 @@ describe("comment edit and delete (HTTP)", () => {
     expect(ownerView.payload).toMatchObject({ canEdit: false, canDelete: true });
   });
 
+  it("an edit made right after posting still counts as edited (the edit time and the creation time come from the same clock)", async () => {
+    // Catches: "(edited)" missing on a quickly edited comment. The creation time came from the database clock and the edit time
+    // from Node's, which can read several milliseconds behind it, so an edit a few milliseconds after posting looked "not later".
+    // That made the pre-push run fail now and then. Many quick rounds, so one slow-to-fail clock gap is not missed.
+    const { owner, base } = await setup();
+    for (let round = 0; round < 25; round++) {
+      const id = await postComment(base, owner.accessToken, `round ${round}`);
+      await request(app).patch(`${base}/comments/${id}`).set("Authorization", `Bearer ${owner.accessToken}`).send({ body: `round ${round} fixed` }).expect(200);
+    }
+    const events = await getEvents(base, owner.accessToken);
+    const unmarked = events.filter((e) => e.type === "issue.commented" && e.payload.edited !== true);
+    expect(unmarked).toHaveLength(0);
+  });
+
   it("another organization cannot edit, delete or attach to a comment (404 or 403)", async () => {
     const { owner, base } = await setup();
     const commentId = await postComment(base, owner.accessToken, "private");

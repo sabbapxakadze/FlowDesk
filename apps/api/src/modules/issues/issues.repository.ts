@@ -917,7 +917,9 @@ export async function updateComment(input: {
   return db.transaction(async (tx) => {
     const [comment] = await tx
       .update(comments)
-      .set({ body: input.body, updatedAt: new Date() })
+      // The DATABASE's clock, like created_at: "edited" compares the two, and Node's clock can read milliseconds behind Postgres's
+      // (on Windows it ticks coarsely), which made a quick edit look "not later" than the comment it edited.
+      .set({ body: input.body, updatedAt: sql`now()` })
       .where(and(eq(comments.id, input.commentId), eq(comments.issueId, input.issueId)))
       .returning();
     if (!comment) throw new Error("Failed to update comment");
