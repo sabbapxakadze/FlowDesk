@@ -6,6 +6,7 @@ import { useMembers, useMyRole } from "../../entities/member";
 import { useAuth } from "../../shared/auth/useAuth";
 import { isUuid, projectPath } from "../../shared/lib/paths";
 import { useSearchPalette } from "../../shared/search-palette/useSearchPalette";
+import { TourButton } from "../../features/app-tour";
 import { Avatar, cn, Skeleton, ThemeSwitch } from "../../shared/ui";
 
 const LINK =
@@ -16,10 +17,13 @@ function SideLink({
   to,
   end = false,
   current,
+  tour,
   children,
 }: {
   to: string;
   end?: boolean;
+  /** The guided tour's name for this link (`data-tour`, ADR 0040). */
+  tour?: string;
   /**
    * Set only when the URL alone can't say whether this link is "current":
    * the project's Issues link should also light up on an issue page, and
@@ -32,13 +36,13 @@ function SideLink({
 }) {
   if (current !== undefined) {
     return (
-      <Link to={to} aria-current={current ? "page" : undefined} className={cn(LINK, current && LINK_ACTIVE)}>
+      <Link to={to} data-tour={tour} aria-current={current ? "page" : undefined} className={cn(LINK, current && LINK_ACTIVE)}>
         {children}
       </Link>
     );
   }
   return (
-    <NavLink to={to} end={end} className={({ isActive }) => cn(LINK, isActive && LINK_ACTIVE)}>
+    <NavLink to={to} end={end} data-tour={tour} className={({ isActive }) => cn(LINK, isActive && LINK_ACTIVE)}>
       {children}
     </NavLink>
   );
@@ -91,7 +95,7 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
       </div>
 
       <nav aria-label="Main" className="scrollbar-sidebar flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
-        <SideLink to="/" end>
+        <SideLink to="/" end tour="my-work">
           My work
         </SideLink>
         <SideLink to="/projects" end>
@@ -99,6 +103,7 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
         </SideLink>
         <button
           type="button"
+          data-tour="search"
           onClick={() => setSearchOpen(true)}
           className={cn(LINK, "w-full justify-between text-left")}
         >
@@ -113,6 +118,7 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
         {canManageProject && <SideLink to="/audit-log">Audit log</SideLink>}
 
         <SectionLabel>Your projects</SectionLabel>
+        <div data-tour="sidebar-projects" className="flex flex-col gap-0.5">
         {isPending ? (
           <div className="flex flex-col gap-1.5 px-2.5">
             <Skeleton className="h-4 w-full bg-[var(--color-bg-sidebar-active)]" />
@@ -134,8 +140,12 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
                   <SideLink to={projectPath(project.key)} current={onProjectList || onIssuePage || onBoard}>
                     Issues
                   </SideLink>
-                  <SideLink to={projectPath(project.key, "sprints")}>Sprints</SideLink>
-                  <SideLink to={projectPath(project.key, "analytics")}>Analytics</SideLink>
+                  <SideLink to={projectPath(project.key, "sprints")} tour="sprints-link">
+                    Sprints
+                  </SideLink>
+                  <SideLink to={projectPath(project.key, "analytics")} tour="analytics-link">
+                    Analytics
+                  </SideLink>
                   {canManageProject && (
                     <SideLink to={projectPath(project.key, "settings")}>Settings</SideLink>
                   )}
@@ -144,11 +154,13 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
             </div>
           ))
         )}
+        </div>
       </nav>
 
       <div className="mt-2 flex flex-col gap-0.5 border-t border-[var(--color-border-sidebar)] pt-3">
+        <TourButton className={cn(LINK, "w-full text-left")} />
         <SideLink to="/design-system">Design system</SideLink>
-        <div className="px-2.5 pt-2">
+        <div data-tour="theme-switch" className="px-2.5 pt-2">
           <ThemeSwitch variant="sidebar" />
         </div>
         {user && (

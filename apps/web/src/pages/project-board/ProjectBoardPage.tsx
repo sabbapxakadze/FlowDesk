@@ -275,7 +275,7 @@ export function ProjectBoardPage() {
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
-          <div className="grid grid-cols-1 gap-4 sm:min-h-0 sm:flex-1 sm:grid-cols-3 sm:grid-rows-[minmax(0,1fr)]">
+          <div data-tour="board-columns" className="grid grid-cols-1 gap-4 sm:min-h-0 sm:flex-1 sm:grid-cols-3 sm:grid-rows-[minmax(0,1fr)]">
             {COLUMNS.map((status) => {
               const ids = columns[status];
               const columnIssues = ids.flatMap((id) => {

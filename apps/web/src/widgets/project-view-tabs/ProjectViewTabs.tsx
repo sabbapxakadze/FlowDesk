@@ -17,7 +17,7 @@ export function ProjectViewTabs({
   panelOpen?: boolean;
 }) {
   return (
-    <div className={panelOpen ? "sm:max-[1559px]:pr-[31rem]" : undefined}>
+    <div data-tour="view-tabs" className={panelOpen ? "sm:max-[1559px]:pr-[31rem]" : undefined}>
       <ViewTabs
         label="View"
         items={[

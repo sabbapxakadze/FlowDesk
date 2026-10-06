@@ -132,6 +132,8 @@ Issues are created with a "New issue" button and popup on both pages (the C key 
 The Issues list is one surface of two-line rows under a column header (ADR 0036), stacking by its own width (also beside the side panel); board and sprint cards stay cards.
 The board and sprint cards (and the drag preview) have a colored priority edge, the assignee at the top right and a labels/priority footer (ADR 0037); dragging is unchanged.
 The access token is renewed silently (on a rejected request, and on returning to a tab) and an inactive person is warned and then signed out after 30 minutes (ADR 0038); nobody should see "Invalid or expired access token".
+A demo organization with five people and about 76 issues of realistic data is built by `pnpm db:seed:demo` (log in as `demo@flowdesk.test`, password `Demo123!@#`; `--reset` rebuilds it; ADR 0039).
+A "Tutorial" row in the sidebar starts a guided tour of the app (our own small engine in `shared/tour`, steps in `features/app-tour`, parts named by `data-tour` attributes; ADR 0040).
 A project's Issues and Board pages share List / Board tabs in their headers (ADR 0034; one "Issues" sidebar link); merging them into one page is step 2.
 `/` is the "My work" page (my open issues across projects and my unread notifications). The issue list carries each issue's labels and
 filters by several labels at once (an issue must have all of them).

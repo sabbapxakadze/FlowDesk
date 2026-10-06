@@ -28,6 +28,7 @@ import { AppShell } from "./AppShell";
 import { AuthLayout } from "./AuthLayout";
 import { ErrorBoundary } from "../shared/error-boundary/ErrorBoundary";
 import { IdleLogout } from "../features/idle-logout";
+import { TourOverlay } from "../shared/tour";
 import { CommandPalette } from "../widgets/command-palette";
 import { SearchPaletteProvider } from "../shared/search-palette/SearchPaletteProvider";
 
@@ -37,6 +38,7 @@ export function App() {
       <SearchPaletteProvider>
         <CommandPalette />
         <IdleLogout />
+        <TourOverlay />
         <ErrorBoundary>
           <Routes>
             <Route

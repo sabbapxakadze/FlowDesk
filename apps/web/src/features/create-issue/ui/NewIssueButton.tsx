@@ -26,6 +26,7 @@ export function NewIssueButton({
         type="button"
         variant="create"
         aria-keyshortcuts="c"
+        data-tour="new-issue"
         className="inline-flex items-center gap-1.5 whitespace-nowrap"
         onClick={() => setOpen(true)}
       >

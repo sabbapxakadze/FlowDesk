@@ -9,7 +9,8 @@
     "start": "node --env-file-if-exists=.env dist/index.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx --env-file-if-exists=.env src/db/seed.ts"
+    "db:seed": "tsx --env-file-if-exists=.env src/db/seed.ts",
+    "db:seed:demo": "tsx --env-file-if-exists=.env src/db/seed-demo.ts"
   },
   "dependencies": {
     "@flowdesk/contracts": "workspace:*",

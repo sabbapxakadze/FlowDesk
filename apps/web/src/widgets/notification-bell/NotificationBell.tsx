@@ -120,6 +120,7 @@ export function NotificationBell({ panelAlign = "left" }: { panelAlign?: "left" 
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         aria-label="Notifications"
+        data-tour="bell"
         className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-sidebar)] bg-[var(--color-bg-sidebar-active)] text-[var(--color-text-sidebar-active)] hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-border-focus)]"
       >
         <Bell size={16} aria-hidden="true" />

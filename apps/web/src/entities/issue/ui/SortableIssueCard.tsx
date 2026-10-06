@@ -62,6 +62,7 @@ export function SortableIssueCard({
 
   return (
     <li
+      data-tour="issue-card"
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={isDragging ? "opacity-40" : ""}

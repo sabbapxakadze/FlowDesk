@@ -218,6 +218,7 @@ export function ProjectDetailPage() {
           1560px: on a wider window nothing is covered, so nothing may move. */}
       <div
         data-panel-trigger
+        data-tour="issue-filters"
         className={`mt-3 mb-3 flex flex-wrap items-center gap-2 ${panel.issueRef ? "sm:max-[1559px]:pr-[31rem]" : ""}`}
       >
         <Dropdown
