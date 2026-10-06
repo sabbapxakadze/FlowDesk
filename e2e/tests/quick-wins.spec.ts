@@ -8,12 +8,13 @@ import { combobox, expectValue, pick } from "../support/dropdown";
  * Load more growing inside its own panel.
  */
 
-const title = (page: Page) => page.getByPlaceholder("Something to do"); // (not by label: the badge sits inside the label)
+const newIssueButton = (page: Page) => page.getByRole("button", { name: /New issue/ });
+const createDialog = (page: Page) => page.getByRole("dialog", { name: "New issue" });
 const titlesOf = (page: Page) =>
   page.locator('ul > li a[href*="/issues/"] p.font-medium').allInnerTexts().then((texts) => texts.map((t) => t.trim()));
 
 test.describe("the C shortcut", () => {
-  test("C puts the cursor in the new-issue title; typing C in a field, Ctrl+C, and a shortcut with a panel open do not", async ({
+  test("C opens the New issue popup; typing C in a field, Ctrl+C, and a shortcut with the issue panel focused do not", async ({
     loggedInPage: page,
   }) => {
     // Why: a one-key shortcut is only safe if it never steals a letter. The guards are the whole feature.
@@ -22,22 +23,21 @@ test.describe("the C shortcut", () => {
     await expect(page.getByRole("link", { name: /Alpha/ }).first()).toBeVisible();
 
     await page.keyboard.press("c");
-    await expect(title(page)).toBeFocused();
-    await expect(title(page)).toHaveValue(""); // the key itself was not typed into the field
+    await expect(createDialog(page)).toBeVisible();
+    await expect(createDialog(page).getByLabel("Title")).toBeFocused();
+    await expect(createDialog(page).getByLabel("Title")).toHaveValue(""); // the key itself was not typed into the field
 
-    // Typing a "c" in a field is typing.
+    // Typing a "c" in a field is typing: it must not open a second popup or change focus.
     await page.keyboard.type("cabbage");
-    await expect(title(page)).toHaveValue("cabbage");
-    await page.getByLabel("Description", { exact: true }).fill("");
-    await page.getByLabel("Description", { exact: true }).focus();
-    await page.keyboard.type("c");
-    await expect(page.getByLabel("Description", { exact: true })).toHaveValue("c");
-    await expect(title(page)).not.toBeFocused();
+    await expect(createDialog(page).getByLabel("Title")).toHaveValue("cabbage");
+    await expect(createDialog(page)).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(createDialog(page)).toHaveCount(0);
 
     // With a modifier it is a different shortcut (copy).
     await page.locator("body").click({ position: { x: 5, y: 5 } });
     await page.keyboard.press("Control+c");
-    await expect(title(page)).not.toBeFocused();
+    await expect(createDialog(page)).toHaveCount(0);
 
     // With the issue panel open (focus inside it) it does nothing to the page behind.
     await page.getByRole("link", { name: /Alpha/ }).first().click();
@@ -45,7 +45,8 @@ test.describe("the C shortcut", () => {
     await expect(panel).toBeFocused();
     await page.keyboard.press("c");
     await page.waitForTimeout(200);
-    await expect(panel).toBeFocused(); // focus did not jump to the title field behind the panel
+    await expect(createDialog(page)).toHaveCount(0);
+    await expect(panel).toBeFocused();
   });
 });
 
@@ -117,33 +118,14 @@ test("audit log: Load more adds rows inside the panel, and the page keeps its he
   expect(await height()).toBe(before);
 });
 
-test("a small C badge in the empty title field says the shortcut exists, and goes away on focus or typing", async ({
+test("the New issue button shows a small C badge saying the shortcut exists, and a phone (no keyboard) hides it", async ({
   loggedInPage: page,
 }) => {
   // Why: the shortcut worked but nothing on the page mentioned it.
   await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: ["Alpha"] });
   await page.goto("/projects/WEB");
-  const badge = page.locator("kbd", { hasText: /^C$/ });
+  const badge = newIssueButton(page).locator("kbd", { hasText: /^C$/ });
   await expect(badge).toBeVisible();
-  // The badge's wrapper must not shrink the field: Title and Description are the same width (both flex-1).
-  const titleWidth = (await title(page).boundingBox())!.width;
-  const descriptionWidth = (await page.getByPlaceholder("Optional").boundingBox())!.width;
-  expect(Math.abs(titleWidth - descriptionWidth)).toBeLessThan(1);
-
-  await page.keyboard.press("c"); // the shortcut focuses the field...
-  await expect(title(page)).toBeFocused();
-  await expect(badge).toBeHidden(); // ...and the badge steps aside
-
-  await page.keyboard.type("x");
-  await page.locator("body").click({ position: { x: 5, y: 5 } });
-  await expect(title(page)).toHaveValue("x");
-  await expect(badge).toBeHidden(); // text in the field: still no badge
-
-  await title(page).fill(""); // (filling focuses the field)
-  await page.locator("body").click({ position: { x: 5, y: 5 } });
-  await expect(badge).toBeVisible(); // empty and not focused again
-
-  // A phone has no keyboard: no badge.
   await page.setViewportSize({ width: 400, height: 800 });
   await expect(badge).toBeHidden();
 });

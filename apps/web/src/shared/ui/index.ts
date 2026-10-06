@@ -27,6 +27,7 @@ export { PRIORITY_OPTIONS, STATUS_OPTIONS } from "./dropdownOptions";
 export { Lane } from "./Lane";
 export { ScrollPanel } from "./ScrollPanel";
 export { ThemeSwitch } from "./ThemeSwitch";
+export { ViewTabs } from "./ViewTabs";
 export { Time } from "./Time";
 export { PriorityBadge, PriorityIcon } from "./PriorityBadge";
 export { DueDate } from "./DueDate";

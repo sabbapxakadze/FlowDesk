@@ -32,6 +32,9 @@
      and a "careful" red, both solid with white text. Same pair in both themes;
      contrast measured on the real values (see docs/roadmap.md). */
   --color-bg-action-success: var(--color-emerald-700);
+  /* Creating something ("New issue") is teal: the app's own hue, the same in both themes (white text 5.4:1; hover 7.5:1). */
+  --color-bg-action-create: var(--color-teal-700);
+  --color-bg-action-create-hover: var(--color-teal-800);
   /* Delete is two clicks. The first button is a solid red; the final confirm is a
      STRONGER red: darker in light mode, brighter in dark mode (a darker red would
      all but vanish on the dark page). White text on all of them. */
@@ -121,6 +124,8 @@
     --color-text-on-action: var(--color-neutral-950);
 
     --color-bg-action-success: var(--color-emerald-700);
+    --color-bg-action-create: var(--color-teal-700);
+    --color-bg-action-create-hover: var(--color-teal-800);
     --color-bg-action-danger: var(--color-red-700);
     --color-bg-action-danger-strong: var(--color-red-600);
     --color-text-on-action-strong: var(--color-white);
@@ -171,6 +176,8 @@
   --color-text-on-action: var(--color-neutral-950);
 
   --color-bg-action-success: var(--color-emerald-700);
+  --color-bg-action-create: var(--color-teal-700);
+  --color-bg-action-create-hover: var(--color-teal-800);
   --color-bg-action-danger: var(--color-red-700);
   --color-bg-action-danger-strong: var(--color-red-600);
   --color-text-on-action-strong: var(--color-white);

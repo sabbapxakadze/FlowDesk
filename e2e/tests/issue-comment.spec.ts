@@ -13,8 +13,9 @@ test("create a project and an issue, then post, edit and delete a comment", asyn
     .getByRole("link", { name: /Website/ })
     .click();
 
-  await page.getByLabel("Title").fill("Fix the footer");
-  await page.getByRole("button", { name: "Add issue" }).click();
+  await page.getByRole("button", { name: /New issue/ }).click();
+  await page.getByRole("dialog", { name: "New issue" }).getByLabel("Title").fill("Fix the footer");
+  await page.getByRole("dialog", { name: "New issue" }).getByRole("button", { name: "Add issue" }).click();
   await page
     .getByRole("main")
     .getByRole("link", { name: /Fix the footer/ })

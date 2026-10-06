@@ -55,8 +55,8 @@ function SectionLabel({ children }: { children: ReactNode }) {
 /**
  * The app's persistent navigation. Every link points at a route that
  * already existed; this only makes them reachable from everywhere. The
- * project matching the current URL expands to its four pages (list, board,
- * sprints, analytics), which used to be reachable only through links inside
+ * project matching the current URL expands to its pages (Issues, which also
+ * holds the Board tab, Sprints, Analytics, Settings), which used to be reachable only through links inside
  * other pages. `actions` is a slot for the caller's buttons (the bell, or the
  * mobile drawer's close button): a widget may not import another widget, so
  * the shell in `app/` supplies it.
@@ -76,6 +76,7 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
   const me = members?.find((member) => member.userId === user?.id);
   const canManageProject = role === "owner" || role === "admin";
   const onProjectList = useMatch({ path: "/projects/:projectKey", end: true }) !== null;
+  const onBoard = useMatch("/projects/:projectKey/board") !== null; // the Board tab of the Issues page (ADR 0034)
 
   return (
     <div className="flex h-full flex-col gap-1 border-r border-[var(--color-border-sidebar)] bg-[var(--color-bg-sidebar)] p-3">
@@ -130,10 +131,9 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
               {currentProjectRef !== undefined &&
                 (isUuid(currentProjectRef) ? project.id === currentProjectRef : project.key.toLowerCase() === currentProjectRef.toLowerCase()) && (
                 <div className="ml-3 flex flex-col gap-0.5 border-l border-[var(--color-border-sidebar)] pl-2">
-                  <SideLink to={projectPath(project.key)} current={onProjectList || onIssuePage}>
+                  <SideLink to={projectPath(project.key)} current={onProjectList || onIssuePage || onBoard}>
                     Issues
                   </SideLink>
-                  <SideLink to={projectPath(project.key, "board")}>Board</SideLink>
                   <SideLink to={projectPath(project.key, "sprints")}>Sprints</SideLink>
                   <SideLink to={projectPath(project.key, "analytics")}>Analytics</SideLink>
                   {canManageProject && (

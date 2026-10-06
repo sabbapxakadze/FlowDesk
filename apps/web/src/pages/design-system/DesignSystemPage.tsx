@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Trash2, X } from "lucide-react";
+import { Columns3, List, Pencil, Trash2, X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { IssueStatus } from "@flowdesk/contracts";
 import { LabelPills } from "../../entities/label";
@@ -27,6 +27,7 @@ import {
   StatusBadge,
   Textarea,
   ThemeSwitch,
+  ViewTabs,
 } from "../../shared/ui";
 
 type SwatchKind = "fill" | "text" | "border";
@@ -56,6 +57,7 @@ const TOKEN_GROUPS: TokenGroup[] = [
       { name: "bg-surface", cssVar: "--color-bg-surface", kind: "fill" },
       { name: "bg-action-primary", cssVar: "--color-bg-action-primary", kind: "fill" },
       { name: "bg-action-success", cssVar: "--color-bg-action-success", kind: "fill" },
+      { name: "bg-action-create", cssVar: "--color-bg-action-create", kind: "fill" },
       { name: "bg-action-danger", cssVar: "--color-bg-action-danger", kind: "fill" },
       { name: "bg-action-danger-strong", cssVar: "--color-bg-action-danger-strong", kind: "fill" },
       { name: "text-default", cssVar: "--color-text-default", kind: "text" },
@@ -403,6 +405,65 @@ function DropdownDemo() {
   );
 }
 
+const DEMO_CARDS: { title: string; status: IssueStatus }[] = [
+  { title: "Fix the footer", status: "todo" },
+  { title: "Dark mode contrast", status: "in_progress" },
+  { title: "Write the README", status: "todo" },
+  { title: "Ship the login page", status: "done" },
+];
+
+function DemoViewBody({ view }: { view: "list" | "board" }) {
+  return view === "list" ? (
+    <ul className="flex flex-col gap-2">
+      {DEMO_CARDS.map((card) => (
+        <li key={card.title} className="flex items-center justify-between rounded-[var(--radius-card)] border border-[var(--color-border-default)] px-3 py-2 text-sm">
+          {card.title}
+          <StatusBadge status={card.status} />
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <div className="grid grid-cols-3 gap-3">
+      {(["todo", "in_progress", "done"] as const).map((status) => (
+        <div key={status} className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-[var(--color-bg-lane)] p-2">
+          <StatusBadge status={status} />
+          {DEMO_CARDS.filter((card) => card.status === status).map((card) => (
+            <div key={card.title} className="rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm">
+              {card.title}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The real `ViewTabs` in a header, once per state (the app's own router decides in the app; here `current` is set by hand). */
+function ViewTabsDemo() {
+  return (
+    <div className="flex max-w-3xl flex-col gap-4">
+      {(["list", "board"] as const).map((view) => (
+        <Card key={view} className="p-4">
+          <PageHeader
+            eyebrow="Website"
+            title={view === "list" ? "Issues" : "Board"}
+            aside={
+              <ViewTabs
+                label={`Demo view, ${view}`}
+                items={[
+                  { to: "/design-system", label: "List", Icon: List, current: view === "list" },
+                  { to: "/design-system", label: "Board", Icon: Columns3, current: view === "board" },
+                ]}
+              />
+            }
+          />
+          <DemoViewBody view={view} />
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 function Scale({ shades, classes, label }: { shades: readonly number[]; classes: Record<number, string>; label: string }) {
   return (
     <div>
@@ -523,10 +584,13 @@ export function DesignSystemPage() {
           </Button>
         </div>
         <p className="mt-4 mb-2 text-sm text-[var(--color-text-muted)]">
-          Success (Save) and danger (Delete): the red is the first click of a delete, the stronger
+          Create (New issue, teal), success (Save) and danger (Delete): the red is the first click of a delete, the stronger
           red is the final confirm.
         </p>
         <div className="flex flex-wrap items-center gap-2">
+          <Button variant="create" size="sm">
+            New issue
+          </Button>
           <Button variant="success" size="sm">
             Save
           </Button>
@@ -702,6 +766,13 @@ export function DesignSystemPage() {
         note="The app's dropdown (owner's pick D4, 2026-10-05), used instead of the browser's select in every filter, form and list. A box that looks like the other controls; a floating list with an optional mark before each label (status dot, priority icon, avatar); a search box once there are more than seven options; the chosen row in the link colour. Keyboard: Down/Up open and move, Home/End jump, Enter or Space choose, a letter jumps to a match, Esc closes only the list, Tab moves on. The box is as wide as its widest option, so a choice never moves its neighbours. Roles and aria attributes follow the select-only combobox pattern."
       >
         <DropdownDemo />
+      </Section>
+
+      <Section
+        title="View tabs"
+        note="Underline tabs that switch between two views of the same thing (owner's pick B, 2026-10-06). On a project, Issues and Board are the List and Board tabs in the page header (ADR 0034). Each tab is a link to its own address, so it is a nav with aria-current, not ARIA tabs. The underline sits on the header's bottom line. Shown below in both states (the links here only reload this page)."
+      >
+        <ViewTabsDemo />
       </Section>
 
       <Section

@@ -55,7 +55,7 @@ test.describe("with animations on", () => {
     await expect(page).toHaveURL(/status=todo/);
     expect(await page.locator("div.motion-rise-in[data-probe]").count()).toBe(1);
 
-    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Board" }).click();
+    await page.getByRole("navigation", { name: "View" }).getByRole("link", { name: "Board" }).click();
     await expect(page).toHaveURL(/\/board$/);
     await expect(page.locator("div.motion-rise-in[data-probe]")).toHaveCount(0); // polled: the URL changes a moment before the new page is on screen
   });

@@ -50,7 +50,7 @@ test("an owner renames a project from its settings, the key stays, a member cann
   await pageB.goto(`/projects/${projectId}`);
   await membersLoaded;
   const sidebarB = pageB.getByRole("navigation", { name: "Main" });
-  await expect(sidebarB.getByRole("link", { name: "Board" })).toBeVisible();
+  await expect(sidebarB.getByRole("link", { name: "Sprints" })).toBeVisible();
   await expect(sidebarB.getByRole("link", { name: "Settings" })).toHaveCount(0);
   await pageB.goto(`/projects/${projectId}/settings`);
   await expect(

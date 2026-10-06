@@ -17,6 +17,9 @@ const buttonVariantClasses = cva(
         // Save / confirm: a solid green "go" button.
         success:
           "bg-[var(--color-bg-action-success)] text-[var(--color-text-on-action-strong)] enabled:hover:bg-[var(--color-bg-action-success-hover)] enabled:hover:ring-2 enabled:hover:ring-[var(--color-ring-action-hover)] enabled:active:brightness-90",
+        // Create: a solid teal "add something new" button (New issue), the same in both themes. White text.
+        create:
+          "bg-[var(--color-bg-action-create)] text-[var(--color-text-on-action-strong)] enabled:hover:bg-[var(--color-bg-action-create-hover)] enabled:hover:ring-2 enabled:hover:ring-[var(--color-ring-action-hover)] enabled:active:brightness-90",
         // Delete: a solid red for the first click...
         danger:
           "bg-[var(--color-bg-action-danger)] text-[var(--color-text-on-action-strong)] enabled:hover:bg-[var(--color-bg-action-danger-hover)] enabled:hover:ring-2 enabled:hover:ring-[var(--color-ring-action-hover)] enabled:active:brightness-90",

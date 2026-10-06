@@ -1,18 +1,18 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
 import type { IssuePriority, IssueStatus } from "@flowdesk/contracts";
 import { useCurrentProject } from "../../entities/project";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
+import { ProjectViewTabs } from "../../widgets/project-view-tabs";
 import { AssigneeAvatar, memberOptions, useMembers } from "../../entities/member";
 import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
 import { LabelPills, useLabels } from "../../entities/label";
-import { CreateIssueForm, type CreateIssueFormHandle } from "../../features/create-issue";
+import { NewIssueButton } from "../../features/create-issue";
 import { EditIssueDialog } from "../../features/edit-issue";
 import { useAuth } from "../../shared/auth/useAuth";
 import { isUuid } from "../../shared/lib/paths";
 import { todayKey } from "../../shared/lib/dueDate";
 import { useTimezone } from "../../shared/lib/timezone";
-import { useShortcut } from "../../shared/lib/useShortcut";
 import {
   Button,
   Card,
@@ -124,9 +124,6 @@ export function ProjectDetailPage() {
   const panel = useIssuePanel();
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
   const [showConflictNotice, setShowConflictNotice] = useState(false);
-  // "C" (create) puts the cursor in the new-issue title, like in most trackers; ignored while typing or with a dialog open.
-  const createForm = useRef<CreateIssueFormHandle>(null);
-  useShortcut("c", () => createForm.current?.focus());
   const editingIssue = issueRows.find(({ item }) => item.id === editingIssueId)?.item;
 
   function setStatusFilter(value: string) {
@@ -207,9 +204,12 @@ export function ProjectDetailPage() {
       {/* From sm up the page is as tall as the window (the 4rem is the Page's own vertical padding) and the list
           scrolls inside its panel, so "Load more" never stretches the page. A short list keeps its own height. */}
       <div className="flex flex-col sm:h-[calc(100dvh-4rem)] sm:min-h-[28rem]">
-      <PageHeader eyebrow={project.name} title="Issues" />
+      <PageHeader eyebrow={project.name} title="Issues" aside={<ProjectViewTabs projectKey={project.key} panelOpen={Boolean(panel.issueRef)} />} />
 
-      <CreateIssueForm ref={createForm} organizationId={organization!.id} projectId={project.id} />
+      {/* The same row, in the same place, as on the Board (ADR 0035). */}
+      <div className="mt-4 flex items-center">
+        <NewIssueButton organizationId={organization!.id} projectId={project.id} />
+      </div>
 
       {/* data-panel-trigger: working the filters while an issue is open in the side panel must not
           close it (the panel ignores clicks here), and the list changes behind it. */}
@@ -218,7 +218,7 @@ export function ProjectDetailPage() {
           1560px: on a wider window nothing is covered, so nothing may move. */}
       <div
         data-panel-trigger
-        className={`mt-4 mb-3 flex flex-wrap items-center gap-2 ${panel.issueRef ? "sm:max-[1559px]:pr-[31rem]" : ""}`}
+        className={`mt-3 mb-3 flex flex-wrap items-center gap-2 ${panel.issueRef ? "sm:max-[1559px]:pr-[31rem]" : ""}`}
       >
         <Dropdown
           aria-label="Filter by status"

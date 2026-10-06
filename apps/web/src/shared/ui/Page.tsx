@@ -45,11 +45,14 @@ export function PageHeader({
   eyebrow,
   title,
   back,
+  aside,
   children,
 }: {
   eyebrow?: string;
   title: string;
   back?: { to: string; label: string; history?: boolean };
+  /** Shown at the right of the title row (wraps under the title on a narrow screen), e.g. the List / Board tabs. */
+  aside?: ReactNode;
   children?: ReactNode;
 }) {
   const navigate = useNavigate();
@@ -79,7 +82,14 @@ export function PageHeader({
         </Link>
       )}
       {eyebrow && <p className="text-sm text-[var(--color-text-muted)]">{eyebrow}</p>}
-      <h1 className="font-display text-3xl font-normal [overflow-wrap:anywhere]">{title}</h1>
+      {aside ? (
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-[var(--color-border-default)]">
+          <h1 className="pb-2 font-display text-3xl font-normal [overflow-wrap:anywhere]">{title}</h1>
+          {aside}
+        </div>
+      ) : (
+        <h1 className="font-display text-3xl font-normal [overflow-wrap:anywhere]">{title}</h1>
+      )}
       {children && <div className="mt-2">{children}</div>}
     </header>
   );

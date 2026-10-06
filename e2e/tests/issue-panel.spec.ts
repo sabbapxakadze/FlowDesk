@@ -117,8 +117,8 @@ test("a click outside that lands on a link still works while the panel closes; c
   await expect(page).toHaveURL(/issue=WEB-1/); // still open
   await expect(panelOf(page)).toBeVisible();
 
-  // A real click on a sidebar link, outside the panel.
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Board" }).click();
+  // A real click on a link outside the panel (the Board tab).
+  await page.getByRole("navigation", { name: "View" }).getByRole("link", { name: "Board" }).click();
   await expect(page).toHaveURL(/\/board$/); // the link worked
   await expect(panelOf(page)).toHaveCount(0); // and the panel is gone
 });

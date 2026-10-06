@@ -39,7 +39,7 @@ test("every project page opens by key, and the address stays readable", async ({
   // Moving with the sidebar keeps it readable too.
   await page.goto("/projects/WEB");
   const nav = page.getByRole("navigation", { name: "Main" });
-  await nav.getByRole("link", { name: "Board" }).click();
+  await page.getByRole("navigation", { name: "View" }).getByRole("link", { name: "Board" }).click();
   await expect(page).toHaveURL(/\/projects\/WEB\/board$/);
   await nav.getByRole("link", { name: "Sprints" }).click();
   await expect(page).toHaveURL(/\/projects\/WEB\/sprints$/);

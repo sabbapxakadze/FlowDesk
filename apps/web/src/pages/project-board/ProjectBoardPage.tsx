@@ -17,8 +17,10 @@ import { useCurrentProject } from "../../entities/project";
 import { LabelPills } from "../../entities/label";
 import { AssigneeAvatar } from "../../entities/member";
 import { SortableIssueCard, IssueSummary, useBoard, useLiveIssueUpdates } from "../../entities/issue";
+import { NewIssueButton } from "../../features/create-issue";
 import { useMoveIssue } from "../../features/move-issue";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
+import { ProjectViewTabs } from "../../widgets/project-view-tabs";
 import { useAuth } from "../../shared/auth/useAuth";
 import { createMultiList, useMultiListCollision, type ListMap } from "../../shared/dnd/multiList";
 import { useDragSensors } from "../../shared/dnd/sensors";
@@ -256,7 +258,11 @@ export function ProjectBoardPage() {
       {/* From sm up the board fills the window: the page does not scroll, each column does (the 4rem is the
           Page's own vertical padding). On a phone the columns stack and the page scrolls as usual. */}
       <div className="flex flex-col sm:h-[calc(100dvh-4rem)] sm:min-h-[28rem]">
-      <PageHeader eyebrow={project.name} title="Board" />
+      <PageHeader eyebrow={project.name} title="Board" aside={<ProjectViewTabs projectKey={project.key} panelOpen={Boolean(panel.issueRef)} />} />
+
+      <div className="mt-4 mb-3 flex items-center">
+        <NewIssueButton organizationId={organizationId} projectId={project.id} />
+      </div>
 
       {isError ? (
         <ErrorText>Failed to load the board: {error.message}</ErrorText>
