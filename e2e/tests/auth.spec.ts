@@ -8,7 +8,7 @@ test.describe("auth", () => {
     await page.goto("/register");
     await page.getByLabel("Name", { exact: true }).fill(TEST_USER.name);
     await page.getByLabel("Email").fill(TEST_USER.email);
-    await page.getByLabel("Password").fill(TEST_USER.password);
+    await page.getByLabel("Password", { exact: true }).fill(TEST_USER.password);
     await page.getByLabel("Organization name").fill(TEST_USER.organizationName);
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page.getByText("Account created for")).toBeVisible();
@@ -24,7 +24,7 @@ test.describe("auth", () => {
     await page.request.post("/api/v1/auth/register", { data: TEST_USER });
     await page.goto("/login");
     await page.getByLabel("Email").fill(TEST_USER.email);
-    await page.getByLabel("Password").fill("not-the-password");
+    await page.getByLabel("Password", { exact: true }).fill("not-the-password");
     await page.getByRole("button", { name: "Log in" }).click();
 
     await expect(page).toHaveURL(/\/login$/);

@@ -6,7 +6,8 @@ export function LoginPage() {
   return (
     <main>
       <NavigationNotice />
-      <h1 className="mb-6 font-display text-3xl font-normal">Log in</h1>
+      <h1 className="font-display text-3xl font-normal">Log in</h1>
+      <p className="mt-1 mb-6 text-sm text-[var(--color-text-muted)]">Welcome back to your workspace.</p>
       <LoginForm />
       <p className="mt-6 text-sm text-[var(--color-text-muted)]">
         New to FlowDesk?{" "}

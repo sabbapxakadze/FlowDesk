@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requestEmailChangeRequestSchema, type RequestEmailChangeRequest } from "@flowdesk/contracts";
 import { accountKeys } from "../../../entities/account";
 import { apiPost, ApiError } from "../../../shared/api/client";
-import { Button, ErrorText, Field, Input } from "../../../shared/ui";
+import { Button, ErrorText, Field, Input, PasswordInput } from "../../../shared/ui";
 
 /**
  * Step one of changing the email: the new address and the current password. A confirmation link goes to the NEW
@@ -49,7 +49,7 @@ export function ChangeEmailForm() {
         <Input type="email" autoComplete="email" {...register("newEmail")} aria-invalid={errors.newEmail ? true : undefined} />
       </Field>
       <Field label="Your password" error={errors.password?.message}>
-        <Input type="password" autoComplete="current-password" {...register("password")} aria-invalid={errors.password ? true : undefined} />
+        <PasswordInput autoComplete="current-password" {...register("password")} aria-invalid={errors.password ? true : undefined} />
       </Field>
       {generalError && <ErrorText>{mutation.error.message}</ErrorText>}
       {mutation.isSuccess && (

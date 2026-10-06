@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { z } from "zod";
 import { ApiError } from "../../../shared/api/client";
-import { Button, buttonVariants, ErrorText, Field, Input, Skeleton } from "../../../shared/ui";
+import { Button, buttonVariants, ErrorText, Field, Input, Skeleton, PasswordInput } from "../../../shared/ui";
 import { acceptInvitation } from "../api/acceptInvitation";
 import { previewInvitation } from "../api/previewInvitation";
 
@@ -110,12 +110,12 @@ export function AcceptInvitationForm({ token }: { token: string }) {
         </Field>
 
         <Field label="Password" error={errors.password?.message}>
-          <Input type="password" {...register("password")} autoComplete="new-password" aria-invalid={errors.password ? true : undefined} className="w-full" />
+          <PasswordInput {...register("password")} autoComplete="new-password" aria-invalid={errors.password ? true : undefined} className="w-full" />
         </Field>
 
         {showGeneralError && <ErrorText>{mutation.error?.message}</ErrorText>}
 
-        <Button type="submit" fullWidth pending={mutation.isPending}>
+        <Button type="submit" variant="create" fullWidth pending={mutation.isPending}>
           {mutation.isPending ? "Creating account…" : "Join"}
         </Button>
       </form>

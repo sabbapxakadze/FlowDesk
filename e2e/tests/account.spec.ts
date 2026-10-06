@@ -63,10 +63,10 @@ test("changing the password needs the right current one, keeps this device logge
   const check = await fresh.newPage();
   await check.goto("/login");
   await check.getByLabel("Email").fill(TEST_USER.email);
-  await check.getByLabel("Password").fill(TEST_USER.password);
+  await check.getByLabel("Password", { exact: true }).fill(TEST_USER.password);
   await check.getByRole("button", { name: "Log in" }).click();
   await expect(check.getByText("Incorrect email or password.")).toBeVisible(); // the old password is dead
-  await check.getByLabel("Password").fill(NEW_PASSWORD);
+  await check.getByLabel("Password", { exact: true }).fill(NEW_PASSWORD);
   await check.getByRole("button", { name: "Log in" }).click();
   await expect(check).toHaveURL(/\/$/);
   await fresh.close();
@@ -142,7 +142,7 @@ test("changing the email: the form asks for the password, says the link was sent
   // The new address logs in; the old one no longer does.
   await opened.goto("/login");
   await opened.getByLabel("Email").fill(TEST_USER.email);
-  await opened.getByLabel("Password").fill(TEST_USER.password);
+  await opened.getByLabel("Password", { exact: true }).fill(TEST_USER.password);
   await opened.getByRole("button", { name: "Log in" }).click();
   await expect(opened.getByText("Incorrect email or password.")).toBeVisible();
   await opened.getByLabel("Email").fill("new-address@example.com");

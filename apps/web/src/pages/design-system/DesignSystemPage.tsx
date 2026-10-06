@@ -17,6 +17,7 @@ import {
   Field,
   IconButton,
   Input,
+  PasswordInput,
   Lane,
   Page,
   PageHeader,
@@ -677,6 +678,9 @@ export function DesignSystemPage() {
           <Input placeholder="A text input" />
           <Input placeholder="Invalid (aria-invalid)" aria-invalid="true" />
           <Input placeholder="Disabled" disabled />
+          <Field label="Password (PasswordInput: the eye shows or hides it)">
+            <PasswordInput placeholder="A password" />
+          </Field>
           <Textarea placeholder="A textarea (resizable only up and down, between 4.5rem and 16rem tall)" rows={3} />
         </div>
       </Section>

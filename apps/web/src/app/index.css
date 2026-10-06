@@ -221,3 +221,19 @@ dialog.motion-dialog[open]::backdrop {
     radial-gradient(farthest-side at 50% 0, var(--edge-shadow), transparent) top / 100% 0.75rem no-repeat scroll,
     radial-gradient(farthest-side at 50% 100%, var(--edge-shadow), transparent) bottom / 100% 0.75rem no-repeat scroll;
 }
+
+/* The auth pages' card (ADR 0041): translucent with a blur behind it. Where the browser cannot blur what is behind an element, or the person
+   asked for less transparency, it is the plain surface colour instead, so the text never depends on what happens to be behind it. */
+.glass-card {
+  background: var(--color-bg-glass);
+  border: 1px solid var(--color-border-glass);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: 0 10px 40px color-mix(in oklab, black 16%, transparent);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-card { background: var(--color-bg-surface); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass-card { background: var(--color-bg-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

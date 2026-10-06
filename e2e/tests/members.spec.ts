@@ -51,11 +51,11 @@ test("an owner invites someone, they join through the link, and the owner sees t
 
   // A too-short password is refused by the form before anything is sent.
   await guest.getByLabel("Name").fill("Newbie Person");
-  await guest.getByLabel("Password").fill("short");
+  await guest.getByLabel("Password", { exact: true }).fill("short");
   await guest.getByRole("button", { name: "Join" }).click();
   await expect(guest.getByText("Password must be at least 8 characters")).toBeVisible();
 
-  await guest.getByLabel("Password").fill(TEST_USER.password);
+  await guest.getByLabel("Password", { exact: true }).fill(TEST_USER.password);
   await guest.getByRole("button", { name: "Join" }).click();
   await expect(guest.getByText(`Welcome to ${TEST_USER.organizationName}`)).toBeVisible();
 
@@ -152,9 +152,9 @@ test("inviting someone who is already a member, or who already has an account, s
 test("a broken or missing invitation link shows one plain message and no form", async ({ page }) => {
   await page.goto("/invite?token=not-a-real-token");
   await expect(page.getByText("This invitation is invalid or has expired.")).toBeVisible();
-  await expect(page.getByLabel("Password")).toHaveCount(0);
+  await expect(page.getByLabel("Password", { exact: true })).toHaveCount(0);
 
   await page.goto("/invite");
   await expect(page.getByText("This invitation link is incomplete.")).toBeVisible();
-  await expect(page.getByLabel("Password")).toHaveCount(0);
+  await expect(page.getByLabel("Password", { exact: true })).toHaveCount(0);
 });

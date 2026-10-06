@@ -18,7 +18,7 @@ async function registerUser(page: Page) {
 export async function logInThroughForm(page: Page, email: string = TEST_USER.email) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(TEST_USER.password);
+  await page.getByLabel("Password", { exact: true }).fill(TEST_USER.password);
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/$/);
 }

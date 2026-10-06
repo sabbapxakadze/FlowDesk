@@ -6,7 +6,7 @@ import {
   confirmPasswordResetRequestSchema,
   type ConfirmPasswordResetRequest,
 } from "@flowdesk/contracts";
-import { Button, ErrorText, Field, Input } from "../../../shared/ui";
+import { Button, ErrorText, Field, PasswordInput } from "../../../shared/ui";
 import { resetPassword } from "../api/resetPassword";
 
 /**
@@ -39,12 +39,12 @@ export function ResetPasswordForm({ token }: { token: string }) {
       <input type="hidden" {...register("token")} />
 
       <Field label="New password" error={errors.newPassword?.message}>
-        <Input type="password" {...register("newPassword")} autoComplete="new-password" aria-invalid={errors.newPassword ? true : undefined} className="w-full" />
+        <PasswordInput {...register("newPassword")} autoComplete="new-password" aria-invalid={errors.newPassword ? true : undefined} className="w-full" />
       </Field>
 
       {mutation.isError && <ErrorText>{mutation.error.message}</ErrorText>}
 
-      <Button type="submit" fullWidth pending={mutation.isPending}>
+      <Button type="submit" variant="create" fullWidth pending={mutation.isPending}>
         {mutation.isPending ? "Resetting…" : "Reset password"}
       </Button>
     </form>

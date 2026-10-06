@@ -98,7 +98,7 @@ test("removing a member asks first, unassigns their issues, and they see a clear
   const gone = await ctx.newPage();
   await gone.goto("/login");
   await gone.getByLabel("Email").fill(SECOND.email);
-  await gone.getByLabel("Password").fill(TEST_USER.password);
+  await gone.getByLabel("Password", { exact: true }).fill(TEST_USER.password);
   await gone.getByRole("button", { name: "Log in" }).click();
   await expect(gone.getByText("not a member of any organization")).toBeVisible();
   await expect(gone.getByText("Ask an owner to invite you again")).toBeVisible();
@@ -127,7 +127,7 @@ test("a removed person is invited back, joins with one click (no new password) a
   const guest = await ctx.newPage();
   await guest.goto(url);
   await expect(guest.getByText("invited you back")).toBeVisible();
-  await expect(guest.getByLabel("Password")).toHaveCount(0);
+  await expect(guest.getByLabel("Password", { exact: true })).toHaveCount(0);
   await guest.getByRole("button", { name: "Join" }).click();
   await expect(guest.getByText(`Welcome to ${TEST_USER.organizationName}`)).toBeVisible();
 

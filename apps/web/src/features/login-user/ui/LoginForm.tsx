@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router";
 import { loginRequestSchema, type LoginRequest } from "@flowdesk/contracts";
 import { useAuth } from "../../../shared/auth/useAuth";
-import { Button, buttonVariants, ErrorText, Field, Input } from "../../../shared/ui";
+import { Button, buttonVariants, ErrorText, Field, Input, PasswordInput } from "../../../shared/ui";
 import { loginUser } from "../api/loginUser";
 
 export function LoginForm() {
@@ -37,12 +37,12 @@ export function LoginForm() {
       </Field>
 
       <Field label="Password" error={errors.password?.message}>
-        <Input type="password" {...register("password")} autoComplete="current-password" aria-invalid={errors.password ? true : undefined} className="w-full" />
+        <PasswordInput {...register("password")} autoComplete="current-password" aria-invalid={errors.password ? true : undefined} className="w-full" />
       </Field>
 
       {mutation.isError && <ErrorText>{mutation.error.message}</ErrorText>}
 
-      <Button type="submit" fullWidth pending={mutation.isPending}>
+      <Button type="submit" variant="create" fullWidth pending={mutation.isPending}>
         {mutation.isPending ? "Logging in…" : "Log in"}
       </Button>
 

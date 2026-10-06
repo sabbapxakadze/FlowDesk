@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { registerRequestSchema, type RegisterRequest } from "@flowdesk/contracts";
 import { ApiError } from "../../../shared/api/client";
-import { Button, buttonVariants, ErrorText, Field, Input } from "../../../shared/ui";
+import { Button, buttonVariants, ErrorText, Field, Input, PasswordInput } from "../../../shared/ui";
 import { registerUser } from "../api/registerUser";
 
 /**
@@ -67,7 +67,7 @@ export function RegisterForm() {
       </Field>
 
       <Field label="Password" error={errors.password?.message}>
-        <Input type="password" {...register("password")} autoComplete="new-password" aria-invalid={errors.password ? true : undefined} className="w-full" />
+        <PasswordInput {...register("password")} autoComplete="new-password" aria-invalid={errors.password ? true : undefined} className="w-full" />
       </Field>
 
       <Field label="Organization name" error={errors.organizationName?.message}>
@@ -76,7 +76,7 @@ export function RegisterForm() {
 
       {showGeneralError && <ErrorText>{mutation.error?.message}</ErrorText>}
 
-      <Button type="submit" fullWidth pending={mutation.isPending}>
+      <Button type="submit" variant="create" fullWidth pending={mutation.isPending}>
         {mutation.isPending ? "Creating account…" : "Create account"}
       </Button>
     </form>

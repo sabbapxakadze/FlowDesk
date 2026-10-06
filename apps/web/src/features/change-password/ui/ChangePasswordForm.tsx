@@ -7,7 +7,7 @@ import { changePasswordRequestSchema } from "@flowdesk/contracts";
 import { useAccount } from "../../../entities/account";
 import { apiPost, ApiError } from "../../../shared/api/client";
 import { useAuth } from "../../../shared/auth/useAuth";
-import { Button, ErrorText, Field, Input } from "../../../shared/ui";
+import { Button, ErrorText, Field, PasswordInput } from "../../../shared/ui";
 import { ResetByEmailDialog } from "./ResetByEmailDialog";
 
 // The request schema plus "type it twice": the repeat never leaves the browser.
@@ -58,13 +58,13 @@ export function ChangePasswordForm() {
   return (
     <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="flex max-w-md flex-col gap-3">
       <Field label="Current password" error={errors.currentPassword?.message}>
-        <Input type="password" autoComplete="current-password" {...register("currentPassword")} aria-invalid={errors.currentPassword ? true : undefined} />
+        <PasswordInput autoComplete="current-password" {...register("currentPassword")} aria-invalid={errors.currentPassword ? true : undefined} />
       </Field>
       <Field label="New password" error={errors.newPassword?.message}>
-        <Input type="password" autoComplete="new-password" {...register("newPassword")} aria-invalid={errors.newPassword ? true : undefined} />
+        <PasswordInput autoComplete="new-password" {...register("newPassword")} aria-invalid={errors.newPassword ? true : undefined} />
       </Field>
       <Field label="Repeat the new password" error={errors.repeat?.message}>
-        <Input type="password" autoComplete="new-password" {...register("repeat")} aria-invalid={errors.repeat ? true : undefined} />
+        <PasswordInput autoComplete="new-password" {...register("repeat")} aria-invalid={errors.repeat ? true : undefined} />
       </Field>
       {mutation.isError && !(mutation.error instanceof ApiError && mutation.error.details) && <ErrorText>{mutation.error.message}</ErrorText>}
       {done && (

@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
+import { FieldLabelContext } from "./field-label";
 import { cn } from "./lib/cn";
 
 /**
@@ -29,10 +30,11 @@ export function Field({
   reserveErrorSpace?: boolean;
   children: ReactNode;
 }) {
+  const labelId = useId();
   return (
     <label className={cn("flex flex-col gap-1.5 text-sm font-medium", className)}>
-      {label}
-      {children}
+      <span id={labelId}>{label}</span>
+      <FieldLabelContext.Provider value={labelId}>{children}</FieldLabelContext.Provider>
       {reserveErrorSpace ? (
         <span
           title={error}

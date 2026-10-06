@@ -45,7 +45,7 @@ export function RequestPasswordResetForm() {
 
       {mutation.isError && <ErrorText>{mutation.error.message}</ErrorText>}
 
-      <Button type="submit" fullWidth pending={mutation.isPending}>
+      <Button type="submit" variant="create" fullWidth pending={mutation.isPending}>
         {mutation.isPending ? "Sending…" : "Send reset link"}
       </Button>
     </form>

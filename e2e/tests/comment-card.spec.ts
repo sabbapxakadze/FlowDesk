@@ -114,7 +114,7 @@ test("on a touch screen the actions are always visible", async ({
   const phone = await context.newPage();
   await phone.goto("/login");
   await phone.getByLabel("Email").fill("e2e-user@example.com");
-  await phone.getByLabel("Password").fill("password123");
+  await phone.getByLabel("Password", { exact: true }).fill("password123");
   await phone.getByRole("button", { name: "Log in" }).click();
   await expect(phone).toHaveURL(/\/$/); // a login lands on My work
   await phone.goto(new URL(issueUrl).pathname);
