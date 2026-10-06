@@ -27,6 +27,7 @@ import { RequireAuth } from "../shared/auth/RequireAuth";
 import { AppShell } from "./AppShell";
 import { AuthLayout } from "./AuthLayout";
 import { ErrorBoundary } from "../shared/error-boundary/ErrorBoundary";
+import { IdleLogout } from "../features/idle-logout";
 import { CommandPalette } from "../widgets/command-palette";
 import { SearchPaletteProvider } from "../shared/search-palette/SearchPaletteProvider";
 
@@ -35,6 +36,7 @@ export function App() {
     <BrowserRouter>
       <SearchPaletteProvider>
         <CommandPalette />
+        <IdleLogout />
         <ErrorBoundary>
           <Routes>
             <Route

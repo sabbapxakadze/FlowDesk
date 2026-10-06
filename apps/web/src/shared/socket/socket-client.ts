@@ -1,5 +1,6 @@
 import { io, type Socket } from "socket.io-client";
 import { getStoredAccessToken } from "../auth/token-store";
+import { renewAccessToken } from "../auth/session-refresh";
 
 /**
  * A plain module-level variable, not React state — same reasoning as
@@ -9,6 +10,10 @@ import { getStoredAccessToken } from "../auth/token-store";
  */
 let socket: Socket | null = null;
 let socketOrganizationId: string | null = null;
+
+// The messages the API's socket handshake answers with when the access token is missing or no longer valid (realtime/socket-server.ts).
+const AUTH_REFUSALS = new Set(["Missing access token", "Invalid or expired access token"]);
+let lastAuthRetryAt = 0;
 
 /**
  * Whether the *current* connection's join:org round-trip has finished.
@@ -104,7 +109,20 @@ export function connectSocket(organizationId: string): void {
 
   s.on("connect_error", (error) => {
     console.error("Socket connection failed", error.message);
+    // The server refused the handshake because the access token is gone or expired. socket.io does not retry a refusal on its
+    // own, so renew the token (at most every 30 seconds) and connect again.
+    if (AUTH_REFUSALS.has(error.message) && Date.now() - lastAuthRetryAt > 30_000) {
+      lastAuthRetryAt = Date.now();
+      renewAccessToken()
+        .then(() => s.connect())
+        .catch(() => undefined);
+    }
   });
+}
+
+/** Connect again if the socket is down, e.g. after the access token was renewed in the background. */
+export function reconnectSocket(): void {
+  if (socket && !socket.connected) socket.connect();
 }
 
 export function whenOrgRoomReady(): Promise<void> {

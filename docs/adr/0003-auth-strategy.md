@@ -26,6 +26,7 @@ not a single `POST /login` returning a long-lived token.
 - A database leak yields no usable refresh tokens, only hashes.
 - Stolen-token replay is detected rather than merely expiring eventually.
 - Cost: more moving parts, and a refresh-on-load step in the SPA bootstrap.
+  (Amended by ADR 0038, 2026-10-06: the refresh is no longer only on load; it also runs when a request is answered 401 and when a tab returns after a while, one at a time even across tabs.)
 
 ## Alternatives rejected
 
