@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Columns3, List, Pencil, Trash2, X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { IssueStatus } from "@flowdesk/contracts";
+import { IssueCardContent, IssueCardFrame } from "../../entities/issue";
 import { LabelPills } from "../../entities/label";
 import {
   Avatar,
@@ -228,18 +229,21 @@ function ScrollPanelDemo() {
   return (
     <div className="grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2">
       <div>
-        <p className="mb-2 text-sm font-medium">look="raised" (the Issues list)</p>
-        <ScrollPanel label="Tray demo" className="h-72">
-          <ul className="flex flex-col gap-2">
-            {Array.from({ length: 9 }, (_, i) => (
-              <Card key={i} as="li">
-                <p className="text-xs text-[var(--color-text-muted)]">WEB-{i + 1}</p>
-                <p className="font-medium">Fix the footer layout</p>
-              </Card>
-            ))}
-          </ul>
-          <Button variant="secondary" size="sm" className="mt-2">Load more</Button>
-        </ScrollPanel>
+        <p className="mb-2 text-sm font-medium">look="edges" in a bordered surface with its own header (the Issues list)</p>
+        <div className="flex h-72 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)]">
+          <div className="border-b border-[var(--color-border-default)] bg-[var(--color-border-default)]/30 px-3.5 py-1.5 text-xs text-[var(--color-text-muted)]">Issue</div>
+          <ScrollPanel label="Tray demo" onSurface className="min-h-0 flex-1 p-0">
+            <ul>
+              {Array.from({ length: 9 }, (_, i) => (
+                <li key={i} className="border-t border-[var(--color-border-default)] px-3.5 py-2.5 first:border-t-0 hover:bg-[var(--color-border-default)]/40">
+                  <p className="font-medium">Fix the footer layout</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">WEB-{i + 1}</p>
+                </li>
+              ))}
+            </ul>
+            <Button variant="secondary" size="sm" className="m-3">Load more</Button>
+          </ScrollPanel>
+        </div>
       </div>
       <div>
         <p className="mb-2 text-sm font-medium">look="edges" onSurface (a person's activity, in a card)</p>
@@ -459,6 +463,35 @@ function ViewTabsDemo() {
           />
           <DemoViewBody view={view} />
         </Card>
+      ))}
+    </div>
+  );
+}
+
+const DEMO_CARD_LABELS = [
+  { id: "d1", name: "bug", color: "#b91c1c" },
+  { id: "d2", name: "payments", color: "#7e22ce" },
+];
+
+/** The board card's face (ADR 0037) for each priority; the card in the app adds the grip, the link and the assignee around it. */
+function IssueCardDemo() {
+  const samples = [
+    { priority: "urgent", title: "Fix the checkout total rounding", dueDate: "2020-01-02", labels: DEMO_CARD_LABELS },
+    { priority: "high", title: "Ship the login page", dueDate: null, labels: DEMO_CARD_LABELS.slice(0, 1) },
+    { priority: "medium", title: "Write the onboarding guide", dueDate: null, labels: [] },
+    { priority: "low", title: "Audit log retention", dueDate: null, labels: DEMO_CARD_LABELS.slice(1) },
+    { priority: "none", title: "A card with no priority has no edge and no footer", dueDate: null, labels: [] },
+  ] as const;
+  return (
+    <div className="grid max-w-3xl grid-cols-1 gap-2 sm:grid-cols-2">
+      {samples.map((sample, index) => (
+        <IssueCardFrame key={sample.priority} priority={sample.priority}>
+          <IssueCardContent
+            issue={{ number: index + 1, title: sample.title, priority: sample.priority, dueDate: sample.dueDate, status: "todo", labels: [...sample.labels] }}
+            projectKey="WEB"
+            labels={<LabelPills labels={[...sample.labels]} variant="outline" className="" />}
+          />
+        </IssueCardFrame>
       ))}
     </div>
   );
@@ -766,6 +799,13 @@ export function DesignSystemPage() {
         note="The app's dropdown (owner's pick D4, 2026-10-05), used instead of the browser's select in every filter, form and list. A box that looks like the other controls; a floating list with an optional mark before each label (status dot, priority icon, avatar); a search box once there are more than seven options; the chosen row in the link colour. Keyboard: Down/Up open and move, Home/End jump, Enter or Space choose, a letter jumps to a match, Esc closes only the list, Tab moves on. The box is as wide as its widest option, so a choice never moves its neighbours. Roles and aria attributes follow the select-only combobox pattern."
       >
         <DropdownDemo />
+      </Section>
+
+      <Section
+        title="Issue card"
+        note="The card on the board and the sprints page, and in the drag preview (ADR 0037). A colored edge at the left shows the priority (urgent red, high amber, medium grey, low light grey; none has no edge); the key and due date are on the first line, the title below, then a footer with quiet outlined label tags and the priority in words, so color is never the only signal. In the app the assignee's picture sits top right and a grip shows on hover, focus and touch."
+      >
+        <IssueCardDemo />
       </Section>
 
       <Section

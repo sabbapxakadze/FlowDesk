@@ -1755,6 +1755,14 @@ The original plan for this slice, kept for the record:
    on the Issues list and on the Board and opens one popup (title, description), which also gives the Board a way to create. C opens it. 4 new e2e tests (`create-issue.spec.ts`); the C-key, badge, empty-form
    and comment-flow tests were moved to the popup. Removed one at a time to see tests fail: the board row's top spacing (caught). **Not caught by any test:** the refresh after a create (the server's live
    update refreshes the page anyway). **Open:** choosing column/priority while creating needs `status`/`priority` in the create request; a per-column "+" on the board would use it.
+9. **Issues list redesign DONE 2026-10-06 (ADR 0036; owner picked option E of seven mockups).** The raised panel with a card per issue became one bordered surface with a header strip (Issue / Status / Priority /
+   Due / Who) and two-line rows (title and labels over the key); Edit on hover or focus; stacks by the list's own width, which also fixes the right-hand columns hiding under the issue side panel. 4 new e2e tests
+   (`issue-list.spec.ts`); removed one at a time to see tests fail: the room left for the side panel, the Edit reveal (both caught). `ScrollPanel`'s `raised` look is gone. **Not changed:** the search results page still uses
+   the older cards; the header is not a sort control yet.
+10. **Board card redesign DONE 2026-10-06 (ADR 0037; owner picked option B "priority edge" of five).** The card on the board, the sprints page and in the drag preview: a colored left edge for the priority (existing tokens),
+   key and due date on the first line, the assignee top right, the title, and a footer with quiet outlined label tags and the priority word; the grip shows on hover, focus and touch. Only the look: the dnd-kit wiring was not touched,
+   and the drag, backlog-order and drag-performance specs pass unchanged. 5 new e2e tests (`board-card.spec.ts`); removed one at a time to see tests fail: the edge, the grip reveal (both caught).
+   **Not done:** comment and attachment counts (not in the board data).
    Not tested: that `mentions` stays out of the public profile activity (that feed returns `{}` for comment events by design). **Markdown STILL OPEN (checked 2026-10-05: descriptions and comments are plain text; the
    description keeps its line breaks since 2026-10-05, nothing more).**
    **Two navigation bugs noted 2026-10-05 (owner), FIXED the same day** (the issue page's, Edit profile's and Account's back links now use `PageHeader`'s `history: true`, so Back returns to where the person came from and the named page is only the fallback for a first page or a new tab; 3 e2e tests in `back-links.spec.ts`; removing the option from the issue page and the edit page made 2 of them fail; the Account test was not mutation-checked). The original report: (1) An issue opened from My work shows "<- {project name}", not "Back": `IssueDetail`

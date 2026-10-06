@@ -4,11 +4,10 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { IssueListItem } from "@flowdesk/contracts";
 import { issueKey, issuePath } from "../../../shared/lib/paths";
-import { Card } from "../../../shared/ui";
 import { pointerListeners, useDragClickGuard } from "../lib/dragHelpers";
 import { openIssueOnClick } from "../lib/issueLinkClick";
 import { DragHandle } from "./DragHandle";
-import { IssueSummary } from "./IssueSummary";
+import { IssueCardContent, IssueCardFrame } from "./IssueCardFace";
 
 /**
  * An issue card that is sortable inside a list (the board's columns, the sprints page's backlog and
@@ -108,7 +107,7 @@ const SortableCardBody = memo(function SortableCardBody({
   guardClick: (event: MouseEvent) => void;
 }) {
   return (
-    <Card hoverable className="flex items-start gap-2 select-none">
+    <IssueCardFrame priority={issue.priority} className="select-none">
       <DragHandle aria-label={dragLabel} {...attributes} {...listeners} />
       <Link
         to={issuePath(projectKey, issue.number)}
@@ -120,11 +119,9 @@ const SortableCardBody = memo(function SortableCardBody({
         }}
         className="block min-w-0 flex-1"
       >
-        <IssueSummary issue={issue} projectKey={projectKey}>
-          {renderLabels?.(issue.labels)}
-        </IssueSummary>
+        <IssueCardContent issue={issue} projectKey={projectKey} labels={renderLabels?.(issue.labels)} />
       </Link>
       {assigneeId && renderAssignee && <span className="shrink-0">{renderAssignee(assigneeId)}</span>}
-    </Card>
+    </IssueCardFrame>
   );
 });

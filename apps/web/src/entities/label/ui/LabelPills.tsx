@@ -1,25 +1,33 @@
+import { cn } from "../../../shared/ui";
 import { LabelBadge } from "./LabelBadge";
+import { LabelTag } from "./LabelTag";
 
 /**
  * A short row of label pills for an issue card: the first `max` labels, then "+n" for the rest. With `onToggle` each pill
  * is a button that picks that label as a filter; the pills of the labels already chosen are ringed. Without it they are
- * plain pills. Pure presentation: the page owns the filter.
+ * plain pills. Pure presentation: the page owns the filter. `className` replaces the default top margin (the Issues list puts the
+ * pills on the title's line). `variant="outline"` draws the quiet tags (dot and name) the board and sprint cards use; it is plain, never
+ * a filter button.
  */
 export function LabelPills({
   labels,
   activeIds = [],
   onToggle,
   max = 3,
+  className = "mt-2",
+  variant = "filled",
 }: {
   labels: { id: string; name: string; color: string }[];
   activeIds?: string[];
   onToggle?: (labelId: string) => void;
   max?: number;
+  className?: string;
+  variant?: "filled" | "outline";
 }) {
   if (labels.length === 0) return null;
   const shown = labels.slice(0, max);
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-1">
+    <div className={cn("flex flex-wrap items-center gap-1", className)}>
       {shown.map((label) =>
         onToggle ? (
           <button
@@ -34,6 +42,8 @@ export function LabelPills({
           >
             <LabelBadge label={label} />
           </button>
+        ) : variant === "outline" ? (
+          <LabelTag key={label.id} label={label} />
         ) : (
           <LabelBadge key={label.id} label={label} />
         ),

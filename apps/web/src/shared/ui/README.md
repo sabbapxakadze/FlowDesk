@@ -44,6 +44,7 @@ goes inside it). Two looks on the surface's own background, no tint: `raised` (a
 (placed from the name's measured position) so a scrolling list neither clips it nor becomes scrollable because of it.
 `ScrollPanel` also takes `fitWindow` (the cap shrinks to the room left in the window, so the bottom edge is on screen) and a
 `footer` (pinned to the bottom of the box, fully visible however far the list is scrolled: Load more on the audit log).
+(2026-10-06, ADR 0036: `ScrollPanel`'s `raised` look was removed; the Issues list is a bordered surface with its own header and a `look="edges"` panel inside.)
 `ViewTabs` (2026-10-06) is the underline switch between two views of one thing, as links with `aria-current` (List / Board on a project, ADR 0034); `PageHeader` takes an `aside` for it.
 
 Motion (ADR 0029): `Button` has `pending` and `done`; `Card` takes `rowState`/`rowIndex` for list rows; hooks `useExitPresence`,

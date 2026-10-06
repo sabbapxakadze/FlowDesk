@@ -7,8 +7,8 @@ import { cn } from "./lib/cn";
  * (`scrollbar-list-always`). The caller sets the height with `className`: a cap (`max-h-[28rem]`), or `min-h-0`
  * inside a column that fills the window. `label` names the area for assistive tech.
  *
- * - `raised` (the Issues list): the list floats above the page, a thin outline and a soft outer shadow, so the
- *   rows sit on a raised panel. The owner tried a pressed-in (inner shadow) version first and did not like it.
+ * - (The `raised` look, a thin outline and a soft outer shadow, was the Issues list's; ADR 0036 replaced it with one
+ *   bordered surface that holds a header strip and this panel, so it is gone.)
  * - `edges` (a person's activity, an issue's comments and activity): no box. A soft shadow and a thin line fade
  *   in at the top once the list has scrolled and at the bottom while more rows are hidden (`.scroll-edges` in
  *   `app/index.css`; CSS only). Pass `onSurface` when the list sits inside a card, so the edges blend into the
@@ -24,7 +24,7 @@ import { cn } from "./lib/cn";
  */
 export function ScrollPanel({
   label,
-  look = "raised",
+  look = "edges",
   onSurface = false,
   fitWindow = false,
   footer,
@@ -32,7 +32,7 @@ export function ScrollPanel({
   children,
 }: {
   label?: string;
-  look?: "raised" | "edges";
+  look?: "edges";
   onSurface?: boolean;
   fitWindow?: boolean;
   footer?: ReactNode;
@@ -73,9 +73,7 @@ export function ScrollPanel({
       style={style}
       className={cn(
         "scrollbar-list-always overflow-y-auto",
-        look === "raised"
-          ? "rounded-[var(--radius-card)] border border-[var(--color-border-default)] p-2 pr-3 shadow-[0_6px_16px_-4px_color-mix(in_oklab,var(--color-text-default)_20%,transparent)]"
-          : "scroll-edges py-2 pr-2 pl-1",
+        "scroll-edges py-2 pr-2 pl-1",
         className,
       )}
     >

@@ -74,9 +74,11 @@ test("inside the issue editor it is not clipped, the label does not reopen it, a
   loggedInPage: page,
 }) => {
   // Why: the editor is a dialog (overflow, top layer) inside <label>s; a list that is clipped, or that a label click
-  // reopens, would be broken there. A short window forces the list to open upward.
+  // reopens, would be broken there. A short window forces the list to open upward: the Dropdown opens up when fewer than 200px are
+  // left below its box, and the editor got shorter when the due date field joined it, so 560px no longer leaves less than that.
+  const HEIGHT = 520;
   await setup(page);
-  await page.setViewportSize({ width: 1100, height: 560 });
+  await page.setViewportSize({ width: 1100, height: HEIGHT });
   await page.goto("/projects/WEB");
   await page.getByRole("listitem").filter({ hasText: "Alpha" }).getByRole("button", { name: "Edit" }).click();
 
@@ -85,7 +87,7 @@ test("inside the issue editor it is not clipped, the label does not reopen it, a
   await expect(listbox(page)).toBeVisible();
   const box = (await page.locator("div.motion-drop-in").boundingBox())!;
   expect(box.y).toBeGreaterThanOrEqual(0);
-  expect(box.y + box.height).toBeLessThanOrEqual(560);
+  expect(box.y + box.height).toBeLessThanOrEqual(HEIGHT);
   await page.getByRole("option", { name: "Done", exact: true }).click();
   await expect(listbox(page)).toHaveCount(0); // chosen, and the <label> around the box did not open it again
   await expectValue(status, "done");
@@ -94,7 +96,7 @@ test("inside the issue editor it is not clipped, the label does not reopen it, a
   const trigger = (await priority.boundingBox())!;
   await priority.click();
   const list = (await page.locator("div.motion-drop-in").boundingBox())!;
-  expect(list.y + list.height).toBeLessThanOrEqual(560);
+  expect(list.y + list.height).toBeLessThanOrEqual(HEIGHT);
   expect(list.y + list.height).toBeLessThanOrEqual(trigger.y + 1); // opened upward: there was more room above
   await page.keyboard.press("Escape");
 });

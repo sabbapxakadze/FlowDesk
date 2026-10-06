@@ -129,6 +129,8 @@ Comments support @mentions (ADR 0033): type `@` and pick a member; the mentioned
 Board and sprint cards show label pills; the Account page has a "Sign out of all devices" button.
 A project's Issues and Board pages share List / Board tabs in their headers (ADR 0034; one "Issues" sidebar link); merging them into one page is step 2.
 Issues are created with a "New issue" button and popup on both pages (the C key too; ADR 0035); the inline form is gone.
+The Issues list is one surface of two-line rows under a column header (ADR 0036), stacking by its own width (also beside the side panel); board and sprint cards stay cards.
+The board and sprint cards (and the drag preview) have a colored priority edge, the assignee at the top right and a labels/priority footer (ADR 0037); dragging is unchanged.
 A project's Issues and Board pages share List / Board tabs in their headers (ADR 0034; one "Issues" sidebar link); merging them into one page is step 2.
 `/` is the "My work" page (my open issues across projects and my unread notifications). The issue list carries each issue's labels and
 filters by several labels at once (an issue must have all of them).

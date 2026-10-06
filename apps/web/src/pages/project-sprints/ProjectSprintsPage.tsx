@@ -16,7 +16,7 @@ import type { GetBacklogResponse, IssueListItem } from "@flowdesk/contracts";
 import { useCurrentProject } from "../../entities/project";
 import { LabelPills } from "../../entities/label";
 import { AssigneeAvatar } from "../../entities/member";
-import { IssueSummary, SortableIssueCard, useBacklog } from "../../entities/issue";
+import { IssueCardContent, IssueCardFrame, SortableIssueCard, useBacklog } from "../../entities/issue";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
 import { SprintStatusBadge, useSprints } from "../../entities/sprint";
 import { CreateSprintForm } from "../../features/create-sprint";
@@ -39,7 +39,7 @@ type IssueLists = ListMap<ListId>;
 const { isListId, findContainer, moveAcrossLists } = createMultiList(LISTS);
 
 /** The label pills on a card. A module-level function, so its identity never changes and the memoised card bodies stay put while dragging. */
-const renderLabels = (labels: IssueListItem["labels"]) => <LabelPills labels={labels} />;
+const renderLabels = (labels: IssueListItem["labels"]) => <LabelPills labels={labels} variant="outline" className="" />;
 
 function buildLists(data: GetBacklogResponse | undefined): IssueLists {
   return {
@@ -393,19 +393,14 @@ export function ProjectSprintsPage() {
 
           <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
             {activeIssue && (
-              <Card className="flex cursor-grabbing shadow-lg">
-                <IssueSummary
-                  issue={activeIssue}
-                  projectKey={project.key}
-                  assignee={
-                    activeIssue.assigneeId ? (
-                      <AssigneeAvatar organizationId={organization!.id} userId={activeIssue.assigneeId} interactive={false} />
-                    ) : null
-                  }
-                >
-                  {renderLabels(activeIssue.labels)}
-                </IssueSummary>
-              </Card>
+              <IssueCardFrame priority={activeIssue.priority} hoverable={false} className="cursor-grabbing shadow-lg">
+                <IssueCardContent issue={activeIssue} projectKey={project.key} labels={renderLabels(activeIssue.labels)} />
+                {activeIssue.assigneeId && (
+                  <span className="shrink-0">
+                    <AssigneeAvatar organizationId={organization!.id} userId={activeIssue.assigneeId} interactive={false} />
+                  </span>
+                )}
+              </IssueCardFrame>
             )}
           </DragOverlay>
         </DndContext>

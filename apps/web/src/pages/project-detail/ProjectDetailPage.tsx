@@ -5,7 +5,7 @@ import { useCurrentProject } from "../../entities/project";
 import { IssuePanel, useIssuePanel } from "../../widgets/issue-detail";
 import { ProjectViewTabs } from "../../widgets/project-view-tabs";
 import { AssigneeAvatar, memberOptions, useMembers } from "../../entities/member";
-import { IssueCard, useIssues, useLiveIssueUpdates } from "../../entities/issue";
+import { IssueListHeader, IssueRow, useIssues, useLiveIssueUpdates } from "../../entities/issue";
 import { LabelPills, useLabels } from "../../entities/label";
 import { NewIssueButton } from "../../features/create-issue";
 import { EditIssueDialog } from "../../features/edit-issue";
@@ -107,7 +107,7 @@ export function ProjectDetailPage() {
   const { data: orgLabels } = useLabels(organization!.id);
   useLiveIssueUpdates(projectId);
   // useInfiniteQuery's data is { pages: Page[], pageParams }, not a flat
-  // list — flatten once here so the rest of this page (and IssueCard)
+  // list — flatten once here so the rest of this page (and IssueRow)
   // doesn't need to know pagination happened at all. The ?? [] is only
   // reached before the first page loads, already gated below by
   // issuesPending — never a real empty-vs-loading ambiguity.
@@ -119,7 +119,7 @@ export function ProjectDetailPage() {
     resetKey: `${status}|${priority}|${due}|${assignee}|${labelIds.join(",")}|${sort}|${order}|${data?.pages.length ?? 0}`,
   });
 
-  // Which issue (if any) is open in the edit popup: page-level state because IssueCard (entities layer) can't
+  // Which issue (if any) is open in the edit popup: page-level state because IssueRow (entities layer) can't
   // import the editor (features layer); this is where the two compose.
   const panel = useIssuePanel();
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
@@ -303,17 +303,25 @@ export function ProjectDetailPage() {
             : "No issues yet."}
         </EmptyState>
       ) : (
-        <ScrollPanel label="Issue list" className="max-h-[65dvh] sm:max-h-none sm:min-h-0">
-        <ul className="flex flex-col gap-2">
+        // One surface (ADR 0036): the header strip above, the rows scrolling beneath it. The outer box keeps clear of the
+        // floating issue panel (as the filter row does), so the inner box, whose own width decides the layout (`@container`),
+        // narrows into the stacked rows instead of hiding its right-hand columns under the panel.
+        <div
+          className={`flex max-h-[65dvh] flex-col sm:max-h-none sm:min-h-0 ${panel.issueRef ? "sm:max-[1559px]:pr-[31rem]" : ""}`}
+        >
+          <div className="@container flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)]">
+            <IssueListHeader />
+        <ScrollPanel label="Issue list" look="edges" onSurface className="min-h-0 flex-1 p-0">
+        <ul>
           {issueRows.map(({ key, item: issue, state, index }) => (
-            <IssueCard
+            <IssueRow
               key={key}
               rowState={state}
               rowIndex={index}
               issue={issue}
               projectKey={project.key}
               assignee={issue.assigneeId ? <AssigneeAvatar organizationId={organization!.id} userId={issue.assigneeId} /> : null}
-              labels={<LabelPills labels={issue.labels} activeIds={labelIds} onToggle={toggleLabel} />}
+              labels={<LabelPills labels={issue.labels} activeIds={labelIds} onToggle={toggleLabel} className="" />}
               onOpen={panel.open}
               onEdit={() => {
                 setShowConflictNotice(false);
@@ -326,7 +334,7 @@ export function ProjectDetailPage() {
           <Button
             variant="secondary"
             size="sm"
-            className="mt-3"
+            className="m-3"
             disabled={isFetchingNextPage}
             onClick={() => void fetchNextPage()}
           >
@@ -334,6 +342,8 @@ export function ProjectDetailPage() {
           </Button>
         )}
         </ScrollPanel>
+          </div>
+        </div>
       )}
       </div>
       {editingIssue && (
