@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router";
 import { loginRequestSchema, type LoginRequest } from "@flowdesk/contracts";
 import { useAuth } from "../../../shared/auth/useAuth";
+import { withViewTransition } from "../../../shared/lib/motion";
 import { Button, buttonVariants, ErrorText, Field, Input, PasswordInput } from "../../../shared/ui";
 import { loginUser } from "../api/loginUser";
 
@@ -22,8 +23,11 @@ export function LoginForm() {
       // Same deliberately-vague message either way — login errors don't
       // say whether it was the email or the password that was wrong (see
       // auth.service.ts), so the form has nothing more specific to show.
-      login(session);
-      void navigate("/");
+      // The login card cross-fades into the app (a View Transition, the same fade as the theme change) instead of cutting.
+      withViewTransition(() => {
+        login(session);
+        void navigate("/");
+      });
     },
   });
 

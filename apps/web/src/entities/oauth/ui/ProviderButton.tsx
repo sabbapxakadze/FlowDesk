@@ -12,7 +12,7 @@ export function ProviderButton({
   onClick,
 }: {
   provider: OAuthProviderName;
-  /** Defaults to "Continue with <Provider>". */
+  /** The visible words; defaults to the provider's name. The accessible name is always "Continue with <Provider>" unless `label` is given. */
   label?: string;
   pending?: boolean;
   disabled?: boolean;
@@ -26,10 +26,11 @@ export function ProviderButton({
       pending={pending}
       disabled={disabled}
       onClick={onClick}
+      aria-label={label ?? `Continue with ${PROVIDER_LABELS[provider]}`}
       className="inline-flex items-center justify-center gap-2.5 bg-[var(--color-bg-surface)]"
     >
       {!pending && <ProviderIcon provider={provider} />}
-      {label ?? `Continue with ${PROVIDER_LABELS[provider]}`}
+      {label ?? PROVIDER_LABELS[provider]}
     </Button>
   );
 }

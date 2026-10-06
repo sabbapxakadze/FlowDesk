@@ -10,8 +10,7 @@ export function RegisterPage() {
       <OAuthErrorNotice />
       <h1 className="font-display text-3xl font-normal">Create your account</h1>
       <p className="mt-1 mb-6 text-sm text-[var(--color-text-muted)]">Set up your account and your first organization.</p>
-      <OAuthButtons />
-      <RegisterForm />
+      <RegisterForm above={<OAuthButtons />} />
       <p className="mt-6 text-sm text-[var(--color-text-muted)]">
         Already have an account?{" "}
         <Link to="/login" className={buttonVariants({ variant: "link" })}>

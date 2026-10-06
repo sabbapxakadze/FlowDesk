@@ -37,3 +37,9 @@ a rule for linking to an existing account (by verified email); a decision about 
 - A split-screen layout, a blurred copy of the product behind the card, bokeh circles, sunset colors, floating product fragments and a mesh gradient with a glowing border (the other mockups): the owner preferred A4.
 - A toggle outside the field, or one that shows the password while a key is held: less discoverable, and awkward on a touch screen.
 - Renaming the toggle without the word "password" to avoid touching the tests: it would have hurt the screen reader announcement.
+
+## Added 2026-10-06
+- The shared `ThemeSwitch` (Light / Dark / System) sits in the top-right corner of every public page, so a theme can be chosen before logging in (remembered in the browser, like in the sidebar).
+- The social buttons (ADR 0042) sit side by side with short labels ("Google", "GitHub") and the line "or with email", as in the chosen mockup; their accessible names stay "Continue with Google / GitHub".
+- Not added, by the owner's choice: an "open the demo account" button on these pages, and opening the tutorial by default.
+- After Create account succeeds, the provider buttons disappear with the form (the page passes them into `RegisterForm` as `above`); they used to stay on top of the confirmation message.

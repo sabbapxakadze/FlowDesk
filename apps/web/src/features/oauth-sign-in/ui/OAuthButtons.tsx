@@ -1,4 +1,8 @@
-import { useOAuthProviders, useStartOAuth, ProviderButton } from "../../../entities/oauth";
+import {
+  useOAuthProviders,
+  useStartOAuth,
+  ProviderButton,
+} from "../../../entities/oauth";
 import { ErrorText } from "../../../shared/ui";
 
 /**
@@ -13,19 +17,25 @@ export function OAuthButtons() {
 
   return (
     <div className="mb-5 flex flex-col gap-2.5" data-testid="oauth-buttons">
-      {providers.data.map((provider) => (
-        <ProviderButton
-          key={provider}
-          provider={provider}
-          pending={start.isPending && start.variables === provider}
-          disabled={start.isPending}
-          onClick={() => start.mutate(provider)}
-        />
-      ))}
+      {/* Side by side (design A4); the names stay "Continue with <Provider>" for screen readers. */}
+      <div className="grid grid-cols-2 gap-2.5">
+        {providers.data.map((provider) => (
+          <ProviderButton
+            key={provider}
+            provider={provider}
+            pending={start.isPending && start.variables === provider}
+            disabled={start.isPending}
+            onClick={() => start.mutate(provider)}
+          />
+        ))}
+      </div>
       {start.isError && <ErrorText>{start.error.message}</ErrorText>}
-      <div className="mt-1 flex items-center gap-3 text-xs text-[var(--color-text-muted)]" aria-hidden="true">
+      <div
+        className="mt-1 flex items-center gap-3 text-xs text-[var(--color-text-muted)]"
+        aria-hidden="true"
+      >
         <span className="h-px flex-1 bg-[var(--color-border-default)]" />
-        or
+        or with email
         <span className="h-px flex-1 bg-[var(--color-border-default)]" />
       </div>
     </div>

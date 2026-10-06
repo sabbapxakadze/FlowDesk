@@ -55,3 +55,10 @@ with the Web Animations API on the row itself: no wrapper element, no leftover s
 - Dimming the page behind the side panel (tried, owner did not want it).
 - A wrapper element per animated row (extra markup, shadows clipped permanently, children remounted).
 - Animating every list including the lanes and search (conflicts with dnd-kit transforms, or too slow).
+
+## Amended 2026-10-06: the theme change is a View Transition
+
+The theme cross-fade (a `motion-theme-fade` class that animated the colours of every element for 200 ms) looked laggy on full pages and on the blur-heavy public pages. It now uses the browser's View Transitions API where it exists: one picture of the page before, one after, a 320 ms fade between them (`::view-transition-old/new(root)` in `app/index.css`; started in `shared/theme/theme-store.ts`). Browsers without the API keep the old class as a fallback; "reduce motion" still turns it all off.
+Measured in headless Chromium (software rendering, so only the direction is meaningful, not the absolute numbers): on `/design-system` the old fade had 19 frames slower than 50 ms and a 27 ms average frame, the view transition none and 18.7 ms; on `/login` the very slow frames went from 4 to 0, but frames slower than 33 ms were not fewer (44 against 55 in 6 switches), because the blurred shapes are costly either way. Not measured on a real GPU or in Safari or Firefox.
+
+After a successful login the login card cross-fades into the app with the same view transition (`withViewTransition` in `shared/lib/motion.ts`: the route change runs inside `document.startViewTransition`, with `flushSync` so React has applied it before the "after" picture; React Router's own `viewTransition` navigate option did not start one in this `<BrowserRouter>` setup, which a test showed). Creating an account has no navigation: its confirmation message fades and rises in (`motion-rise-in`). Not smoothed: signing in with Google or GitHub, which is a full page load.

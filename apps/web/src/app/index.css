@@ -146,7 +146,15 @@ body {
 .motion-flash { animation: motion-flash 900ms var(--motion-ease-out) backwards; }
 .motion-press { transition: transform calc(80ms) var(--motion-ease-out); }
 .motion-press:active:not(:disabled) { transform: scale(0.98); }
-/* A quick cross-fade of colours while the theme flips (the class is on <html> for a moment). */
+/* The theme change is a View Transition (shared/theme/theme-store.ts): the browser fades from a picture of the old page to a
+   picture of the new one. This is its timing; nothing else in the app uses view transitions. Off under reduce motion (the store
+   does not start one there). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 320ms;
+  animation-timing-function: ease-in-out;
+}
+/* Fallback for browsers without View Transitions: a quick cross-fade of colours while the theme flips (the class is on <html> for a moment). */
 .motion-theme-fade,
 .motion-theme-fade *,
 .motion-theme-fade *::before,

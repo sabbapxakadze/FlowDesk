@@ -136,3 +136,19 @@ test("on a phone neither page scrolls sideways", async ({ page }) => {
     expect(fits, `${path} scrolls sideways`).toBe(true);
   }
 });
+
+test("the theme switch on the public pages changes the theme and is remembered after a reload", async ({ page }) => {
+  // Why: people can pick Light or Dark before logging in. The choice must really change the page (data-theme on <html>),
+  // be marked as pressed for assistive technology, and survive a reload (it is stored in the browser).
+  await page.goto("/login");
+  const theme = page.getByRole("group", { name: "Theme" });
+  await theme.getByRole("button", { name: "Dark" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(theme.getByRole("button", { name: "Dark" })).toHaveAttribute("aria-pressed", "true");
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.goto("/register"); // the other public pages have it too
+  await theme.getByRole("button", { name: "Light" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});

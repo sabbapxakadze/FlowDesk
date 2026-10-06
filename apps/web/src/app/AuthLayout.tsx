@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router";
-import { cn } from "../shared/ui";
+import { cn, ThemeSwitch } from "../shared/ui";
 
 /**
  * Layout route for the public auth pages (login, register, verify-email,
@@ -16,6 +16,9 @@ import { cn } from "../shared/ui";
  * The card stays put; only what is inside it fades and rises in (`motion-rise-in`, ADR 0029), keyed by the path like AppShell's pages are,
  * so logging out lands on a login page that arrives instead of popping in, and switching between login and register plays it on the
  * form. Off under reduced motion, like every motion class.
+ *
+ * The Light / Dark / System switch sits in the top-right corner of every public page (the same shared `ThemeSwitch` the sidebar uses, the
+ * choice is remembered in the browser), so people can pick a theme before they ever log in.
  */
 export function AuthLayout() {
   const { pathname } = useLocation();
@@ -32,6 +35,9 @@ export function AuthLayout() {
           <div className="absolute right-0 bottom-0 h-96 w-96 rounded-full bg-[var(--color-aurora-2)] opacity-75 blur-[70px] max-sm:h-64 max-sm:w-64" />
           <div className="absolute top-24 right-12 h-64 w-64 rounded-full bg-[var(--color-aurora-3)] opacity-60 blur-[70px] max-sm:h-40 max-sm:w-40" />
         </div>
+      </div>
+      <div className="absolute top-4 right-4 z-10">
+        <ThemeSwitch />
       </div>
       <Link
         to="/"

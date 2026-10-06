@@ -60,21 +60,39 @@ export function getTheme(): Theme {
 }
 
 /**
- * The colours blend for a moment (the `motion-theme-fade` class on <html>, app/index.css) instead of the
- * whole page flipping in one frame. Only for a change the person makes here; the first paint and another
- * tab's change are applied as they are. Skipped under "reduce motion".
+ * The page blends from the old colours to the new instead of flipping in one frame. Only for a change the person
+ * makes here; the first paint and another tab's change are applied as they are. Skipped under "reduce motion".
+ *
+ * Preferred: the browser's View Transitions API. It takes ONE picture of the page before and one after and fades
+ * between the two on the graphics card, so it stays smooth even on pages with heavy effects (the blurred shapes and
+ * frosted card of the public pages). Fallback for browsers without it: the `motion-theme-fade` class on <html>
+ * (app/index.css), which animates the colours of every element, and is correct but heavier on blur-heavy pages.
+ * `change` runs inside the transition, so both the colours and the switch's own pressed state are in the new picture.
  */
-function fadeThemeChange(): void {
-  if (prefersReducedMotion()) return;
+type ViewTransitionDocument = Document & { startViewTransition?: (update: () => void) => unknown };
+
+function withThemeFade(change: () => void): void {
+  if (prefersReducedMotion()) {
+    change();
+    return;
+  }
+  const doc = document as ViewTransitionDocument;
+  if (typeof doc.startViewTransition === "function") {
+    doc.startViewTransition(change);
+    return;
+  }
   const root = document.documentElement;
   root.classList.add("motion-theme-fade");
+  change();
   window.setTimeout(() => root.classList.remove("motion-theme-fade"), 260);
 }
 
 export function setTheme(theme: Theme): void {
   current = theme;
-  fadeThemeChange();
-  applyToDocument(theme);
+  withThemeFade(() => {
+    applyToDocument(theme);
+    notify();
+  });
   try {
     if (theme === "system") {
       localStorage.removeItem(KEY);
@@ -84,7 +102,6 @@ export function setTheme(theme: Theme): void {
   } catch {
     // Not remembered, still applied to this tab.
   }
-  notify();
 }
 
 export function subscribe(listener: () => void): () => void {

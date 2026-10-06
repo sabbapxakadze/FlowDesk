@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { test, expect } from "../support/fixtures";
+import { test, expect, TEST_USER } from "../support/fixtures";
 import { createIssueViaApi } from "../support/api";
 import { combobox, pick } from "../support/dropdown";
 
@@ -25,6 +25,20 @@ async function recordRowAnimations(page: Page) {
     };
   });
 }
+/** Counts document.startViewTransition() calls (the theme change is one), without changing what the browser does with them. */
+async function countViewTransitions(page: Page) {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __viewTransitions: number };
+    w.__viewTransitions = 0;
+    const original = (document as unknown as { startViewTransition?: (cb: () => void) => unknown }).startViewTransition?.bind(document);
+    if (original) {
+      (document as unknown as { startViewTransition: (cb: () => void) => unknown }).startViewTransition = (cb) => {
+        w.__viewTransitions++;
+        return original(cb);
+      };
+    }
+  });
+}
 const rowAnimations = (page: Page) =>
   page.evaluate(() => (window as unknown as { __rowAnims: { kind: string; tag: string }[] }).__rowAnims);
 
@@ -33,6 +47,35 @@ const animationOf = (page: Page, selector: string) =>
 
 test.describe("with animations on", () => {
   test.use({ reducedMotion: "no-preference" });
+
+  test("logging in cross-fades into the app: one view transition, and the app is shown", async ({ page }) => {
+    // Why: a successful login used to cut from the login card to the app in one frame. It now runs a view transition (the same fade as the
+    // theme change) around the route change, once.
+    await page.request.post("/api/v1/auth/register", { data: TEST_USER });
+    await countViewTransitions(page);
+    await page.goto("/login");
+    await page.getByLabel("Email").fill(TEST_USER.email);
+    await page.getByLabel("Password", { exact: true }).fill(TEST_USER.password);
+    await page.getByRole("button", { name: "Log in" }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByText(`Hello, ${TEST_USER.name}`)).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { __viewTransitions: number }).__viewTransitions)).toBe(1);
+  });
+
+  test("a created account's confirmation fades in, and the provider buttons are gone with the form", async ({ page }) => {
+    // Why: the form used to be swapped for the message in one frame. And the Google/GitHub buttons live above the form, so they must go
+    // with it: "Continue with Google" over "Account created, check your email" made no sense.
+    await page.goto("/register");
+    await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
+    await page.getByLabel("Name", { exact: true }).fill("New Person");
+    await page.getByLabel("Email").fill("new.person@example.com");
+    await page.getByLabel("Password", { exact: true }).fill("password123");
+    await page.getByLabel("Organization name").fill("New Org");
+    await page.getByRole("button", { name: "Create account" }).click();
+    await expect(page.getByText("Account created for")).toBeVisible();
+    expect(await animationOf(page, "p.motion-rise-in")).not.toBe("none");
+    await expect(page.getByRole("button", { name: "Continue with Google" })).toHaveCount(0);
+  });
 
   test("logging out lands on a login page that fades and rises in, instead of popping in", async ({ loggedInPage: page }) => {
     // Why: the pages inside the app animate, but the login page had no motion at all, so logging out was an abrupt cut.
@@ -103,9 +146,26 @@ test.describe("with animations on", () => {
     expect(await opacity()).toBe(1);
   });
 
-  test("switching the theme cross-fades the colours: the class is on the page for a moment, then gone", async ({
+  test("switching the theme runs ONE view transition (a fade between two pictures of the page), not the heavy per-element fade", async ({
     loggedInPage: page,
   }) => {
+    // Why: the per-element colour fade was visibly laggy on full pages (measured: frames over 50 ms with it, none with the view transition),
+    // so the preferred way must be what runs when the browser supports it, and it must run once per change.
+    await countViewTransitions(page);
+    await page.goto("/projects");
+    await page.getByRole("group", { name: "Theme" }).getByRole("button", { name: /Dark/i }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    expect(await page.evaluate(() => (window as unknown as { __viewTransitions: number }).__viewTransitions)).toBe(1);
+    await expect(page.locator("html")).not.toHaveClass(/motion-theme-fade/);
+  });
+
+  test("without view-transition support the colours still cross-fade: the class is on the page for a moment, then gone", async ({
+    loggedInPage: page,
+  }) => {
+    // Why: browsers without the API must keep the old, correct behaviour instead of flipping in one frame.
+    await page.addInitScript(() => {
+      (document as unknown as { startViewTransition?: unknown }).startViewTransition = undefined;
+    });
     await page.goto("/projects");
     await page.getByRole("group", { name: "Theme" }).getByRole("button", { name: /Dark/i }).click();
     await expect(page.locator("html")).toHaveClass(/motion-theme-fade/);
@@ -321,13 +381,27 @@ test.describe("with reduced motion", () => {
     expect(await animationOf(page, "div.motion-rise-in")).toBe("none");
   });
 
+  test("logging in starts no view transition", async ({ page }) => {
+    // Why: "reduce motion" must also mean a plain, instant change of page after a login.
+    await page.request.post("/api/v1/auth/register", { data: TEST_USER });
+    await countViewTransitions(page);
+    await page.goto("/login");
+    await page.getByLabel("Email").fill(TEST_USER.email);
+    await page.getByLabel("Password", { exact: true }).fill(TEST_USER.password);
+    await page.getByRole("button", { name: "Log in" }).click();
+    await expect(page).toHaveURL(/\/$/);
+    expect(await page.evaluate(() => (window as unknown as { __viewTransitions: number }).__viewTransitions)).toBe(0);
+  });
+
   test("nothing animates: no rise-in, no theme fade", async ({ loggedInPage: page }) => {
     // Why: people who asked for less motion must get none, and nothing may wait for an animation that never runs.
+    await countViewTransitions(page);
     await page.goto("/projects");
     expect(await animationOf(page, "div.motion-rise-in")).toBe("none");
     await page.getByRole("group", { name: "Theme" }).getByRole("button", { name: /Dark/i }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect(page.locator("html")).not.toHaveClass(/motion-theme-fade/);
+    expect(await page.evaluate(() => (window as unknown as { __viewTransitions: number }).__viewTransitions)).toBe(0);
   });
 
   test("the issue panel is removed at once when closed: nothing waits for an animation that does not run", async ({
