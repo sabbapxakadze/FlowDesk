@@ -34,6 +34,13 @@ const animationOf = (page: Page, selector: string) =>
 test.describe("with animations on", () => {
   test.use({ reducedMotion: "no-preference" });
 
+  test("logging out lands on a login page that fades and rises in, instead of popping in", async ({ loggedInPage: page }) => {
+    // Why: the pages inside the app animate, but the login page had no motion at all, so logging out was an abrupt cut.
+    await page.getByRole("button", { name: "Log out" }).click();
+    await expect(page).toHaveURL(/\/login$/);
+    expect(await animationOf(page, "div.motion-rise-in")).toBe("motion-rise-in");
+  });
+
   test("a page change plays the rise-in, but a filter or the side panel (query string only) does not replay it", async ({
     loggedInPage: page,
   }) => {
@@ -306,6 +313,13 @@ test.describe("with animations on", () => {
 
 test.describe("with reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
+
+  test("the login page after logging out does not animate either", async ({ loggedInPage: page }) => {
+    // Why: the new login transition must obey the same "less motion" setting as every other motion.
+    await page.getByRole("button", { name: "Log out" }).click();
+    await expect(page).toHaveURL(/\/login$/);
+    expect(await animationOf(page, "div.motion-rise-in")).toBe("none");
+  });
 
   test("nothing animates: no rise-in, no theme fade", async ({ loggedInPage: page }) => {
     // Why: people who asked for less motion must get none, and nothing may wait for an animation that never runs.

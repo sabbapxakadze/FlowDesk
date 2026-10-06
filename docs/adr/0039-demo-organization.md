@@ -13,7 +13,7 @@ very good, testable data.
 - **`pnpm db:seed:demo`** (`apps/api/src/db/seed-demo.ts`, content in `seed-demo-data.ts`) builds "FlowDesk Demo" when it is missing and does nothing when it exists.
   **`--reset`** deletes that organization and the five demo users and builds it again: the way to undo what a visitor changed, and to refresh the dates.
   It refuses to run when `NODE_ENV=production` unless `ALLOW_DEMO_SEED=true`, because a script that deletes an organization by name must never be pointed at real data by accident.
-- **Five people, one per role, one shared password.** Alex Morgan `demo@flowdesk.test` (Owner), Priya Shah (Admin), Marcus Lee and Sofia Rossi (Members), Daniel Okafor (Viewer);
+- **Five people, one per role, one shared password.** Alex Morgan `demo@flowdesk.test` (Owner), Nino Beridze (Admin), Marcus Lee and Sofia Rossi (Members), Daniel Okafor (Viewer);
   all `@flowdesk.test`, which can never receive mail, so a password-reset email cannot reach anyone. They have job titles, short bios and different timezones. The owner sees every feature
   (members, audit log, settings, deleting); logging in as the others shows what a member or a viewer can and cannot do.
 - **Data worth testing:** three projects (Website Redesign `WEB`, Mobile App `APP`, Platform API `API`), 76 issues; 8 labels (some issues carry four, to show "+n"); every status, priority and assignee

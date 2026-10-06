@@ -322,7 +322,7 @@ export function ProjectDetailPage() {
               issue={issue}
               projectKey={project.key}
               assignee={issue.assigneeId ? <AssigneeAvatar organizationId={organization!.id} userId={issue.assigneeId} /> : null}
-              labels={<LabelPills labels={issue.labels} activeIds={labelIds} onToggle={toggleLabel} className="" />}
+              labels={<LabelPills labels={issue.labels} activeIds={labelIds} onToggle={toggleLabel} className="relative z-10" />}
               onOpen={panel.open}
               onEdit={() => {
                 setShowConflictNotice(false);

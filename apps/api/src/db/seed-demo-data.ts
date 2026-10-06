@@ -3,10 +3,10 @@
  * Plain data, no database calls; `seed-demo.ts` turns it into rows. Times are written as "days ago" (or "days from today" for
  * due dates), so the demo always looks current whenever it is (re)built.
  *
- * Comment text can mention a person with `{alex}`, `{priya}`... which becomes the real `@[Name](user:<id>)` token (ADR 0033).
+ * Comment text can mention a person with `{alex}`, `{nino}`... which becomes the real `@[Name](user:<id>)` token (ADR 0033).
  */
 
-export type PersonKey = "alex" | "priya" | "marcus" | "sofia" | "daniel";
+export type PersonKey = "alex" | "nino" | "marcus" | "sofia" | "daniel";
 export type Role = "owner" | "admin" | "member" | "viewer";
 export type Status = "todo" | "in_progress" | "done";
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
@@ -42,13 +42,13 @@ export const PEOPLE: Record<PersonKey, PersonSpec> = {
     bio: "I run the product team. Ask me about priorities, sprints, or where the coffee is.",
     timezone: "America/New_York",
   },
-  priya: {
-    email: "priya.shah@flowdesk.test",
-    name: "Priya Shah",
+  nino: {
+    email: "nino.beridze@flowdesk.test",
+    name: "Nino Beridze",
     role: "admin",
     jobTitle: "Tech Lead",
     bio: "Backend and infrastructure. I review most pull requests before lunch.",
-    timezone: "Europe/London",
+    timezone: "Asia/Tbilisi",
   },
   marcus: {
     email: "marcus.lee@flowdesk.test",
@@ -156,7 +156,7 @@ export const PROJECTS: ProjectSpec[] = [
       {
         title: "Set up the CMS staging environment",
         labels: ["tech-debt"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "high",
       },
       {
@@ -186,13 +186,13 @@ export const PROJECTS: ProjectSpec[] = [
       {
         title: "Migrate blog posts to the new CMS",
         labels: ["tech-debt"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "medium",
       },
       {
         title: "Add sitemap and robots.txt",
         labels: ["docs"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "low",
       },
       {
@@ -240,7 +240,7 @@ export const PROJECTS: ProjectSpec[] = [
       {
         title: "Set up uptime monitoring",
         labels: ["tech-debt"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "medium",
       },
       {
@@ -265,7 +265,7 @@ export const PROJECTS: ProjectSpec[] = [
         sprint: "active",
         comments: [
           {
-            by: "priya",
+            by: "nino",
             agoDays: 6,
             text: "Can we show annual pricing by default? {sofia} what do you think?",
           },
@@ -320,7 +320,7 @@ export const PROJECTS: ProjectSpec[] = [
         status: "todo",
         priority: "medium",
         labels: ["feature", "security"],
-        assignee: "priya",
+        assignee: "nino",
         reporter: "alex",
         dueIn: 10,
         createdAgo: 7,
@@ -333,13 +333,13 @@ export const PROJECTS: ProjectSpec[] = [
         priority: "medium",
         labels: ["docs"],
         assignee: "alex",
-        reporter: "priya",
+        reporter: "nino",
         dueIn: 3,
         createdAgo: 10,
         sprint: "active",
         comments: [
           {
-            by: "priya",
+            by: "nino",
             agoDays: 4,
             text: "I put the CMS admin credentials format in the thread. {alex} you can use it for the screenshots.",
           },
@@ -353,7 +353,7 @@ export const PROJECTS: ProjectSpec[] = [
         priority: "high",
         labels: ["performance", "tech-debt"],
         assignee: "marcus",
-        reporter: "priya",
+        reporter: "nino",
         dueIn: 7,
         createdAgo: 14,
         sprint: "active",
@@ -409,23 +409,23 @@ export const PROJECTS: ProjectSpec[] = [
         status: "todo",
         priority: "high",
         labels: ["tech-debt"],
-        assignee: "priya",
+        assignee: "nino",
         reporter: "alex",
         dueIn: -5,
         createdAgo: 20,
         comments: [
           {
-            by: "priya",
+            by: "nino",
             agoDays: 15,
             text: "I exported the old URL list, about 340 entries. I will turn it into a redirect map.",
           },
           {
             by: "alex",
             agoDays: 2,
-            text: "{priya} this one slipped. Is there anything blocking it?",
+            text: "{nino} this one slipped. Is there anything blocking it?",
           },
           {
-            by: "priya",
+            by: "nino",
             agoDays: 1.5,
             text: "Only my time. I will do it in the next sprint planning and put it at the top.",
           },
@@ -498,7 +498,7 @@ export const PROJECTS: ProjectSpec[] = [
         status: "todo",
         priority: "medium",
         labels: ["docs", "tech-debt", "design", "feature"],
-        assignee: "priya",
+        assignee: "nino",
         reporter: "marcus",
         createdAgo: 22,
       },
@@ -535,7 +535,7 @@ export const PROJECTS: ProjectSpec[] = [
       {
         title: "Connect the app to the production API",
         labels: ["feature"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "high",
       },
       {
@@ -559,7 +559,7 @@ export const PROJECTS: ProjectSpec[] = [
       {
         title: "Set up automatic builds",
         labels: ["tech-debt"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "medium",
       },
       {
@@ -604,10 +604,10 @@ export const PROJECTS: ProjectSpec[] = [
           {
             by: "marcus",
             agoDays: 4,
-            text: "Using the same event the web bell uses, so the wording stays identical. {priya} do we have a device token endpoint yet?",
+            text: "Using the same event the web bell uses, so the wording stays identical. {nino} do we have a device token endpoint yet?",
           },
           {
-            by: "priya",
+            by: "nino",
             agoDays: 3.2,
             text: "Not yet, I will add POST /devices today. It stores the token per user and platform.",
           },
@@ -620,7 +620,7 @@ export const PROJECTS: ProjectSpec[] = [
         status: "todo",
         priority: "urgent",
         labels: ["bug"],
-        assignee: "priya",
+        assignee: "nino",
         reporter: "daniel",
         dueIn: -2,
         createdAgo: 6,
@@ -634,7 +634,7 @@ export const PROJECTS: ProjectSpec[] = [
           {
             by: "alex",
             agoDays: 0.6,
-            text: "{priya} this blocks the 2.3 release. Can you look at it today?",
+            text: "{nino} this blocks the 2.3 release. Can you look at it today?",
           },
         ],
       },
@@ -656,7 +656,7 @@ export const PROJECTS: ProjectSpec[] = [
         status: "in_progress",
         priority: "high",
         labels: ["feature", "security"],
-        assignee: "priya",
+        assignee: "nino",
         reporter: "alex",
         dueIn: 9,
         createdAgo: 13,
@@ -682,7 +682,7 @@ export const PROJECTS: ProjectSpec[] = [
         priority: "high",
         labels: ["performance"],
         assignee: "marcus",
-        reporter: "priya",
+        reporter: "nino",
         dueIn: 12,
         createdAgo: 11,
       },
@@ -706,7 +706,7 @@ export const PROJECTS: ProjectSpec[] = [
         status: "todo",
         priority: "medium",
         labels: ["tech-debt"],
-        reporter: "priya",
+        reporter: "nino",
         createdAgo: 15,
       },
       {
@@ -728,13 +728,13 @@ export const PROJECTS: ProjectSpec[] = [
         priority: "urgent",
         labels: ["customer-request"],
         assignee: "alex",
-        reporter: "priya",
+        reporter: "nino",
         dueIn: 2,
         createdAgo: 7,
         sprint: "active",
         comments: [
           {
-            by: "priya",
+            by: "nino",
             agoDays: 1,
             text: "{alex} I will hand you the build once the camera crash is fixed. Screenshots are already in the shared folder.",
           },
@@ -765,13 +765,13 @@ export const PROJECTS: ProjectSpec[] = [
       {
         title: "Add refresh token rotation",
         labels: ["security"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "high",
       },
       {
         title: "Index the issues table for the board query",
         labels: ["performance"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "medium",
       },
       {
@@ -783,7 +783,7 @@ export const PROJECTS: ProjectSpec[] = [
       {
         title: "Return field-level validation errors",
         labels: ["feature"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "medium",
       },
       {
@@ -795,7 +795,7 @@ export const PROJECTS: ProjectSpec[] = [
       {
         title: "Fix duplicate events on retry",
         labels: ["bug"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "high",
       },
       {
@@ -807,7 +807,7 @@ export const PROJECTS: ProjectSpec[] = [
       {
         title: "Add tenant isolation tests",
         labels: ["security"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "high",
       },
       {
@@ -819,13 +819,13 @@ export const PROJECTS: ProjectSpec[] = [
       {
         title: "Return consistent pagination cursors",
         labels: ["tech-debt"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "medium",
       },
       {
         title: "Add database backups and a restore test",
         labels: ["tech-debt", "security"],
-        assignee: "priya",
+        assignee: "nino",
         priority: "high",
       },
       {
@@ -843,20 +843,20 @@ export const PROJECTS: ProjectSpec[] = [
         status: "in_progress",
         priority: "high",
         labels: ["security", "feature"],
-        assignee: "priya",
+        assignee: "nino",
         reporter: "alex",
         dueIn: 3,
         createdAgo: 8,
         comments: [
           {
-            by: "priya",
+            by: "nino",
             agoDays: 3,
             text: "Limits per IP are in. Per-email is next. I will keep the numbers in config so we can tune them.",
           },
           {
             by: "alex",
             agoDays: 1.4,
-            text: "Thanks {priya}. Please make sure the error message tells people how long to wait.",
+            text: "Thanks {nino}. Please make sure the error message tells people how long to wait.",
           },
         ],
       },
@@ -868,7 +868,7 @@ export const PROJECTS: ProjectSpec[] = [
         priority: "medium",
         labels: ["feature"],
         assignee: "marcus",
-        reporter: "priya",
+        reporter: "nino",
         createdAgo: 10,
       },
       {
@@ -878,7 +878,7 @@ export const PROJECTS: ProjectSpec[] = [
         status: "in_progress",
         priority: "urgent",
         labels: ["performance", "bug"],
-        assignee: "priya",
+        assignee: "nino",
         reporter: "marcus",
         dueIn: -3,
         createdAgo: 11,
@@ -889,14 +889,14 @@ export const PROJECTS: ProjectSpec[] = [
             text: "EXPLAIN shows a sequential scan after the rank sort. Details attached in the query plan I pasted in chat.",
           },
           {
-            by: "priya",
+            by: "nino",
             agoDays: 6,
             text: "Reproduced with the seeded 20k dataset. I think the generated column needs a different weight config.",
           },
           {
             by: "alex",
             agoDays: 0.7,
-            text: "{priya} customers are noticing. Can we get a fix out this week?",
+            text: "{nino} customers are noticing. Can we get a fix out this week?",
           },
         ],
       },
@@ -908,7 +908,7 @@ export const PROJECTS: ProjectSpec[] = [
         priority: "medium",
         labels: ["docs"],
         assignee: "alex",
-        reporter: "priya",
+        reporter: "nino",
         createdAgo: 13,
       },
       {
@@ -919,7 +919,7 @@ export const PROJECTS: ProjectSpec[] = [
         priority: "low",
         labels: ["tech-debt"],
         assignee: "marcus",
-        reporter: "priya",
+        reporter: "nino",
         dueIn: 30,
         createdAgo: 20,
       },
@@ -930,7 +930,7 @@ export const PROJECTS: ProjectSpec[] = [
         status: "done",
         priority: "high",
         labels: ["bug"],
-        assignee: "priya",
+        assignee: "nino",
         reporter: "daniel",
         createdAgo: 9,
         doneAgo: 5,
@@ -945,7 +945,7 @@ export const PROJECTS: ProjectSpec[] = [
         status: "todo",
         priority: "high",
         labels: ["security"],
-        assignee: "priya",
+        assignee: "nino",
         reporter: "alex",
         dueIn: 6,
         createdAgo: 6,
@@ -958,7 +958,7 @@ export const PROJECTS: ProjectSpec[] = [
         priority: "medium",
         labels: ["tech-debt"],
         assignee: "marcus",
-        reporter: "priya",
+        reporter: "nino",
         createdAgo: 14,
         doneAgo: 9,
       },
@@ -970,7 +970,7 @@ export const PROJECTS: ProjectSpec[] = [
         priority: "medium",
         labels: ["feature", "customer-request"],
         assignee: "alex",
-        reporter: "priya",
+        reporter: "nino",
         createdAgo: 12,
       },
       {
@@ -981,7 +981,7 @@ export const PROJECTS: ProjectSpec[] = [
         priority: "low",
         labels: ["performance"],
         assignee: "marcus",
-        reporter: "priya",
+        reporter: "nino",
         dueIn: 8,
         createdAgo: 7,
       },
@@ -992,7 +992,7 @@ export const PROJECTS: ProjectSpec[] = [
         status: "todo",
         priority: "none",
         labels: ["tech-debt"],
-        reporter: "priya",
+        reporter: "nino",
         createdAgo: 24,
       },
     ],
@@ -1039,7 +1039,7 @@ export const AUDIT: AuditSpec[] = [
     agoDays: 58,
     action: "member.joined",
     targetType: "member",
-    target: "Priya Shah",
+    target: "Nino Beridze",
     details: { role: "member" },
   },
   {
@@ -1047,8 +1047,8 @@ export const AUDIT: AuditSpec[] = [
     agoDays: 57,
     action: "member.role_changed",
     targetType: "member",
-    target: "Priya Shah",
-    details: { email: "priya.shah@flowdesk.test", from: "member", to: "admin" },
+    target: "Nino Beridze",
+    details: { email: "nino.beridze@flowdesk.test", from: "member", to: "admin" },
   },
   {
     by: "marcus",
@@ -1083,7 +1083,7 @@ export const AUDIT: AuditSpec[] = [
     details: { from: "Marketing Site", to: "Website Redesign" },
   },
   {
-    by: "priya",
+    by: "nino",
     agoDays: 64,
     action: "sprint.started",
     targetType: "sprint",
@@ -1091,7 +1091,7 @@ export const AUDIT: AuditSpec[] = [
     details: { projectName: "Website Redesign" },
   },
   {
-    by: "priya",
+    by: "nino",
     agoDays: 51,
     action: "sprint.completed",
     targetType: "sprint",
@@ -1099,7 +1099,7 @@ export const AUDIT: AuditSpec[] = [
     details: { projectName: "Website Redesign", releasedIssues: 1 },
   },
   {
-    by: "priya",
+    by: "nino",
     agoDays: 22,
     action: "sprint.started",
     targetType: "sprint",
@@ -1107,7 +1107,7 @@ export const AUDIT: AuditSpec[] = [
     details: { projectName: "Website Redesign" },
   },
   {
-    by: "priya",
+    by: "nino",
     agoDays: 9,
     action: "sprint.completed",
     targetType: "sprint",
@@ -1123,7 +1123,7 @@ export const AUDIT: AuditSpec[] = [
     details: { color: { from: "#ca8a04", to: "#d97706" } },
   },
   {
-    by: "priya",
+    by: "nino",
     agoDays: 8,
     action: "sprint.started",
     targetType: "sprint",

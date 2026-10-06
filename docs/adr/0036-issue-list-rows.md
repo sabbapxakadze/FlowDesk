@@ -24,7 +24,7 @@ and chose "a table of two-line rows".
 ## Trade-offs, named
 
 - The header is labels only; it could become the sort control later (sorting is a dropdown today).
-- Only the title is the link, as the card was; the key under it is plain text.
+- The title is the one link, stretched over the whole row (a CSS pseudo-element), so a click on any empty part of a row opens the issue; the label pills, the assignee and Edit sit above it. The key under the title is plain text.
 - The hover tint uses the existing `border-default` color at low opacity instead of a new token; revisit if a theme needs its own.
 - The search results still use the older card, so the two lists of issues now look different.
 

@@ -78,7 +78,7 @@ export function IssueRow({
       as="li"
       rowState={rowState}
       rowIndex={rowIndex}
-      className={`group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-none border-t border-[var(--color-border-default)] bg-transparent px-3.5 py-2.5 shadow-none first:border-t-0 hover:bg-[var(--color-border-default)]/40 ${COLUMNS}`}
+      className={`group relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-none border-t border-[var(--color-border-default)] bg-transparent px-3.5 py-2.5 shadow-none first:border-t-0 hover:bg-[var(--color-border-default)]/40 ${COLUMNS}`}
     >
       <div className="col-start-1 row-start-1 min-w-0">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -86,7 +86,9 @@ export function IssueRow({
             to={issuePath(projectKey, issue.number)}
             data-panel-trigger
             onClick={(event) => openIssueOnClick(event, onOpen, key)}
-            className="min-w-0"
+            // A stretched link: this pseudo-element covers the whole row (the row is `relative`), so a click on any empty part of the row opens
+            // the issue too. The controls that are not part of the link (labels, the assignee, Edit) sit above it with `relative z-10`.
+            className="min-w-0 after:absolute after:inset-0"
           >
             <p className="font-medium [overflow-wrap:anywhere]">{issue.title}</p>
           </Link>
@@ -114,12 +116,12 @@ export function IssueRow({
       </div>
 
       <div className="col-start-2 row-start-1 flex items-center justify-end gap-2 @3xl:contents">
-        <span className="@3xl:justify-self-start">{assignee}</span>
+        <span className="relative z-10 @3xl:justify-self-start">{assignee}</span>
         {onEdit ? (
           <Button
             type="button"
             variant="link"
-            className={`shrink-0 justify-self-end ${REVEAL}`}
+            className={`relative z-10 shrink-0 justify-self-end ${REVEAL}`}
             onClick={onEdit}
           >
             Edit

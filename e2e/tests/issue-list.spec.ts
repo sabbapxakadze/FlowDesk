@@ -141,3 +141,25 @@ test("with the issue panel open on a 1280px window, nothing in a row sits under 
     );
   }
 });
+
+test("clicking an empty part of a row opens the issue in the side panel; Edit still opens the editor, not the panel", async ({
+  loggedInPage: page,
+}) => {
+  // Why: only the title text was a link, so a click between the columns did nothing. The whole row should open the issue, without
+  // taking the clicks of the controls inside it (Edit, the assignee, the label pills).
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await setup(page);
+
+  const late = row(page, "Late thing");
+  const box = (await late.boundingBox())!;
+  await late.click({ position: { x: box.width * 0.5, y: box.height / 2 } }); // the gap between the title and the status column
+  await expect(page).toHaveURL(/issue=WEB-2/);
+  await expect(panelOf(page)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panelOf(page)).toHaveCount(0);
+
+  await row(page, "Priority thing").hover();
+  await row(page, "Priority thing").getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByRole("dialog", { name: "Edit WEB-1" })).toBeVisible();
+  await expect(page).not.toHaveURL(/issue=/); // Edit was not mistaken for a click on the row
+});

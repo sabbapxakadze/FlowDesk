@@ -113,7 +113,7 @@ function expandMentions(
 ): { body: string; mentioned: string[] } {
   const mentioned: string[] = [];
   const body = text.replace(
-    /\{(alex|priya|marcus|sofia|daniel)\}/g,
+    /\{(alex|nino|marcus|sofia|daniel)\}/g,
     (_, key: PersonKey) => {
       if (!mentioned.includes(ids[key])) mentioned.push(ids[key]);
       return mentionToken(ids[key], PEOPLE[key].name);
@@ -157,7 +157,7 @@ export async function seedDemo(
     // ---- people, organization, membership ---------------------------------------------------------------
     const joinedAgo: Record<PersonKey, number> = {
       alex: 90,
-      priya: 58,
+      nino: 58,
       marcus: 50,
       sofia: 45,
       daniel: 40,
@@ -199,16 +199,14 @@ export async function seedDemo(
       .values({ name: DEMO_ORG_NAME, slug: DEMO_ORG_SLUG, createdAt: ago(90) })
       .returning({ id: organizations.id });
     const organizationId = org!.id;
-    await tx
-      .insert(organizationMembers)
-      .values(
-        PERSON_KEYS.map((key) => ({
-          organizationId,
-          userId: ids[key],
-          role: PEOPLE[key].role,
-          createdAt: ago(joinedAgo[key]),
-        })),
-      );
+    await tx.insert(organizationMembers).values(
+      PERSON_KEYS.map((key) => ({
+        organizationId,
+        userId: ids[key],
+        role: PEOPLE[key].role,
+        createdAt: ago(joinedAgo[key]),
+      })),
+    );
 
     // ---- labels ------------------------------------------------------------------------------------------
     const labelNames = Object.keys(LABELS) as LabelName[];
@@ -649,7 +647,7 @@ function draftsFor(
       priority: h.priority ?? "none",
       labels: h.labels ?? [],
       assignee: h.assignee,
-      reporter: i % 2 === 0 ? "priya" : "alex",
+      reporter: i % 2 === 0 ? "nino" : "alex",
       createdAgo: first.startAgo! + 1 + (i % 4),
       startedAgo,
       doneAgo,
