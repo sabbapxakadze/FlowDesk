@@ -33,6 +33,30 @@ const envSchema = z.object({
   ATTACHMENT_SIGNING_SECRET: z
     .string()
     .min(32, "ATTACHMENT_SIGNING_SECRET must be at least 32 characters — this signs every download token"),
+  // "Sign in with Google/GitHub" (ADR 0042). A provider is on only when BOTH its id and secret are set (see the
+  // refinement below); with none set the buttons simply do not appear.
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  GITHUB_CLIENT_ID: z.string().min(1).optional(),
+  GITHUB_CLIENT_SECRET: z.string().min(1).optional(),
+  // Development only: "true" turns on the fake provider (lib/oauth/fake.ts) so the sign-in buttons and the whole flow
+  // can be tried without real Google/GitHub credentials. Refused in production (see the refinement below).
+  OAUTH_FAKE: z.enum(["true", "false"]).optional(),
+}).superRefine((value, ctx) => {
+  if (value.OAUTH_FAKE === "true" && value.NODE_ENV === "production") {
+    ctx.addIssue({ code: "custom", message: "OAUTH_FAKE must not be enabled in production", path: ["OAUTH_FAKE"] });
+  }
+  for (const provider of ["GOOGLE", "GITHUB"] as const) {
+    const id = value[`${provider}_CLIENT_ID`];
+    const secret = value[`${provider}_CLIENT_SECRET`];
+    if (Boolean(id) !== Boolean(secret)) {
+      ctx.addIssue({
+        code: "custom",
+        message: `${provider}_CLIENT_ID and ${provider}_CLIENT_SECRET must be set together`,
+        path: [`${provider}_CLIENT_ID`],
+      });
+    }
+  }
 });
 
 function loadEnv() {

@@ -2,6 +2,7 @@ import { and, desc, eq, gt, isNull, ne } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import {
   authTokens,
+  oauthIdentities,
   organizationMembers,
   organizations,
   sessions,
@@ -35,17 +36,28 @@ export async function organizationSlugExists(slug: string): Promise<boolean> {
  */
 export async function createUserWithOrganization(input: {
   email: string;
-  passwordHash: string;
+  /** Null for an account made with a provider (ADR 0042). */
+  passwordHash: string | null;
   name: string;
   organizationName: string;
   organizationSlug: string;
+  /** Set when the provider already confirmed the email, so the account starts verified. */
+  emailVerified?: boolean;
+  /** The provider identity of an account made with Google/GitHub; created in the same transaction. */
+  identity?: { provider: "google" | "github"; providerUserId: string; email: string };
 }) {
   return db.transaction(async (tx) => {
     const [user] = await tx
       .insert(users)
-      .values({ email: input.email, passwordHash: input.passwordHash, name: input.name })
+      .values({
+        email: input.email,
+        passwordHash: input.passwordHash,
+        name: input.name,
+        emailVerifiedAt: input.emailVerified ? new Date() : null,
+      })
       .returning();
     if (!user) throw new Error("Failed to create user");
+    if (input.identity) await tx.insert(oauthIdentities).values({ userId: user.id, ...input.identity });
 
     const [organization] = await tx
       .insert(organizations)
@@ -154,6 +166,16 @@ export async function markAuthTokenUsed(id: string) {
 
 export async function verifyUserEmail(userId: string) {
   await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, userId));
+}
+
+/**
+ * A provider confirmed this email, but the account with it was made by password and never verified (ADR 0042): whoever
+ * registered it may not be the owner of the address. The password is removed and every session ended, so only the
+ * person who just proved the address through the provider can use the account.
+ */
+export async function resetUnverifiedAccount(userId: string) {
+  await db.update(users).set({ passwordHash: null, emailVerifiedAt: new Date() }).where(eq(users.id, userId));
+  await db.update(sessions).set({ revokedAt: new Date() }).where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
 }
 
 export async function updateUserPassword(userId: string, passwordHash: string) {

@@ -20,7 +20,7 @@ show / hide password button. From five frosted-glass variants (after three first
 - **The field's accessible name.** `Field`'s `<label>` wraps its control, so a button inside would have become part of the name ("Password Show password"). `Field` now puts the label text in a span with an id and offers it through a small context (`field-label.ts`);
   `PasswordInput` names itself by it with `aria-labelledby`. Other controls are untouched.
 
-## Not in this change: sign-in with Google or GitHub
+## Not in this change: sign-in with Google or GitHub (built afterwards: see ADR 0042)
 
 It is a slice of its own, and the buttons are not shown until it exists (no dead buttons). What it needs: provider apps created by the owner (Google Cloud console, GitHub settings) and their credentials in the environment; a callback endpoint with a CSRF check;
 a rule for linking to an existing account (by verified email); a decision about accounts without a password (the users table requires a password hash today) and about change-password and reset for them; a fake provider for the tests. The card has room for the buttons and an "or with email" line.

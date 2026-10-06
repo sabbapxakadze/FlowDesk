@@ -1778,7 +1778,13 @@ The original plan for this slice, kept for the record:
    **Not done:** an automatic offer to new people, per-role tours, a record of who finished it, a real phone, a real screen reader.
 14. **Auth pages redesign + show/hide password DONE 2026-10-06 (ADR 0041; owner picked option A4 of eight mockups).** Login, Register and every other public auth page: a frosted-glass card over three soft blurred shapes (new semantic tokens for the glass and the shapes, a plain-surface fallback where the
    browser cannot blur or less transparency is asked for); on Login and Register a "Log in / Create account" switch at the top of the card. A show/hide button in every password field (`PasswordInput`, 8 fields in 6 forms; the label naming fixed through `Field`). 7 new e2e tests
-   (`auth-pages.spec.ts`); three deliberate breaks were each caught; 13 existing test lines needed `{ exact: true }`. **Not built (own slice):** Google/GitHub sign-in (the owner must create provider apps; needs a callback endpoint, account linking and a decision about accounts without a password).
+   (`auth-pages.spec.ts`); three deliberate breaks were each caught; 13 existing test lines needed `{ exact: true }`. **Built afterwards (item 15):** Google/GitHub sign-in (the owner must create provider apps; needs a callback endpoint, account linking and a decision about accounts without a password).
+15. **Sign in with Google and GitHub DONE 2026-10-06 (ADR 0042; owner chose both providers, accounts without a password, linking only on a provider-verified email, and connected accounts on /account).** Buttons on Login and Create account (only for providers
+   whose credentials are in `apps/api/.env`); the authorization-code flow with PKCE on the server, its state in a signed 10-minute cookie, a callback that redirects into the app (no token in any URL). Decision table: connected provider -> sign in; unverified provider email -> refused;
+   existing account with that email -> connected (an account whose own email was never verified loses its password and sessions first); otherwise a new passwordless account with its own organization. `users.password_hash` is nullable, new table `oauth_identities` (migration 0028).
+   /account gains Sign-in methods (Connect / Disconnect, never the last way in, locked in a transaction) and "Add password" for passwordless accounts; change password / change email / login handle the missing password. `lib/oauth/` seam with Google, GitHub and a test-only fake.
+   Tests: 23 API (`oauth.http.test.ts`), 6 adapter parsing tests (`providers.test.ts`, canned answers), 7 e2e (`oauth.spec.ts`); five deliberate breaks were each caught. **NOT verified: a real Google or GitHub round trip** (needs the owner's client ids and secrets; redirect URLs are in `.env.example`),
+   and whether GitHub enforces the PKCE parameters. **Not built:** OAuth inside the invitation flow, "remember me", more providers, choosing the organization name at provider sign-up.
    Not tested: that `mentions` stays out of the public profile activity (that feed returns `{}` for comment events by design). **Markdown STILL OPEN (checked 2026-10-05: descriptions and comments are plain text; the
    description keeps its line breaks since 2026-10-05, nothing more).**
    **Two navigation bugs noted 2026-10-05 (owner), FIXED the same day** (the issue page's, Edit profile's and Account's back links now use `PageHeader`'s `history: true`, so Back returns to where the person came from and the named page is only the fallback for a first page or a new tab; 3 e2e tests in `back-links.spec.ts`; removing the option from the issue page and the edit page made 2 of them fail; the Account test was not mutation-checked). The original report: (1) An issue opened from My work shows "<- {project name}", not "Back": `IssueDetail`
@@ -2468,6 +2474,15 @@ prioritise work, discuss it with edits and files, and see when things happened.
 
 ## Phase 9 — Production
 
+- [ ] **Make Google and GitHub sign-in real (ADR 0042; the code is built and tested with a fake, never run against the real providers).**
+  Steps, in order: (1) create a Google Cloud OAuth client (type "Web application", consent screen in Testing mode with your Gmail as a test user) and a
+  GitHub OAuth App; (2) register the redirect URLs `{APP_URL}/api/v1/auth/oauth/google/callback` and `.../github/callback` (for local dev
+  `http://localhost:5173`, and again for the real production domain); (3) put the ids and secrets in the environment (`apps/api/.env`, and the
+  secret store of wherever it is deployed, never the repo); (4) remove `OAUTH_FAKE=true` from `.env`; (5) try both providers once for real: a new
+  account, a second sign-in, connect and disconnect on `/account`, and a cancel at the provider's page; (6) check whether GitHub enforces the PKCE
+  parameters we send; (7) for production: publish the Google consent screen (or keep named test users), use HTTPS so the Secure cookies work, and
+  add a rate-limit store that is shared between instances (Redis item below), since the OAuth limiter is in memory. Also decide then: OAuth inside the
+  invitation flow, and choosing the organization name at provider sign-up.
 - [ ] Docker + docker-compose (api, web, postgres, redis)
 - [ ] Redis: caching, rate limits, Socket.IO adapter
 - [ ] Background jobs + transactional email

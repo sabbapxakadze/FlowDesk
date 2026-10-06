@@ -45,6 +45,17 @@ export const loginRateLimiter = rateLimit({
   handler: tooManyRequests,
 });
 
+// Starting and finishing a provider sign-in are two requests each, and nothing here can be guessed (the provider does
+// the authenticating), so this is looser than the password login limit.
+export const oauthRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: skipInTest,
+  handler: tooManyRequests,
+});
+
 // Spam account creation, not credential guessing — looser window is fine.
 export const registerRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

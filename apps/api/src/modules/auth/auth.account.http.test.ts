@@ -47,7 +47,7 @@ describe("account: timezone", () => {
     // Why: null means "use the browser's"; only real IANA names are stored, so every viewer can format with it.
     await register("tz@example.com");
     const s = await logIn("tz@example.com");
-    expect((await account(s).expect(200)).body.data).toEqual({ email: "tz@example.com", emailVerified: false, pendingEmail: null, timezone: null });
+    expect((await account(s).expect(200)).body.data).toEqual({ email: "tz@example.com", emailVerified: false, pendingEmail: null, timezone: null, hasPassword: true, connectedAccounts: [] });
 
     const set = await request(app).patch("/api/v1/users/me/timezone").set(as(s)).send({ timezone: "Asia/Tbilisi" }).expect(200);
     expect(set.body.data.timezone).toBe("Asia/Tbilisi");

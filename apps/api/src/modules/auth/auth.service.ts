@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import argon2 from "argon2";
 import { AppError } from "../../shared/errors.js";
 import * as authRepository from "./auth.repository.js";
+import * as oauthRepository from "./oauth.repository.js";
 import * as organizationsRepository from "../organizations/organizations.repository.js";
 import { generateOpaqueToken, hashToken, signAccessToken } from "./tokens.js";
 import {
@@ -31,7 +32,7 @@ function toSlug(name: string): string {
  * check below) — acceptable here since a lost race just means a retry, not
  * data corruption, and slug collisions on a random suffix are very rare.
  */
-async function generateUniqueSlug(organizationName: string): Promise<string> {
+export async function generateUniqueSlug(organizationName: string): Promise<string> {
   const base = toSlug(organizationName);
   let candidate = base;
 
@@ -187,8 +188,9 @@ export async function login(input: { email: string; password: string }) {
 
   // Same error for "no such account" and "wrong password" — a different
   // message for each would let an attacker use this endpoint to check
-  // which emails have accounts at all (user enumeration).
-  if (!user) {
+  // which emails have accounts at all (user enumeration). An account with no
+  // password (made with Google/GitHub) answers the same way.
+  if (!user || !user.passwordHash) {
     throw INVALID_CREDENTIALS_ERROR();
   }
   const passwordMatches = await argon2.verify(user.passwordHash, input.password);
@@ -196,7 +198,14 @@ export async function login(input: { email: string; password: string }) {
     throw INVALID_CREDENTIALS_ERROR();
   }
 
-  // Before the session is created: someone with no organization gets no session row.
+  return startSessionFor(user);
+}
+
+/**
+ * A new login session (a new token family) for someone who has just proved who they are, by password or through a
+ * provider. Before the session is created: someone with no organization gets no session row.
+ */
+export async function startSessionFor(user: { id: string; email: string; name: string; timezone: string | null }) {
   const organization = await getPrimaryOrganization(user.id);
   const familyId = randomUUID();
   const { accessToken, refreshToken } = await issueSession(user.id, familyId);
@@ -345,6 +354,8 @@ export async function getAccount(userId: string) {
     emailVerified: user.emailVerifiedAt !== null,
     pendingEmail: await authRepository.findPendingEmailChange(userId),
     timezone: user.timezone,
+    hasPassword: user.passwordHash !== null,
+    connectedAccounts: await oauthRepository.listIdentitiesForUser(userId),
   };
 }
 
@@ -369,6 +380,7 @@ export async function changePassword(input: {
 }): Promise<{ keptThisSession: boolean }> {
   const user = await authRepository.findUserById(input.userId);
   if (!user) throw new AppError("unauthenticated", 401, "Your account no longer exists.");
+  if (!user.passwordHash) throw NO_PASSWORD_ERROR("currentPassword");
   if (!(await argon2.verify(user.passwordHash, input.currentPassword))) {
     throw FIELD_ERROR("currentPassword", "Current password is incorrect.");
   }
@@ -377,14 +389,46 @@ export async function changePassword(input: {
   }
 
   await authRepository.updateUserPassword(user.id, await argon2.hash(input.newPassword, { type: argon2.argon2id }));
+  const keptThisSession = await endOtherSessions(user.id, input.refreshToken);
+  await sendPasswordChangedNotice(user.email);
+  return { keptThisSession };
+}
 
-  const session = input.refreshToken ? await authRepository.findSessionByTokenHash(hashToken(input.refreshToken)) : undefined;
-  const keptThisSession = Boolean(session && session.userId === user.id && !session.revokedAt);
+/** An account made with Google/GitHub has no password until it adds one; the actions that ask for it say so. */
+const NO_PASSWORD_ERROR = (field: string) =>
+  FIELD_ERROR(field, "This account has no password yet. Add one on the Account page first.");
+
+/**
+ * After a password is set or changed: sign out every OTHER session and keep the one that did it (found by its refresh
+ * cookie). With no usable cookie there is no "this device" to keep, so every session ends.
+ */
+async function endOtherSessions(userId: string, refreshToken: string | undefined): Promise<boolean> {
+  const session = refreshToken ? await authRepository.findSessionByTokenHash(hashToken(refreshToken)) : undefined;
+  const keptThisSession = Boolean(session && session.userId === userId && !session.revokedAt);
   if (keptThisSession && session) {
-    await authRepository.revokeOtherFamilies(user.id, session.familyId);
+    await authRepository.revokeOtherFamilies(userId, session.familyId);
   } else {
-    await authRepository.revokeAllForUser(user.id);
+    await authRepository.revokeAllForUser(userId);
   }
+  return keptThisSession;
+}
+
+/**
+ * The first password of an account made with Google/GitHub (ADR 0042). No "current password" exists to ask for; the
+ * person is signed in, which is the proof, and the other sessions are signed out like after any password change.
+ */
+export async function setPassword(input: {
+  userId: string;
+  newPassword: string;
+  refreshToken: string | undefined;
+}): Promise<{ keptThisSession: boolean }> {
+  const user = await authRepository.findUserById(input.userId);
+  if (!user) throw new AppError("unauthenticated", 401, "Your account no longer exists.");
+  if (user.passwordHash) {
+    throw new AppError("password_already_set", 409, "This account already has a password. Use 'Change password'.");
+  }
+  await authRepository.updateUserPassword(user.id, await argon2.hash(input.newPassword, { type: argon2.argon2id }));
+  const keptThisSession = await endOtherSessions(user.id, input.refreshToken);
   await sendPasswordChangedNotice(user.email);
   return { keptThisSession };
 }
@@ -400,6 +444,7 @@ export async function changePassword(input: {
 export async function requestEmailChange(input: { userId: string; newEmail: string; password: string }) {
   const user = await authRepository.findUserById(input.userId);
   if (!user) throw new AppError("unauthenticated", 401, "Your account no longer exists.");
+  if (!user.passwordHash) throw NO_PASSWORD_ERROR("password");
   if (!(await argon2.verify(user.passwordHash, input.password))) {
     throw FIELD_ERROR("password", "Password is incorrect.");
   }

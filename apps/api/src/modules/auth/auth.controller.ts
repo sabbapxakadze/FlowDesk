@@ -11,6 +11,7 @@ import {
   confirmEmailChangeRequestSchema,
   getAccountResponseSchema,
   requestEmailChangeRequestSchema,
+  setPasswordRequestSchema,
   updateTimezoneRequestSchema,
 } from "@flowdesk/contracts";
 import { env } from "../../config/env.js";
@@ -36,7 +37,7 @@ function refreshCookieOptions() {
   };
 }
 
-function setRefreshCookie(res: Response, refreshToken: string) {
+export function setRefreshCookie(res: Response, refreshToken: string) {
   res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
     ...refreshCookieOptions(),
     maxAge: REFRESH_COOKIE_MAX_AGE_MS,
@@ -147,6 +148,20 @@ export async function changePassword(req: Request, res: Response) {
   if (!parsed.success) throw badRequest("Invalid password change", parsed);
   const cookie: unknown = req.cookies?.[REFRESH_COOKIE_NAME];
   const { keptThisSession } = await authService.changePassword({
+    userId: req.auth!.userId,
+    ...parsed.data,
+    refreshToken: typeof cookie === "string" && cookie.length > 0 ? cookie : undefined,
+  });
+  if (!keptThisSession) res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions());
+  res.status(200).json({ keptThisSession });
+}
+
+/** The first password of an account made with Google/GitHub (ADR 0042); like change-password it needs the refresh cookie. */
+export async function setPassword(req: Request, res: Response) {
+  const parsed = setPasswordRequestSchema.safeParse(req.body);
+  if (!parsed.success) throw badRequest("Invalid password", parsed);
+  const cookie: unknown = req.cookies?.[REFRESH_COOKIE_NAME];
+  const { keptThisSession } = await authService.setPassword({
     userId: req.auth!.userId,
     ...parsed.data,
     refreshToken: typeof cookie === "string" && cookie.length > 0 ? cookie : undefined,

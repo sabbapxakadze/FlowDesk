@@ -134,7 +134,7 @@ The board and sprint cards (and the drag preview) have a colored priority edge, 
 The access token is renewed silently (on a rejected request, and on returning to a tab) and an inactive person is warned and then signed out after 30 minutes (ADR 0038); nobody should see "Invalid or expired access token".
 A demo organization with five people and about 76 issues of realistic data is built by `pnpm db:seed:demo` (log in as `demo@flowdesk.test`, password `Demo123!@#`; `--reset` rebuilds it; ADR 0039).
 A "Tutorial" row in the sidebar starts a guided tour of the app (our own small engine in `shared/tour`, steps in `features/app-tour`, parts named by `data-tour` attributes; ADR 0040).
-The public auth pages are a frosted-glass card over soft blurred shapes with a Log in / Create account switch, and every password field has a show/hide button (`shared/ui/PasswordInput`; ADR 0041). Sign-in with Google/GitHub is not built yet.
+The public auth pages are a frosted-glass card over soft blurred shapes with a Log in / Create account switch, and every password field has a show/hide button (`shared/ui/PasswordInput`; ADR 0041). Sign-in with Google and GitHub (ADR 0042) is built and optional: a provider's button shows only when its credentials are in `apps/api/.env`; such accounts have no password until they add one on `/account`, where Sign-in methods connects and disconnects providers (never the last way in).
 `/` is the "My work" page (my open issues across projects and my unread notifications). The issue list carries each issue's labels and
 filters by several labels at once (an issue must have all of them).
 The assignee circle on an issue card shows the person's photo and is a profile link with the hover card (beside the card's issue link, never inside it).

@@ -17,3 +17,4 @@ export * from "./profile.js";
 export * from "./my-work.js";
 export * from "./account.js";
 export * from "./mentions.js";
+export * from "./oauth.js";

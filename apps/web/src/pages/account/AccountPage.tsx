@@ -1,6 +1,8 @@
 import { useAccount } from "../../entities/account";
 import { ChangeEmailForm } from "../../features/change-email";
-import { ChangePasswordForm } from "../../features/change-password";
+import { OAuthErrorNotice } from "../../entities/oauth";
+import { ChangePasswordForm, SetPasswordForm } from "../../features/change-password";
+import { SignInMethods } from "../../features/connected-accounts";
 import { TimezoneForm } from "../../features/set-timezone";
 import { SignOutEverywhere } from "../../features/sign-out-everywhere";
 import { useAuth } from "../../shared/auth/useAuth";
@@ -30,6 +32,7 @@ export function AccountPage() {
   return (
     <Page>
       <PageHeader title="Account" back={{ to: "/profile", label: "Edit profile", history: true }} />
+      <OAuthErrorNotice />
       {account.isPending ? (
         <Skeleton className="h-48 w-full max-w-xl" />
       ) : account.isError ? (
@@ -47,11 +50,24 @@ export function AccountPage() {
                 {account.data.email}.
               </p>
             )}
-            <ChangeEmailForm />
+            {account.data.hasPassword ? (
+              <ChangeEmailForm />
+            ) : (
+              <p className="text-sm text-[var(--color-text-muted)]">To change your email, add a password first (in the Password section below).</p>
+            )}
           </Section>
-          <Section title="Password" note="Other devices are signed out when you change it.">
-            <ChangePasswordForm />
+          <Section title="Sign-in methods" note="Besides your email and password, you can sign in with these. At least one way to sign in always stays.">
+            <SignInMethods account={account.data} />
           </Section>
+          {account.data.hasPassword ? (
+            <Section title="Password" note="Other devices are signed out when you change it.">
+              <ChangePasswordForm />
+            </Section>
+          ) : (
+            <Section title="Password" note="You sign in with a provider and have no password yet. Adding one also lets you log in with your email. Other devices are signed out.">
+              <SetPasswordForm />
+            </Section>
+          )}
           <Section title="Devices" note="Ends every session of your account, this one too. Use it if a device is lost or you left yourself logged in somewhere.">
             <SignOutEverywhere />
           </Section>

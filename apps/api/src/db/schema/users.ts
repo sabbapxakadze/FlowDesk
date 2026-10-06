@@ -9,7 +9,8 @@ import { pgTable, uuid, varchar, timestamp } from "drizzle-orm/pg-core";
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  // Null for an account made through "Sign in with Google/GitHub" that has not added a password (ADR 0042).
+  passwordHash: varchar("password_hash", { length: 255 }),
   name: varchar("name", { length: 255 }).notNull(),
   // Profile (ADR 0028). All optional. avatarKey is the random part of the photo's public URL
   // (a new one on every upload); null means "show initials".

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { IssueStatus } from "@flowdesk/contracts";
 import { IssueCardContent, IssueCardFrame } from "../../entities/issue";
 import { LabelPills } from "../../entities/label";
+import { ProviderButton } from "../../entities/oauth";
 import {
   Avatar,
   Button,
@@ -682,6 +683,14 @@ export function DesignSystemPage() {
             <PasswordInput placeholder="A password" />
           </Field>
           <Textarea placeholder="A textarea (resizable only up and down, between 4.5rem and 16rem tall)" rows={3} />
+        </div>
+      </Section>
+
+      <Section title="Sign-in buttons" note="ProviderButton: the Continue with Google / GitHub buttons of the auth pages (the real ones appear only for providers the server has switched on).">
+        <div className="flex max-w-sm flex-col gap-2.5">
+          <ProviderButton provider="google" />
+          <ProviderButton provider="github" />
+          <ProviderButton provider="google" pending />
         </div>
       </Section>
 
