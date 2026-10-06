@@ -43,7 +43,7 @@ goes inside it). Two looks on the surface's own background, no tint: `raised` (a
 `.scroll-edges`; a person's activity and the full issue page's timeline). `PersonHover`'s card is `position: fixed`
 (placed from the name's measured position) so a scrolling list neither clips it nor becomes scrollable because of it.
 `ScrollPanel` also takes `fitWindow` (the cap shrinks to the room left in the window, so the bottom edge is on screen) and a
-`footer` (pinned to the bottom of the box, fully visible however far the list is scrolled: Load more on the profile).
+`footer` (pinned to the bottom of the box, fully visible however far the list is scrolled: Load more on the audit log).
 
 Motion (ADR 0029): `Button` has `pending` and `done`; `Card` takes `rowState`/`rowIndex` for list rows; hooks `useExitPresence`,
 `useAnimatedList`, `useRowMotion`/`useRowMotionProps` and `useSuccessFlash`; the `motion-*` classes are in `app/index.css`.

@@ -106,32 +106,26 @@ function RecentActivity({ organizationId, profile }: { organizationId: string; p
       ) : items.length === 0 ? (
         <EmptyState>No activity yet.</EmptyState>
       ) : (
-        // Capped: "Load more" adds rows inside the panel, the page keeps its height.
-        <ScrollPanel
-          label="Activity list"
-          look="edges"
-          onSurface
-          fitWindow
-          className="max-h-[28rem]"
-          footer={
-            activity.hasNextPage && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={activity.isFetchingNextPage}
-                onClick={() => void activity.fetchNextPage()}
-              >
-                {activity.isFetchingNextPage ? "Loadingâ€¦" : "Load more"}
-              </Button>
-            )
-          }
-        >
+        // Capped: "Load more" is the last item of the list (as on the Issues page), so it shows once you scroll to the
+        // end, and the rows it adds appear inside the panel; the page keeps its height.
+        <ScrollPanel label="Activity list" look="edges" onSurface fitWindow className="max-h-[28rem]">
           <ul aria-label="Recent activity" className="flex flex-col gap-3 p-1">
             {items.map((item) => (
               <ActivityRow key={item.id} item={item} person={profile} />
             ))}
           </ul>
+          {activity.hasNextPage && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="mt-3"
+              disabled={activity.isFetchingNextPage}
+              onClick={() => void activity.fetchNextPage()}
+            >
+              {activity.isFetchingNextPage ? "Loading…" : "Load more"}
+            </Button>
+          )}
         </ScrollPanel>
       )}
     </Card>

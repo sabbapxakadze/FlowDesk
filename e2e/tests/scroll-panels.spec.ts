@@ -62,16 +62,15 @@ test("profile: Load more fills the activity panel, the page keeps its height", a
   const first = await metrics(page, "Activity list");
   expect(first.client).toBeLessThanOrEqual(28 * 16 + 1); // capped at 28rem
 
-  // The button is pinned to the bottom of the box: fully inside it at rest (not cut in half by the edge), and
-  // still fully inside after the list is scrolled to the top and back.
+  // Like the Issues list, the button is the last item of the list: out of sight at rest, in view once scrolled to the end.
   const loadMore = panel.getByRole("button", { name: "Load more" });
   const inside = async () => {
     const button = (await loadMore.boundingBox())!;
     const area = (await panel.boundingBox())!;
     return button.y >= area.y && button.y + button.height <= area.y + area.height + 0.5;
   };
-  expect(await inside()).toBe(true);
-  await panel.evaluate((el) => (el.scrollTop = 120));
+  expect(await inside()).toBe(false);
+  await panel.evaluate((el) => (el.scrollTop = el.scrollHeight));
   expect(await inside()).toBe(true);
   await panel.evaluate((el) => (el.scrollTop = 0));
   const before = await pageHeight(page);
