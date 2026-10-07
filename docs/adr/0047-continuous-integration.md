@@ -26,6 +26,10 @@ Choices, and why:
 - **Failure artifacts**: Playwright traces and screenshots are uploaded for 7 days when a job fails, since a CI failure cannot be reproduced by looking at the machine.
 - **Action versions are pinned to a major version** (`@v7`, `@v6`) as read from each action's releases page on 2026-10-07. A major tag moves with that action's own fixes; pinning each to a full commit hash is stricter and is a possible later hardening.
 
+## One retry in CI (added after the first runs)
+
+The first two CI runs each failed one browser test that passes on the owner's machine (a real session bug, ADR 0048, and a test reading a new tab's address too early). The browser suite on CI now **retries a failed test once** (`retries: 1` when the `CI` variable is set; locally none). A test that fails and then passes is reported as **flaky**, not as a plain pass, and its first-try screenshot and trace are uploaded (`if: always()`). The retry is a safety net for slow shared machines, not a licence: **every test reported as flaky is to be looked at**, because the first two were not noise. A test that fails twice fails the job. The production smoke test keeps no retry. Not verified: how GitHub's page shows a flaky test (the Playwright list output marks it).
+
 ## Not part of this slice
 
 - **Blocking merges.** "Failing checks block merging" is a repository setting (Settings, Branches, a rule that requires the four checks), not a file in the code. The owner sets it after the first run, because the checks must have run once before GitHub lists them as selectable.

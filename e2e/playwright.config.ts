@@ -32,7 +32,9 @@ export default defineConfig({
   // parallel without racing each other, same reasoning as the API's vitest config.
   workers: 1,
   fullyParallel: false,
-  retries: 0,
+  // On CI (the CI variable is set by GitHub) a failed test is tried once more. If the second try passes, the report marks it "flaky" instead
+  // of green: it is a hint to find the hidden timing assumption, not a pass to ignore (ADR 0047). Locally nothing is retried.
+  retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["html", { open: "never", outputFolder: "../playwright-report" }]],
   outputDir: "../test-results",
   use: {

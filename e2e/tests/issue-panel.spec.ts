@@ -144,7 +144,9 @@ test("a reload keeps the panel open, and the full-page link and a Ctrl+click sti
   const newTab = context.waitForEvent("page");
   await cardLink(page, "Beta issue").click({ modifiers: ["Control"] });
   const tab = await newTab;
-  await expect(tab).toHaveURL(/\/issues\/WEB-2/); // a new tab starts at about:blank: wait for it to arrive, do not read it once
+  // The tab shows the issue's own page. Its address is not read: on CI (Linux, headless) Playwright kept reporting an empty address for this
+  // background tab for 5 seconds although the trace shows the page fully loaded, so the page's content is what proves it.
+  await expect(tab.getByRole("heading", { level: 1, name: "Beta issue" })).toBeVisible();
   await expect(panelOf(page)).toHaveCount(0);
 });
 

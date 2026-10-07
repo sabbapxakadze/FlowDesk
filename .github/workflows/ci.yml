@@ -146,10 +146,11 @@ jobs:
       # the suite be split into 4 parts that run at the same time.
       - run: pnpm exec playwright test -c e2e/playwright.config.ts --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v7
-        if: failure()
+        if: always() # also when a test failed once and passed on its retry ("flaky"): the evidence of the first try is kept
         with:
           name: e2e-results-shard-${{ matrix.shard }}
           path: |
             test-results/
             playwright-report/
           retention-days: 7
+          if-no-files-found: ignore
