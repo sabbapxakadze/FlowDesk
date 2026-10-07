@@ -72,7 +72,8 @@ test("an expired token is renewed and the request sent again: the page shows its
   const before = net.refreshes();
   await net.expire();
   await page.getByRole("link", { name: "Members", exact: true }).click();
-  await expect(page.getByText("E2E User")).toBeVisible();
+  // The member list loaded (inside the page itself: the sidebar shows the same name, and each name has a hover card, so an unscoped text match finds several).
+  await expect(page.locator("main").getByRole("link", { name: "E2E User" }).first()).toBeVisible();
   await expect(page.getByText("No pending invitations.")).toBeVisible();
   await expect(page.locator("main")).not.toContainText("Invalid or expired");
   await page.waitForTimeout(1500);

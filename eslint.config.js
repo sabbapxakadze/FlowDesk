@@ -8,7 +8,7 @@ import prettierConfig from "eslint-config-prettier";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "**/.turbo/**", "**/coverage/**", "e2e/.tsbuild/**", "playwright-report/**", "test-results/**"],
+    ignores: ["**/dist/**", "apps/web/build/**", "**/node_modules/**", "**/.turbo/**", "**/coverage/**", "e2e/.tsbuild/**", "playwright-report/**", "test-results/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

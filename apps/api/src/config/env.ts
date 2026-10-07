@@ -47,6 +47,13 @@ const envSchema = z.object({
   DEMO_ENABLED: z.enum(["true", "false"]).optional(),
   DEMO_TTL_MINUTES: z.coerce.number().int().min(1).max(24 * 60).default(120),
   DEMO_MAX_ACTIVE: z.coerce.number().int().min(1).max(1000).default(40),
+  // Running in production (ADR 0046). TRUST_PROXY: how many proxies are in front of the server (Render: 1; nothing in front: 0), so the
+  // rate limiters see the visitor and not the proxy. SERVE_WEB: serve the built web app from this process (WEB_DIST_DIR overrides where it
+  // was built). RUN_MIGRATIONS: bring the database schema up to date when the server starts (Render's free plan has no pre-deploy step).
+  TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
+  SERVE_WEB: z.enum(["true", "false"]).optional(),
+  WEB_DIST_DIR: z.string().min(1).optional(),
+  RUN_MIGRATIONS: z.enum(["true", "false"]).optional(),
 }).superRefine((value, ctx) => {
   if (value.OAUTH_FAKE === "true" && value.NODE_ENV === "production") {
     ctx.addIssue({ code: "custom", message: "OAUTH_FAKE must not be enabled in production", path: ["OAUTH_FAKE"] });

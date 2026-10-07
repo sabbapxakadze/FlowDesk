@@ -143,6 +143,7 @@ The assignee circle on an issue card shows the person's photo and is a profile l
 Every dropdown is the app's own `shared/ui/Dropdown` (search past seven options, marks before labels, keyboard and screen-reader support), not a native select.
 Long lists scroll inside their own area instead of stretching the page (`shared/ui/ScrollPanel`: a raised panel on the Issues
 page, edge shadows on a person's activity and an issue's timeline).
+Production mode (ADR 0046, Phase 9 slice 9.1): with `SERVE_WEB=true` the API process serves the built web app (`apps/web/build`, from `pnpm build`) on one address, `TRUST_PROXY=1` behind Render's proxy, `RUN_MIGRATIONS=true` brings the schema up to date at start, SIGTERM stops it cleanly, and a strict Content-Security-Policy (scripts by hash, no eval) is sent; the plan for hosting on Render + Neon + R2 is the top of Phase 9 in `docs/roadmap.md` (ADR 0045).
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,
@@ -477,7 +478,7 @@ Update this line when a phase completes.
 - **Backend** Node + TypeScript + Express, Socket.IO, Zod, JWT, Argon2id
 - **Database** PostgreSQL 16 (native locally), **Drizzle ORM**
 - **Shared** `packages/contracts` — Zod schemas as the single source of truth
-- **Later** Redis, Docker, GitHub Actions, S3-compatible object storage
+- **Later** GitHub Actions, S3-compatible object storage (Cloudflare R2). Hosting is Render + Neon (ADR 0045); Docker is skipped for now and Redis only comes with a second server instance
 
 ---
 
@@ -564,6 +565,7 @@ pnpm db:generate    # drizzle migration from a schema change (apps/api)
 pnpm db:migrate     # apply migrations to $DATABASE_URL
 pnpm db:seed        # idempotent local demo data
 pnpm test:e2e       # Playwright e2e on its own servers + flowdesk_test (ADR 0020)
+pnpm test:e2e:prod # builds, then runs the BUILT app like Render will (one process, production mode) and smoke-tests it (ADR 0046)
 ```
 
 One-time for e2e: `pnpm exec playwright install chromium`. The e2e run starts

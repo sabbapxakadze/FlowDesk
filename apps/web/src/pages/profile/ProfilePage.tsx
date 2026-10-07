@@ -123,7 +123,7 @@ function RecentActivity({ organizationId, profile }: { organizationId: string; p
               disabled={activity.isFetchingNextPage}
               onClick={() => void activity.fetchNextPage()}
             >
-              {activity.isFetchingNextPage ? "Loading…" : "Load more"}
+              {activity.isFetchingNextPage ? "Loadingâ€¦" : "Load more"}
             </Button>
           )}
         </ScrollPanel>

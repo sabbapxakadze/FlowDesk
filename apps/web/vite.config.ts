@@ -13,6 +13,8 @@ const apiTarget = process.env.API_PROXY_TARGET ?? "http://localhost:4000";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // The bundle goes to build/ (served by the API in production, ADR 0046), apart from dist/, where `tsc -b` writes its own output.
+  build: { outDir: "build", emptyOutDir: true },
   server: {
     proxy: {
       "/api": {

@@ -1,5 +1,9 @@
 import express, { type Express } from "express";
 import cookieParser from "cookie-parser";
+import { env } from "./config/env.js";
+import { AppError } from "./shared/errors.js";
+import { applyProxyTrust } from "./lib/proxy.js";
+import { applySecurityHeaders, DEFAULT_WEB_DIR, loadWebApp, serveWebApp } from "./web-app.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { healthRouter } from "./modules/health/health.routes.js";
@@ -25,6 +29,13 @@ import { myWorkRouter } from "./modules/my-work/my-work.routes.js";
  */
 export const app: Express = express();
 
+// Behind Render's proxy the visitor's address comes from X-Forwarded-For (ADR 0046); with nothing in front the header is ignored.
+applyProxyTrust(app, env.TRUST_PROXY);
+
+// In production the same process serves the built web app (ADR 0046). Read at start, so a missing build stops the server at boot.
+const webApp = env.SERVE_WEB === "true" ? loadWebApp(env.WEB_DIST_DIR ?? DEFAULT_WEB_DIR) : undefined;
+if (webApp) applySecurityHeaders(app, { html: webApp.html, appUrl: env.APP_URL });
+
 app.use(requestLogger);
 app.use(express.json());
 app.use(cookieParser());
@@ -45,6 +56,11 @@ app.use("/api/v1", invitationsRouter);
 app.use("/api/v1", auditRouter);
 app.use("/api/v1", profilesRouter);
 app.use("/api/v1", myWorkRouter);
+
+// An address under /api that no route answered is a JSON 404, never the web app's page (the page's fallback skips /api too).
+app.use("/api", (_req, _res, next) => next(new AppError("not_found", 404, "No such API route.")));
+
+if (webApp) serveWebApp(app, webApp);
 
 // Must be registered after every route — see error-handler.ts.
 app.use(errorHandler);

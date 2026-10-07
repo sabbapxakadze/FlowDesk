@@ -7,11 +7,5 @@ export const pool = new Pool({ connectionString: env.DATABASE_URL });
 
 export const db = drizzle(pool, { schema });
 
-// Let the pool close cleanly instead of leaving connections dangling when
-// the process is asked to stop (Ctrl+C locally, SIGTERM from an
-// orchestrator later).
-for (const signal of ["SIGINT", "SIGTERM"] as const) {
-  process.on(signal, () => {
-    void pool.end();
-  });
-}
+// The pool is closed by the server's clean shutdown (index.ts, lib/shutdown.ts), AFTER it has stopped taking requests; closing it here on the
+// signal itself would pull the database away from requests that are still being answered. Scripts (seed, seed-demo) end the pool themselves.

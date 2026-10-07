@@ -409,7 +409,9 @@ test.describe("with animations on", () => {
     expect(await rowAnimations(page)).toEqual([]);
     await page.getByPlaceholder("Add a comment…").fill("Hello there");
     await page.getByRole("button", { name: "Comment", exact: true }).click();
-    await expect(page.getByText("Hello there")).toBeVisible();
+    // Wait for the POSTED comment: a row of the timeline. (getByText("Hello there") also matches the comment box itself the moment the text is
+    // typed, before anything was posted, so the check below used to run too early.)
+    await expect(page.getByRole("listitem").filter({ hasText: "Hello there" })).toBeVisible();
     expect((await rowAnimations(page)).some((a) => a.kind === "enter")).toBe(true);
   });
 });
