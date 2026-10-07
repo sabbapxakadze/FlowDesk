@@ -1,0 +1,155 @@
+# Continuous integration (ADR 0047): every pull request and every push to main runs the same checks the owner runs by hand.
+#
+#   check            lint and typecheck
+#   api-tests        the API test suite against a real Postgres
+#   build-and-smoke  the production build, run the way Render will run it (pnpm test:e2e:prod)
+#   e2e              the whole browser suite, split into 4 shards that run at the same time, each with its OWN Postgres
+#
+# None of the values below is a secret: they only let the API start in a throwaway database that exists for the length of the job.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to the same branch cancels the run that is still going: its result is already out of date.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  HUSKY: "0" # the git hooks are for the owner's machine
+  JWT_SECRET: ci-only-jwt-secret-for-throwaway-test-runs-0123456789
+  ATTACHMENT_SIGNING_SECRET: ci-only-attachment-secret-for-throwaway-runs-0123456789
+  RESEND_API_KEY: ci-dummy-key # mail is attempted and refused; nothing is ever delivered from a test
+  EMAIL_FROM: ci@example.com
+  APP_URL: http://localhost:5173
+
+jobs:
+  check:
+    name: Lint and typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6 # the pnpm version comes from "packageManager" in package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+
+  api-tests:
+    name: API tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: flowdesk
+          POSTGRES_PASSWORD: flowdesk
+          POSTGRES_DB: flowdesk_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U flowdesk -d flowdesk_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://flowdesk:flowdesk@localhost:5432/flowdesk_test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @flowdesk/contracts build # the API imports the built contracts
+      - run: pnpm test # the test setup migrates the database itself
+
+  build-and-smoke:
+    name: Production build and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: flowdesk
+          POSTGRES_PASSWORD: flowdesk
+          POSTGRES_DB: flowdesk_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U flowdesk -d flowdesk_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://flowdesk:flowdesk@localhost:5432/flowdesk_test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e:prod # builds everything, then runs the BUILT app as one process (it migrates the database at start)
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: smoke-test-results
+          path: test-results/
+          retention-days: 7
+
+  e2e:
+    name: Browser tests (shard ${{ matrix.shard }} of 4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false # one failing shard must not hide the others' results
+      matrix:
+        shard: [1, 2, 3, 4]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: flowdesk
+          POSTGRES_PASSWORD: flowdesk
+          POSTGRES_DB: flowdesk_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U flowdesk -d flowdesk_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://flowdesk:flowdesk@localhost:5432/flowdesk_test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm --filter @flowdesk/contracts build
+      - run: pnpm db:migrate # a fresh database per shard: the tests reset the data, not the schema
+        env:
+          DATABASE_URL: postgresql://flowdesk:flowdesk@localhost:5432/flowdesk_test
+      # Every test resets the whole database, so the tests of one run cannot share it; each shard has its own Postgres, which is what lets
+      # the suite be split into 4 parts that run at the same time.
+      - run: pnpm exec playwright test -c e2e/playwright.config.ts --shard=${{ matrix.shard }}/4
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: e2e-results-shard-${{ matrix.shard }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
