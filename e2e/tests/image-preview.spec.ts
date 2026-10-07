@@ -185,7 +185,7 @@ test("a file that is not an image does not open the popup; it opens as a link in
   const newTab = context.waitForEvent("page");
   await link.click();
   const tab = await newTab;
-  expect(tab.url()).toContain("/api/v1/attachments/");
+  await expect(tab).toHaveURL(/\/api\/v1\/attachments\//); // a new tab starts at about:blank: wait for it to arrive
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 

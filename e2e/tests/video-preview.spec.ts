@@ -171,7 +171,7 @@ test("a document in a comment is still a text chip that opens in a new tab", asy
   await expect(chip).toContainText("5 B");
   const newTab = context.waitForEvent("page");
   await chip.click();
-  expect((await newTab).url()).toContain("/api/v1/attachments/");
+  await expect(await newTab).toHaveURL(/\/api\/v1\/attachments\//); // a new tab starts at about:blank: wait for it to arrive
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 

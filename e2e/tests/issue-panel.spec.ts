@@ -144,7 +144,7 @@ test("a reload keeps the panel open, and the full-page link and a Ctrl+click sti
   const newTab = context.waitForEvent("page");
   await cardLink(page, "Beta issue").click({ modifiers: ["Control"] });
   const tab = await newTab;
-  expect(tab.url()).toContain("/issues/WEB-2");
+  await expect(tab).toHaveURL(/\/issues\/WEB-2/); // a new tab starts at about:blank: wait for it to arrive, do not read it once
   await expect(panelOf(page)).toHaveCount(0);
 });
 
