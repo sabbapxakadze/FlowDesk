@@ -34,3 +34,5 @@ not a single `POST /login` returning a long-lived token.
 - **Long-lived non-rotating refresh tokens** — theft is undetectable.
 - **Server-side sessions only** — simpler and defensible, but teaches less about
   the token model that dominates current API design.
+
+**Amended 2026-10-07 (ADR 0048):** a spent token presented again within 10 seconds of its rotation, while its family still has a live session, is answered as a refresh that raced itself instead of revoking the family. After 10 seconds, or once the family is ended by logout or a password change, the rule above applies unchanged.

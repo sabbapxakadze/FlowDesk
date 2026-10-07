@@ -144,6 +144,7 @@ Every dropdown is the app's own `shared/ui/Dropdown` (search past seven options,
 Long lists scroll inside their own area instead of stretching the page (`shared/ui/ScrollPanel`: a raised panel on the Issues
 page, edge shadows on a person's activity and an issue's timeline).
 Production mode (ADR 0046, Phase 9 slice 9.1): with `SERVE_WEB=true` the API process serves the built web app (`apps/web/build`, from `pnpm build`) on one address, `TRUST_PROXY=1` behind Render's proxy, `RUN_MIGRATIONS=true` brings the schema up to date at start, SIGTERM stops it cleanly, and a strict Content-Security-Policy (scripts by hash, no eval) is sent; the plan for hosting on Render + Neon + R2 is the top of Phase 9 in `docs/roadmap.md` (ADR 0045).
+A refresh token that was spent less than 10 seconds ago, in a family that is still alive, is answered again instead of revoking the family (ADR 0048; found by the first CI run: a cancelled refresh logged the person out). CI is `.github/workflows/ci.yml` (ADR 0047): four jobs, the browser suite in 4 shards each with its own Postgres.
 Remaining Phase 8.5 slices are in `docs/roadmap.md`.
 
 Slice 4 (file attachments) is done: local disk plus our own HMAC-signed,

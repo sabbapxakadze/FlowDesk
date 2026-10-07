@@ -1,7 +1,19 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
+import { db } from "../../db/client.js";
+import { sessions } from "../../db/schema/index.js";
 import { resetDatabase } from "../../db/test-utils.js";
 import { AppError } from "../../shared/errors.js";
 import * as authService from "./auth.service.js";
+import { hashToken } from "./tokens.js";
+
+/** Pretends the token was rotated a minute ago, i.e. long after the grace window (ADR 0048), without sleeping in a test. */
+async function ageRotation(refreshToken: string) {
+  await db
+    .update(sessions)
+    .set({ revokedAt: new Date(Date.now() - 60_000) })
+    .where(eq(sessions.refreshTokenHash, hashToken(refreshToken)));
+}
 
 /**
  * The important test in this whole slice. Rotation on its own is easy to
@@ -59,7 +71,7 @@ describe("auth service — sessions", () => {
     expect(thirdToken).not.toBe(secondToken);
   });
 
-  it("reusing an already-rotated token revokes the entire family, not just that request", async () => {
+  it("reusing a token rotated long ago revokes the entire family, not just that request", async () => {
     const { refreshToken: firstToken } = await authService.login({
       email: "session@example.com",
       password: "password123",
@@ -67,6 +79,7 @@ describe("auth service — sessions", () => {
 
     // Rotate once — firstToken is now spent, secondToken is the live one.
     const { refreshToken: secondToken } = await authService.refresh(firstToken);
+    await ageRotation(firstToken); // past the grace window: this is no longer a refresh racing itself
 
     // Presenting the already-used firstToken again must fail...
     await expect(authService.refresh(firstToken)).rejects.toThrow(AppError);
@@ -77,6 +90,53 @@ describe("auth service — sessions", () => {
     // detection exists to catch: a stolen old token doesn't just fail
     // itself, it has to burn the attacker's foothold in the family too.
     await expect(authService.refresh(secondToken)).rejects.toThrow(AppError);
+  });
+
+  it("a token rotated a moment ago is answered again, like a refresh that raced itself, and the family survives (ADR 0048)", async () => {
+    // Why: the browser cancels a refresh (reload, a click on a link) after the server rotated but before the new cookie was stored, and
+    // the next request carries the old token. Found by CI: the person was signed out on a slow machine.
+    const { refreshToken: firstToken } = await authService.login({
+      email: "session@example.com",
+      password: "password123",
+    });
+    const { refreshToken: lostToken } = await authService.refresh(firstToken); // its answer never reached the browser
+
+    const replayed = await authService.refresh(firstToken); // the browser asks again with the old cookie
+    expect(replayed.accessToken).toBeTruthy();
+    expect(replayed.refreshToken).not.toBe(firstToken);
+
+    // The session carries on with the token the browser did receive, and the family was not killed.
+    const next = await authService.refresh(replayed.refreshToken);
+    expect(next.refreshToken).toBeTruthy();
+    expect(lostToken).toBeTruthy();
+  });
+
+  it("answering a raced token does not stretch the grace window", async () => {
+    // Why: if the replay marked the old token spent again, its revoked time would move to now and a stolen token could be replayed
+    // for ever by replaying it every few seconds.
+    const { refreshToken: firstToken } = await authService.login({
+      email: "session@example.com",
+      password: "password123",
+    });
+    await authService.refresh(firstToken);
+    const [before] = await db.select().from(sessions).where(eq(sessions.refreshTokenHash, hashToken(firstToken)));
+
+    await authService.refresh(firstToken); // raced, answered
+    const [after] = await db.select().from(sessions).where(eq(sessions.refreshTokenHash, hashToken(firstToken)));
+    expect(after!.revokedAt!.getTime()).toBe(before!.revokedAt!.getTime());
+  });
+
+  it("a rotated token replayed right after logout is refused: the grace never revives an ended session", async () => {
+    // Why: the grace window is only for a family that is still alive. Without that check, a stolen old token could start a new session
+    // for 10 seconds after the person logged out.
+    const { refreshToken: firstToken } = await authService.login({
+      email: "session@example.com",
+      password: "password123",
+    });
+    const { refreshToken: secondToken } = await authService.refresh(firstToken);
+    await authService.logout(secondToken);
+
+    await expect(authService.refresh(firstToken)).rejects.toMatchObject({ code: "invalid_refresh_token" });
   });
 
   it("logout revokes the current family, and that family only", async () => {

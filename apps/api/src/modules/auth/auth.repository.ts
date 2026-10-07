@@ -117,6 +117,19 @@ export async function revokeFamily(familyId: string) {
     .where(and(eq(sessions.familyId, familyId), isNull(sessions.revokedAt)));
 }
 
+/**
+ * True while any token of the family can still be used: not revoked and not expired. Tells a refresh that raced itself (a rotated
+ * token replayed within the grace window, ADR 0048) from a replay after logout or a password change, which ended the family.
+ */
+export async function familyHasLiveSession(familyId: string) {
+  const [row] = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(and(eq(sessions.familyId, familyId), isNull(sessions.revokedAt), gt(sessions.expiresAt, new Date())))
+    .limit(1);
+  return row !== undefined;
+}
+
 export async function revokeAllForUser(userId: string) {
   await db
     .update(sessions)

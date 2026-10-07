@@ -140,6 +140,12 @@ export async function register(input: {
 }
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+/**
+ * How long after a rotation the OLD refresh token is still understood as "a refresh that raced itself" and not as theft (ADR 0048).
+ * A browser can cancel a refresh (a reload, a click on a link) after the server has already rotated the token but before the new cookie
+ * was stored, and the next request then sends the old one.
+ */
+export const REFRESH_REUSE_GRACE_MS = 10_000;
 const EMAIL_CHANGE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 const INVALID_CREDENTIALS_ERROR = () =>
@@ -230,7 +236,14 @@ export async function refresh(refreshToken: string) {
     throw INVALID_REFRESH_ERROR();
   }
 
-  if (session.revokedAt) {
+  // A token that was spent by a normal rotation a moment ago, in a family that is still alive, is a refresh that raced itself (the browser
+  // cancelled the request after the server had rotated, ADR 0048): answer it like a normal refresh and leave the family alone.
+  const racedItself =
+    session.revokedAt !== null &&
+    Date.now() - session.revokedAt.getTime() < REFRESH_REUSE_GRACE_MS &&
+    (await authRepository.familyHasLiveSession(session.familyId));
+
+  if (session.revokedAt && !racedItself) {
     // This exact token was already used (or already explicitly revoked)
     // once before. Seeing it again is a stolen-token signal, not a normal
     // retry — the whole lineage dies, not just this one request. See
@@ -244,8 +257,10 @@ export async function refresh(refreshToken: string) {
   }
 
   // Valid — this token is now spent; a new one takes its place in the
-  // same family.
-  await authRepository.revokeSession(session.id);
+  // same family. (A raced token is already spent: marking it again would move its revoked time and stretch the grace window.)
+  if (!session.revokedAt) {
+    await authRepository.revokeSession(session.id);
+  }
 
   const [user, organization] = await Promise.all([
     authRepository.findUserById(session.userId),
