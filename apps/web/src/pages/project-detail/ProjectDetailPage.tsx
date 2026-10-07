@@ -215,7 +215,8 @@ export function ProjectDetailPage() {
           close it (the panel ignores clicks here), and the list changes behind it. */}
       {/* While the floating panel is open (480px wide, plus its margin) the row keeps clear of it, so
           a filter that would sit underneath wraps onto a second line instead of being unreachable. Only below
-          1560px: on a wider window nothing is covered, so nothing may move. */}
+          1560px, on purpose (owner, 2026-10-07): on a wider window the row does not move when the panel opens. Between about 1560px and 2240px the
+          floating panel therefore covers the right-hand end of the list (the assignee and Edit columns, part of the due date); Esc closes it. */}
       <div
         data-panel-trigger
         data-tour="issue-filters"

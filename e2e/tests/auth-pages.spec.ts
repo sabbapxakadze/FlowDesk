@@ -152,3 +152,47 @@ test("the theme switch on the public pages changes the theme and is remembered a
   await theme.getByRole("button", { name: "Light" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });
+
+test("the Home button in the corner of every public page leads to the landing page", async ({ page }) => {
+  // Why: the auth pages were a dead end if someone arrived at /login or /register and wanted to see what the app is first.
+  for (const path of ["/login", "/register", "/forgot-password"]) {
+    await page.goto(path);
+    await page.getByRole("link", { name: "Home", exact: true }).click();
+    await expect(page, path).toHaveURL(/\/$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Plan the work. Follow it through." })).toBeVisible();
+  }
+});
+
+test("on a phone the Home button, the brand and the theme switch fit on one line without overlapping", async ({ page }) => {
+  // Why: three things now share the top edge; on a narrow screen the two corner controls must not run into the centred brand.
+  await page.setViewportSize({ width: 360, height: 700 });
+  await page.goto("/login");
+  const home = (await page.getByRole("link", { name: "Home", exact: true }).boundingBox())!;
+  const brand = (await page.getByRole("link", { name: "FlowDesk" }).boundingBox())!;
+  const theme = (await page.getByRole("group", { name: "Theme" }).boundingBox())!;
+  const overlaps = (a: typeof home, b: typeof home) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  expect(overlaps(home, brand), "Home and the brand").toBe(false);
+  expect(overlaps(brand, theme), "the brand and the theme switch").toBe(false);
+  expect(overlaps(home, theme), "Home and the theme switch").toBe(false);
+});
+
+test("the Home button is transparent until pointed at", async ({ page }) => {
+  // Why: the owner asked for it to blend into the page like the theme switch's corner, not sit on it as a filled button.
+  await page.goto("/login");
+  const home = page.getByRole("link", { name: "Home", exact: true });
+  const look = () => home.evaluate((el) => ({ bg: getComputedStyle(el).backgroundColor, border: getComputedStyle(el).borderTopColor }));
+  expect(await look()).toEqual({ bg: "rgba(0, 0, 0, 0)", border: "rgba(0, 0, 0, 0)" });
+  await home.hover();
+  await expect.poll(async () => (await look()).bg).not.toBe("rgba(0, 0, 0, 0)"); // a tint appears on hover
+});
+
+test("a modified click on the Home button still opens a new tab (the fade does not hijack it)", async ({ page, context }) => {
+  // Why: FadeLink takes over plain clicks only; Ctrl or Cmd click must keep the browser's own behaviour.
+  await page.goto("/login");
+  const opened = context.waitForEvent("page");
+  await page.getByRole("link", { name: "Home", exact: true }).click({ modifiers: ["Control"] });
+  const tab = await opened;
+  await tab.waitForLoadState();
+  expect(new URL(tab.url()).pathname).toBe("/");
+  await expect(page).toHaveURL(/\/login$/); // this tab did not move
+});

@@ -54,8 +54,8 @@ test("changing the password needs the right current one, keeps this device logge
   await page.reload(); // this device carries on
   await expect(page.getByRole("heading", { level: 1, name: "Account" })).toBeVisible();
 
-  await other.reload(); // the other device is signed out
-  await expect(other).toHaveURL(/\/login$/);
+  await other.reload(); // the other device is signed out; it was on `/`, which now shows the landing page to anyone not signed in (ADR 0043)
+  await expect(other.getByRole("heading", { level: 1, name: "Plan the work. Follow it through." })).toBeVisible();
   await otherContext.close();
 
   await page.goto("/login"); // (already logged in here, so use a clean context for the credential check)
@@ -100,8 +100,8 @@ test("Sign out of all devices asks first, then ends this session and every other
   await devices.getByRole("button", { name: "Yes, sign out everywhere" }).click();
   await expect(page).toHaveURL(/\/login/);
 
-  await other.reload(); // the other device's session is gone: it cannot refresh
-  await expect(other).toHaveURL(/\/login/);
+  await other.reload(); // the other device's session is gone: it cannot refresh, so `/` shows the landing page (ADR 0043)
+  await expect(other.getByRole("heading", { level: 1, name: "Plan the work. Follow it through." })).toBeVisible();
   await otherContext.close();
 });
 

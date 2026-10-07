@@ -170,9 +170,9 @@ export default tseslint.config(
   // base no-undef rule for .ts/.tsx (the compiler already checks that,
   // more accurately). Plain .mjs still needs the runtime globals named.
   {
-    files: ["scripts/**/*.mjs"],
+    files: ["scripts/**/*.mjs", "e2e/scripts/**/*.mjs"],
     languageOptions: {
-      globals: { process: "readonly", console: "readonly", URL: "readonly" },
+      globals: { process: "readonly", console: "readonly", URL: "readonly", localStorage: "readonly" },
     },
   },
 );

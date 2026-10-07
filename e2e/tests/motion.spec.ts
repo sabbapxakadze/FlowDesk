@@ -39,6 +39,28 @@ async function countViewTransitions(page: Page) {
     }
   });
 }
+/**
+ * Like countViewTransitions, and also records what the page looked like at the moment each fade started (its path and its h1), so a test
+ * can tell a real cross-fade (the NEW page is already in place) from one that fades from the old page to the old page.
+ */
+async function recordViewTransitions(page: Page) {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __vtLog: string[] };
+    w.__vtLog = [];
+    const doc = document as unknown as { startViewTransition?: (cb: () => void) => { ready: Promise<void> } };
+    const original = doc.startViewTransition?.bind(document);
+    if (!original) return;
+    doc.startViewTransition = (cb) => {
+      const transition = original(cb);
+      transition.ready
+        .then(() => w.__vtLog.push(`${location.pathname} | ${document.querySelector("h1")?.textContent}`))
+        .catch(() => w.__vtLog.push("skipped"));
+      return transition;
+    };
+  });
+}
+const viewTransitionLog = (page: Page) => page.evaluate(() => (window as unknown as { __vtLog: string[] }).__vtLog);
+
 const rowAnimations = (page: Page) =>
   page.evaluate(() => (window as unknown as { __rowAnims: { kind: string; tag: string }[] }).__rowAnims);
 
@@ -75,6 +97,27 @@ test.describe("with animations on", () => {
     await expect(page.getByText("Account created for")).toBeVisible();
     expect(await animationOf(page, "p.motion-rise-in")).not.toBe("none");
     await expect(page.getByRole("button", { name: "Continue with Google" })).toHaveCount(0);
+  });
+
+  test("moving between the landing page and the auth pages cross-fades, with the new page already in place", async ({ page }) => {
+    // Why: these links replace a whole page, and used to cut. A fade that starts before the new page is rendered would fade the old page
+    // into itself, so the test reads the page at the moment the fade starts.
+    await recordViewTransitions(page);
+    await page.goto("/");
+    await page.getByRole("heading", { level: 1 }).waitFor();
+
+    await page.getByRole("link", { name: "Log in", exact: true }).first().click();
+    await expect(page).toHaveURL(/\/login$/);
+    await page.getByRole("link", { name: "Home", exact: true }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await page.getByRole("link", { name: "Create account", exact: true }).first().click();
+    await expect(page).toHaveURL(/\/register$/);
+    await page.waitForTimeout(500);
+    expect(await viewTransitionLog(page)).toEqual([
+      "/login | Log in",
+      "/ | Plan the work. Follow it through.",
+      "/register | Create your account",
+    ]);
   });
 
   test("logging out lands on a login page that fades and rises in, instead of popping in", async ({ loggedInPage: page }) => {
@@ -379,6 +422,17 @@ test.describe("with reduced motion", () => {
     await page.getByRole("button", { name: "Log out" }).click();
     await expect(page).toHaveURL(/\/login$/);
     expect(await animationOf(page, "div.motion-rise-in")).toBe("none");
+  });
+
+  test("the Home button and the landing page's links still work and start no view transition", async ({ page }) => {
+    // Why: "reduce motion" must mean an instant change of page here too, and the links must still navigate.
+    await countViewTransitions(page);
+    await page.goto("/");
+    await page.getByRole("link", { name: "Log in", exact: true }).first().click();
+    await expect(page).toHaveURL(/\/login$/);
+    await page.getByRole("link", { name: "Home", exact: true }).click();
+    await expect(page).toHaveURL(/\/$/);
+    expect(await page.evaluate(() => (window as unknown as { __viewTransitions: number }).__viewTransitions)).toBe(0);
   });
 
   test("logging in starts no view transition", async ({ page }) => {

@@ -32,3 +32,7 @@ and chose "a table of two-line rows".
 
 - One surface with hairline rows and no columns (more room per issue but nothing aligned), a plain table (cramped labels, harder on a narrow window),
   cards without the outer panel (smallest change, still a stack of cards) and a Comfortable / Compact switch (a setting to maintain for a problem width already solves).
+
+## Noted 2026-10-07: wider than 1560px the panel may cover the right-hand columns (accepted)
+
+The 1560px limit was chosen when a wider window meant "nothing is covered". Since the sidebar was added that is no longer true: measured in a real browser at 1862px (the owner's window) the panel starts at 1370px while the list reaches 1527px, so about 157px at the right end (the assignee and Edit columns, part of the due date) sits under the floating panel; between roughly 1560px and 2240px the list is partly covered, and from about 2240px it is clear. The owner looked at it and chose to leave it: the panel is a floating, non-modal card by design (ADR 0025), a wide window should not reflow when it opens, and closing it (Esc) brings the columns back. Not checked: the board and sprints pages. If it is ever changed, raise the three `1559px` thresholds (`ProjectDetailPage` twice, `ProjectViewTabs`) to about 2239px and update the motion test "on a wide window the issue filters do not move when the panel opens", which asserts the current behaviour at 1920px.

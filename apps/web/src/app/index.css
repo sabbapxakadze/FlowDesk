@@ -245,3 +245,24 @@ dialog.motion-dialog[open]::backdrop {
 @media (prefers-reduced-transparency: reduce) {
   .glass-card { background: var(--color-bg-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+
+/* The landing page (ADR 0043). Background: wide, soft, diagonal ribbons of colour down the page, from the same colour tokens as the auth
+   pages' shapes (so dark mode needs nothing extra). The preview frame fades out at its bottom edge, so the screenshot looks like it
+   continues below the page. */
+.landing-ribbon {
+  position: absolute;
+  left: -15%;
+  width: 130%;
+  height: 14rem;
+  border-radius: 9999px;
+  filter: blur(48px);
+  opacity: 0.42;
+  transform: rotate(-9deg);
+}
+.landing-ribbon-a { background: linear-gradient(90deg, var(--color-aurora-1), var(--color-aurora-2)); }
+.landing-ribbon-b { background: linear-gradient(90deg, var(--color-aurora-2), var(--color-aurora-3)); }
+.landing-ribbon-c { background: linear-gradient(90deg, var(--color-aurora-3), var(--color-aurora-1)); }
+.landing-fade {
+  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+}

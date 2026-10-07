@@ -103,8 +103,10 @@ test("a comment from someone else shows as unread here, clicking it opens the is
   await ctx.close();
 });
 
-test("signed out, / goes to the login page", async ({ page }) => {
-  // Why: the old redirect did this; the page is now behind the login like every other.
+test("signed out, My work is not shown: / is the public landing page (ADR 0043)", async ({ page }) => {
+  // Why: My work is behind the login like every other app page. A visitor at / used to be redirected to the login page; now they
+  // see the landing page instead (landing.spec.ts covers it), and still never My work.
   await page.goto("/");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Plan the work. Follow it through." })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "My work" })).toHaveCount(0);
 });

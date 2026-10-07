@@ -4,8 +4,12 @@ import type { AuthSession } from "@flowdesk/contracts";
 export type AuthUser = AuthSession["user"];
 export type AuthOrganization = AuthSession["organization"];
 
-/** Why a session ended without the person pressing "Log out": the login page says so. */
-export type SessionEndReason = "expired" | "idle";
+/**
+ * Why there is no session any more. "expired" and "idle" are the session ending on its own (the login page says so);
+ * "signed-out" is the person pressing "Log out" (no message, but it still means "go to the login page": the landing page
+ * at `/` is only for people who were never signed in on this page load, ADR 0043).
+ */
+export type SessionEndReason = "expired" | "idle" | "signed-out";
 
 export interface AuthContextValue {
   user: AuthUser | null;
@@ -13,7 +17,7 @@ export interface AuthContextValue {
   accessToken: string | null;
   /** True only while the initial silent refresh (on page load) is in flight. */
   isLoading: boolean;
-  /** Set when the session ended on its own (it expired, or the person was inactive); cleared by the next login. */
+  /** Set when the session ended (it expired, the person was inactive, or they logged out); cleared by the next login. */
   endedReason: SessionEndReason | null;
   login: (session: AuthSession) => void;
   logout: () => void;

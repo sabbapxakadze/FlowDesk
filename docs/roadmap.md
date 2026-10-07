@@ -1785,6 +1785,10 @@ The original plan for this slice, kept for the record:
    /account gains Sign-in methods (Connect / Disconnect, never the last way in, locked in a transaction) and "Add password" for passwordless accounts; change password / change email / login handle the missing password. `lib/oauth/` seam with Google, GitHub and a test-only fake.
    Tests: 23 API (`oauth.http.test.ts`), 6 adapter parsing tests (`providers.test.ts`, canned answers), 7 e2e (`oauth.spec.ts`); five deliberate breaks were each caught. **NOT verified: a real Google or GitHub round trip** (needs the owner's client ids and secrets; redirect URLs are in `.env.example`),
    and whether GitHub enforces the PKCE parameters. **Not built:** OAuth inside the invitation flow, "remember me", more providers, choosing the organization name at provider sign-up.
+16. **Landing page at `/` DONE 2026-10-07 (ADR 0043; owner picked the centered hero with the fading screenshot, content B, then asked for a richer page and a different background).** A logged-out visit to `/` shows a public page (`RequireAuth` `publicHome`): hero, a Board / Issues / Analytics preview made of real screenshots of the demo
+   organization (static JPEGs in `apps/web/public/landing/`, retaken by `pnpm landing:shots`), an about section, how it works, eight feature tiles, four use cases, a closing call to action, and a "Built by" block with the owner's email and phone. Soft diagonal ribbons replace the dot background. Log out and expired sessions still go to `/login`
+   (`SessionEndReason` gained `signed-out`). 11 new e2e tests (`landing.spec.ts`); three deliberate breaks (logout reason, the dark picture, the path rule) were each caught, after adding the test for "any other app page still goes to login" that the third one exposed as missing; text contrast measured at 5.11:1 or better in light and dark, wide and phone.
+   Two existing tests that assumed the old redirect were updated on purpose (`account.spec.ts`, `my-work.spec.ts`). **Not verified:** Safari and Firefox rendering, a real phone, link previews, load time. **Public contact details** can be harvested by bots (the owner's choice).
    Not tested: that `mentions` stays out of the public profile activity (that feed returns `{}` for comment events by design). **Markdown STILL OPEN (checked 2026-10-05: descriptions and comments are plain text; the
    description keeps its line breaks since 2026-10-05, nothing more).**
    **Two navigation bugs noted 2026-10-05 (owner), FIXED the same day** (the issue page's, Edit profile's and Account's back links now use `PageHeader`'s `history: true`, so Back returns to where the person came from and the named page is only the fallback for a first page or a new tab; 3 e2e tests in `back-links.spec.ts`; removing the option from the issue page and the edit page made 2 of them fail; the Account test was not mutation-checked). The original report: (1) An issue opened from My work shows "<- {project name}", not "Back": `IssueDetail`
@@ -2483,6 +2487,10 @@ prioritise work, discuss it with edits and files, and see when things happened.
   parameters we send; (7) for production: publish the Google consent screen (or keep named test users), use HTTPS so the Secure cookies work, and
   add a rate-limit store that is shared between instances (Redis item below), since the OAuth limiter is in memory. Also decide then: OAuth inside the
   invitation flow, and choosing the organization name at provider sign-up.
+  **Also (owner, 2026-10-06): smooth the landing after a Google/GitHub sign-in.** A password login now cross-fades into the app (ADR 0029, `withViewTransition`),
+  but a provider sign-in is a full page load (the browser leaves for the provider and comes back to `/`), so it still cuts. Options to look at then: a short
+  fade-in on the first paint after a provider sign-in (a `?welcome` marker or a flag set before leaving), or cross-document view transitions where the
+  browsers support them. Check it with the real providers, not the fake.
 - [ ] Docker + docker-compose (api, web, postgres, redis)
 - [ ] Redis: caching, rate limits, Socket.IO adapter
 - [ ] Background jobs + transactional email

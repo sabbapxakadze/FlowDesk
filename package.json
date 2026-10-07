@@ -23,7 +23,8 @@
     "db:generate": "pnpm --filter @flowdesk/api db:generate",
     "db:migrate": "pnpm --filter @flowdesk/api db:migrate",
     "db:seed": "pnpm --filter @flowdesk/api db:seed",
-    "db:seed:demo": "pnpm --filter @flowdesk/api db:seed:demo"
+    "db:seed:demo": "pnpm --filter @flowdesk/api db:seed:demo",
+    "landing:shots": "node e2e/scripts/capture-landing.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

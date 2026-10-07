@@ -43,3 +43,5 @@ a rule for linking to an existing account (by verified email); a decision about 
 - The social buttons (ADR 0042) sit side by side with short labels ("Google", "GitHub") and the line "or with email", as in the chosen mockup; their accessible names stay "Continue with Google / GitHub".
 - Not added, by the owner's choice: an "open the demo account" button on these pages, and opening the tutorial by default.
 - After Create account succeeds, the provider buttons disappear with the form (the page passes them into `RegisterForm` as `above`); they used to stay on top of the confirmation message.
+- The "FlowDesk" brand link above the card (to `/`) now leads to the public landing page for visitors (ADR 0043), instead of bouncing back to the login page.
+- A "Home" button sits in the top-left corner of every public page (the mirror image of the theme switch) and leads to the landing page (2026-10-07).

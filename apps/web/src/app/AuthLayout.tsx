@@ -1,5 +1,6 @@
-import { Link, NavLink, Outlet, useLocation } from "react-router";
-import { cn, ThemeSwitch } from "../shared/ui";
+import { ArrowLeft } from "lucide-react";
+import { NavLink, Outlet, useLocation } from "react-router";
+import { buttonVariants, cn, FadeLink, ThemeSwitch } from "../shared/ui";
 
 /**
  * Layout route for the public auth pages (login, register, verify-email,
@@ -18,13 +19,14 @@ import { cn, ThemeSwitch } from "../shared/ui";
  * form. Off under reduced motion, like every motion class.
  *
  * The Light / Dark / System switch sits in the top-right corner of every public page (the same shared `ThemeSwitch` the sidebar uses, the
- * choice is remembered in the browser), so people can pick a theme before they ever log in.
+ * choice is remembered in the browser), so people can pick a theme before they ever log in. The top-left corner has a "Home" button back
+ * to the public landing page (ADR 0043), the mirror image of the theme switch: transparent until pointed at. Going to the landing page cross-fades.
  */
 export function AuthLayout() {
   const { pathname } = useLocation();
   const showSwitch = pathname === "/login" || pathname === "/register";
   return (
-    <div className="relative flex min-h-screen flex-col items-center overflow-hidden px-4 py-12 sm:justify-center">
+    <div className="relative flex min-h-screen flex-col items-center overflow-hidden px-4 pt-16 pb-12 sm:justify-center sm:py-12">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 flex items-center justify-center"
@@ -36,15 +38,24 @@ export function AuthLayout() {
           <div className="absolute top-24 right-12 h-64 w-64 rounded-full bg-[var(--color-aurora-3)] opacity-60 blur-[70px] max-sm:h-40 max-sm:w-40" />
         </div>
       </div>
+      <div className="absolute top-4 left-4 z-10">
+        <FadeLink
+          to="/"
+          className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "inline-flex h-9 items-center gap-1.5 border-transparent bg-transparent px-3")}
+        >
+          <ArrowLeft size={16} aria-hidden="true" />
+          Home
+        </FadeLink>
+      </div>
       <div className="absolute top-4 right-4 z-10">
         <ThemeSwitch />
       </div>
-      <Link
+      <FadeLink
         to="/"
         className="relative mb-8 font-display text-3xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-border-focus)]"
       >
         FlowDesk
-      </Link>
+      </FadeLink>
       <div className="glass-card relative w-full max-w-sm rounded-[var(--radius-card)] p-6">
         {showSwitch && <AuthSwitch />}
         <div key={pathname} className="motion-rise-in">

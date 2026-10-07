@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    setEndedReason(null);
+    setEndedReason("signed-out");
     clearSession();
     // Local state clears immediately either way; telling the server to
     // revoke the session is best-effort and shouldn't block the UI on it.

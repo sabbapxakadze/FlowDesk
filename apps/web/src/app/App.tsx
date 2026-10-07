@@ -23,6 +23,7 @@ import { VerifyEmailPage } from "../pages/verify-email/VerifyEmailPage";
 import { ForgotPasswordPage } from "../pages/forgot-password/ForgotPasswordPage";
 import { ResetPasswordPage } from "../pages/reset-password/ResetPasswordPage";
 import { DesignSystemPage } from "../pages/design-system/DesignSystemPage";
+import { LandingPage } from "../pages/landing";
 import { RequireAuth } from "../shared/auth/RequireAuth";
 import { AppShell } from "./AppShell";
 import { AuthLayout } from "./AuthLayout";
@@ -43,7 +44,7 @@ export function App() {
           <Routes>
             <Route
               element={
-                <RequireAuth>
+                <RequireAuth publicHome={<LandingPage />}>
                   <AppShell />
                 </RequireAuth>
               }
