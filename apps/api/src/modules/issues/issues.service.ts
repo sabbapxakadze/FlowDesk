@@ -11,6 +11,7 @@ import {
 import * as storage from "../../lib/storage.js";
 import * as issuesRepository from "./issues.repository.js";
 import * as organizationsRepository from "../organizations/organizations.repository.js";
+import { assertDemoHasRoomForIssue } from "../demo/demo.guard.js";
 
 function broadcastNotifications(notifiedUserIds: string[]): void {
   for (const userId of notifiedUserIds) broadcastNotificationCreated(userId);
@@ -64,6 +65,7 @@ export async function createIssue(input: {
   description: string | null;
   reporterId: string;
 }) {
+  await assertDemoHasRoomForIssue(input.organizationId); // a demo copy is capped (ADR 0044)
   const issue = await issuesRepository.create(input);
   broadcastIssueChanged(input.projectId, issue.id);
   return issue;

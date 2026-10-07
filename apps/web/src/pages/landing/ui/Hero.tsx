@@ -1,4 +1,6 @@
+import { DemoNote } from "../../../features/try-demo";
 import { buttonVariants, cn, FadeLink } from "../../../shared/ui";
+import { LandingDemoButton } from "./LandingDemoButton";
 
 /** The first thing a visitor reads: what FlowDesk is in one line, and the two ways in. */
 export function Hero() {
@@ -18,7 +20,9 @@ export function Hero() {
         <FadeLink to="/login" className={cn(buttonVariants({ variant: "secondary" }), "inline-flex h-12 items-center justify-center bg-[var(--color-bg-surface)] px-8 text-base")}>
           Log in
         </FadeLink>
+        <LandingDemoButton />
       </div>
+      <DemoNote className="mt-4 max-w-md" />
     </header>
   );
 }

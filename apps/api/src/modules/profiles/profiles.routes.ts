@@ -4,6 +4,7 @@ import { AVATAR_MAX_BYTES, AVATAR_MIME_TYPES } from "@flowdesk/contracts";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { requireOrgMembership } from "../../middleware/require-org-membership.js";
 import { AppError } from "../../shared/errors.js";
+import { denyInDemo } from "../demo/demo.guard.js";
 import * as profilesController from "./profiles.controller.js";
 
 export const profilesRouter: RouterType = Router();
@@ -41,7 +42,7 @@ function parseAvatarUpload(req: Request, res: Response, next: NextFunction) {
 }
 
 profilesRouter.patch("/users/me/profile", requireAuth, profilesController.updateMine);
-profilesRouter.put("/users/me/avatar", requireAuth, parseAvatarUpload, profilesController.uploadAvatar);
+profilesRouter.put("/users/me/avatar", requireAuth, denyInDemo("Uploading a photo"), parseAvatarUpload, profilesController.uploadAvatar);
 profilesRouter.delete("/users/me/avatar", requireAuth, profilesController.removeAvatar);
 profilesRouter.get("/users/me/profile-nudge", requireAuth, profilesController.getNudge);
 profilesRouter.post("/users/me/profile-nudge/dismiss", requireAuth, profilesController.dismissNudge);

@@ -7,6 +7,7 @@ import {
 } from "../../middleware/rate-limit.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 import * as authController from "./auth.controller.js";
+import { denyInDemo } from "../demo/demo.guard.js";
 import * as oauthController from "./oauth.controller.js";
 
 export const authRouter: RouterType = Router();
@@ -37,7 +38,7 @@ authRouter.post("/auth/password-reset/confirm", authController.confirmPasswordRe
 // scoped to /api/v1/auth) reaches it and the server knows which session to keep.
 authRouter.get("/users/me/account", requireAuth, authController.getAccount);
 authRouter.patch("/users/me/timezone", requireAuth, authController.updateTimezone);
-authRouter.post("/auth/change-password", requireAuth, loginRateLimiter, authController.changePassword);
-authRouter.post("/auth/set-password", requireAuth, loginRateLimiter, authController.setPassword);
-authRouter.post("/auth/email-change/request", requireAuth, loginRateLimiter, authController.requestEmailChange);
+authRouter.post("/auth/change-password", requireAuth, denyInDemo("Changing the password"), loginRateLimiter, authController.changePassword);
+authRouter.post("/auth/set-password", requireAuth, denyInDemo("Setting a password"), loginRateLimiter, authController.setPassword);
+authRouter.post("/auth/email-change/request", requireAuth, denyInDemo("Changing the email"), loginRateLimiter, authController.requestEmailChange);
 authRouter.post("/auth/email-change/confirm", authController.confirmEmailChange);

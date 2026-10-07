@@ -137,12 +137,13 @@ test("on a phone the page does not scroll sideways, and the theme choice is reme
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });
 
-test("the landing page makes no API calls of its own", async ({ page }) => {
-  // Why: it is public and static; nothing on it may need the server (only the app's usual silent session check happens on load).
+test("the landing page only asks the server whether the demo is offered", async ({ page }) => {
+  // Why: it is public and static. The only thing it may ask the server is whether "Try the demo" is on (a public, read-only answer, ADR 0044), besides
+  // the app's usual silent session check on load; nothing else on it may need the server.
   const calls: string[] = [];
   page.on("request", (request) => {
     const url = request.url();
-    if (url.includes("/api/v1/") && !url.endsWith("/api/v1/auth/refresh") && !url.includes("/auth/oauth/providers")) calls.push(url);
+    if (url.includes("/api/v1/") && !url.endsWith("/api/v1/auth/refresh") && !url.includes("/auth/oauth/providers") && !url.endsWith("/api/v1/demo/info")) calls.push(url);
   });
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();

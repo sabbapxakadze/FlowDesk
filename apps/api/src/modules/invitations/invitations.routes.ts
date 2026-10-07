@@ -3,6 +3,7 @@ import { requireAuth } from "../../middleware/require-auth.js";
 import { requireOrgMembership } from "../../middleware/require-org-membership.js";
 import { requirePermission } from "../../middleware/require-permission.js";
 import { registerRateLimiter } from "../../middleware/rate-limit.js";
+import { denyInDemo } from "../demo/demo.guard.js";
 import * as invitationsController from "./invitations.controller.js";
 
 export const invitationsRouter: RouterType = Router();
@@ -12,7 +13,8 @@ export const invitationsRouter: RouterType = Router();
 const manage = [requireAuth, requireOrgMembership, requirePermission("manage_members")];
 
 invitationsRouter.get("/organizations/:organizationId/invitations", ...manage, invitationsController.list);
-invitationsRouter.post("/organizations/:organizationId/invitations", ...manage, invitationsController.create);
+// Invitations send an email to any address, so a demo copy cannot make them (ADR 0044).
+invitationsRouter.post("/organizations/:organizationId/invitations", ...manage, denyInDemo("Inviting people"), invitationsController.create);
 invitationsRouter.delete(
   "/organizations/:organizationId/invitations/:invitationId",
   ...manage,
@@ -22,6 +24,7 @@ invitationsRouter.delete(
 invitationsRouter.post(
   "/organizations/:organizationId/invitations/:invitationId/resend",
   ...manage,
+  denyInDemo("Inviting people"),
   invitationsController.resend,
 );
 

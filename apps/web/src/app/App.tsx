@@ -35,7 +35,9 @@ import { SearchPaletteProvider } from "../shared/search-palette/SearchPalettePro
 
 export function App() {
   return (
-    <BrowserRouter>
+    // useTransitions={false}: navigations render at once instead of inside React's startTransition, so `withViewTransition` (flushSync) can
+    // have the new page on screen when the fade starts (shared/lib/motion.ts). The app has no lazy routes or Suspense that would need it.
+    <BrowserRouter useTransitions={false}>
       <SearchPaletteProvider>
         <CommandPalette />
         <IdleLogout />

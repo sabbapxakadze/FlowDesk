@@ -45,3 +45,4 @@ a rule for linking to an existing account (by verified email); a decision about 
 - After Create account succeeds, the provider buttons disappear with the form (the page passes them into `RegisterForm` as `above`); they used to stay on top of the confirmation message.
 - The "FlowDesk" brand link above the card (to `/`) now leads to the public landing page for visitors (ADR 0043), instead of bouncing back to the login page.
 - A "Home" button sits in the top-left corner of every public page (the mirror image of the theme switch) and leads to the landing page (2026-10-07).
+- The Home button is transparent (no fill, no border) until pointed at, and going home cross-fades (ADR 0029). Phones get extra top padding so the brand clears the two corner controls (a test checks that Home, the brand and the theme switch do not overlap at 360px).

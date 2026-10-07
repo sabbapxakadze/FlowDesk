@@ -11,6 +11,7 @@ import { env } from "../../config/env.js";
 import { enabledProviders } from "../../lib/oauth/index.js";
 import { logger } from "../../lib/logger.js";
 import { AppError } from "../../shared/errors.js";
+import { assertNotDemoUser } from "../demo/demo.guard.js";
 import { setRefreshCookie } from "./auth.controller.js";
 import * as oauthService from "./oauth.service.js";
 import { verifyAccessToken } from "./tokens.js";
@@ -38,7 +39,7 @@ export function listProviders(_req: Request, res: Response) {
  * A fetch, not a browser navigation: "connect" has to carry the access token (it lives in memory, a navigation cannot
  * send it), and the answer is just the URL to go to. The state cookie is set on this response.
  */
-export function start(req: Request, res: Response) {
+export async function start(req: Request, res: Response) {
   const provider = parseProvider(req);
   const parsed = startOAuthRequestSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -54,6 +55,7 @@ export function start(req: Request, res: Response) {
     } catch {
       throw new AppError("unauthenticated", 401, "Log in to connect an account.");
     }
+    await assertNotDemoUser(userId!, "Connecting a sign-in account");
   }
 
   const fakeHint: unknown = req.cookies?.[FAKE_PROFILE_COOKIE_NAME];

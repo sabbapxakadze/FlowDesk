@@ -32,3 +32,7 @@ Safari and Firefox rendering of the blur and the fade mask; a real phone; how th
 - A dot grid with one glow (the first build): the owner did not like it.
 - Blurred real-app background, the split layout and the top-bar layout (mockups): the owner picked the centered hero.
 - A separate `/welcome` address: nobody would land there by default.
+
+## Noted 2026-10-07
+
+A third button, "Try the demo", and a note about the demo's lifetime were added to the hero and the closing block when the server offers the demo (ADR 0044).

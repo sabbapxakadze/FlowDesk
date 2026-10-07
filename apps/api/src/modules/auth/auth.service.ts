@@ -179,7 +179,12 @@ async function getPrimaryOrganization(userId: string) {
       "You are not a member of any organization. Ask an owner to invite you again.",
     );
   }
-  return organization;
+  // An expired "Try the demo" copy cannot start or renew a session, whether or not the clean-up has removed it yet (ADR 0044).
+  if (organization.demoExpiresAt && organization.demoExpiresAt.getTime() <= Date.now()) {
+    throw new AppError("demo_expired", 401, "This demo has ended. Start a new one from the home page.");
+  }
+  // `demoExpiresAt` travels as text (it is JSON in the session); null for a real organization (ADR 0044).
+  return { ...organization, demoExpiresAt: organization.demoExpiresAt?.toISOString() ?? null };
 }
 
 export async function login(input: { email: string; password: string }) {

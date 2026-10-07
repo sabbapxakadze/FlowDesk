@@ -1,4 +1,6 @@
+import { DemoNote } from "../../../features/try-demo";
 import { buttonVariants, cn, FadeLink } from "../../../shared/ui";
+import { LandingDemoButton } from "./LandingDemoButton";
 
 /** The same two ways in as the top of the page, after the visitor has read what the app does. */
 export function FinalCta() {
@@ -18,7 +20,9 @@ export function FinalCta() {
           <FadeLink to="/login" className={cn(buttonVariants({ variant: "secondary" }), "inline-flex h-12 items-center justify-center bg-[var(--color-bg-surface)] px-8 text-base")}>
             Log in
           </FadeLink>
+          <LandingDemoButton />
         </div>
+        <DemoNote className="mx-auto mt-4 max-w-md" />
       </div>
     </section>
   );

@@ -50,6 +50,9 @@ export type LoginRequest = z.infer<typeof loginRequestSchema>;
  * auto-creates a personal org at signup, no invite flow exists yet). Real
  * multi-org support is future scope, not this shape.
  */
+/** The organization a session is in. `demoExpiresAt` is set only for a visitor's private "Try the demo" copy (ADR 0044): when it is deleted. */
+const sessionOrganizationSchema = organizationSummarySchema.extend({ demoExpiresAt: z.string().nullable() });
+
 export const authSessionSchema = z.object({
   accessToken: z.string(),
   user: z.object({
@@ -59,7 +62,7 @@ export const authSessionSchema = z.object({
     /** The person's own timezone (IANA name) or null for the browser's; times on screen use it. */
     timezone: z.string().nullable(),
   }),
-  organization: organizationSummarySchema,
+  organization: sessionOrganizationSchema,
 });
 
 export type AuthSession = z.infer<typeof authSessionSchema>;

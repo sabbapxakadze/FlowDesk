@@ -3,6 +3,7 @@ import { Menu, X } from "lucide-react";
 import { Outlet, useLocation } from "react-router";
 import { useAuth } from "../shared/auth/useAuth";
 import { IconButton } from "../shared/ui";
+import { DemoBar } from "../widgets/demo-bar";
 import { NotificationBell } from "../widgets/notification-bell";
 import { Sidebar } from "../widgets/sidebar";
 import { useLiveOrganizationUpdates } from "./useLiveOrganizationUpdates";
@@ -70,7 +71,10 @@ export function AppShell() {
         <div className="sticky top-0 z-30 h-screen">
           <Sidebar actions={<NotificationBell panelAlign="left" />} />
         </div>
-        <PageOutlet />
+        <div className="min-w-0">
+          <DemoBar />
+          <PageOutlet />
+        </div>
       </div>
     );
   }
@@ -92,6 +96,7 @@ export function AppShell() {
           <NotificationBell panelAlign="right" />
         </div>
       </header>
+      <DemoBar />
 
       {open && (
         <div

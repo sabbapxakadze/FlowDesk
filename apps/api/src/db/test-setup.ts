@@ -20,6 +20,8 @@ if (!process.env.TEST_DATABASE_URL) {
   );
 }
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+// The demo endpoint is on for the tests (they switch it off by changing `env.DEMO_ENABLED` where they need to).
+process.env.DEMO_ENABLED = "true";
 // Same reasoning: never let a test run write into the real dev uploads
 // directory. lib/storage.ts reads UPLOADS_DIR through config/env.ts,
 // which hasn't loaded yet at this point in the module graph.

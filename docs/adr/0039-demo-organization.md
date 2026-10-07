@@ -40,3 +40,7 @@ very good, testable data.
 - Going through the services and repositories: faithful, but they stamp the current time, so no history for the charts, and each issue would fan out notifications.
 - One generic generator (like the old 100 "Demo issue N"): shows nothing a person would recognise and tests no filter well.
 - A member-only demo user: safer, but the tour and the demo would miss Members, Audit log and Settings.
+
+## Noted 2026-10-07 (ADR 0044)
+
+The same builder now also makes the private, passwordless, self-deleting copies of "Try the demo" (`createDemoCopy`); `seedDemo` and its fixed `demo@flowdesk.test` login are unchanged and stay for development. The 14 seed tests passed unchanged after the refactor.

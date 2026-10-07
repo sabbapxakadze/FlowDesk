@@ -32,6 +32,12 @@ export async function requireOrgMembership(req: Request, _res: Response, next: N
     throw new AppError("not_a_member", 403, "You are not a member of this organization.");
   }
 
+  // A "Try the demo" copy past its time (ADR 0044) is refused even if the clean-up has not removed it yet, so "deleted after N hours" holds
+  // for what the visitor can do, not only for the rows.
+  if (membership.demoExpiresAt && membership.demoExpiresAt.getTime() <= Date.now()) {
+    throw new AppError("demo_expired", 403, "This demo has ended. Start a new one from the home page.");
+  }
+
   req.ctx = { userId: req.auth.userId, organizationId, role: membership.role };
   next();
 }

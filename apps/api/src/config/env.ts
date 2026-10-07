@@ -42,6 +42,11 @@ const envSchema = z.object({
   // Development only: "true" turns on the fake provider (lib/oauth/fake.ts) so the sign-in buttons and the whole flow
   // can be tried without real Google/GitHub credentials. Refused in production (see the refinement below).
   OAUTH_FAKE: z.enum(["true", "false"]).optional(),
+  // "Try the demo" (ADR 0044): a private, self-deleting copy of the demo organization per visitor. OFF unless DEMO_ENABLED is "true", so a
+  // deploy that never decided exposes no public write endpoint. A copy lives DEMO_TTL_MINUTES; at most DEMO_MAX_ACTIVE are live at once.
+  DEMO_ENABLED: z.enum(["true", "false"]).optional(),
+  DEMO_TTL_MINUTES: z.coerce.number().int().min(1).max(24 * 60).default(120),
+  DEMO_MAX_ACTIVE: z.coerce.number().int().min(1).max(1000).default(40),
 }).superRefine((value, ctx) => {
   if (value.OAUTH_FAKE === "true" && value.NODE_ENV === "production") {
     ctx.addIssue({ code: "custom", message: "OAUTH_FAKE must not be enabled in production", path: ["OAUTH_FAKE"] });

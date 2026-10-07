@@ -60,6 +60,8 @@ export default defineConfig({
         // production; Chromium accepts that on http://localhost, and the reload
         // test proves the session still survives it.
         NODE_ENV: "test",
+        // "Try the demo" is on for the e2e API (it is off by default, ADR 0044).
+        DEMO_ENABLED: "true",
         LOG_LEVEL: "warn",
         PORT: String(API_PORT),
         DATABASE_URL: testDatabaseUrl,

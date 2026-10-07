@@ -204,6 +204,13 @@
       "when": 1791311481301,
       "tag": "0028_oauth_identities",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1791379450956,
+      "tag": "0029_try_the_demo",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,7 @@ import { requireProject } from "../../middleware/require-project.js";
 import { requireIssue } from "../../middleware/require-issue.js";
 import { requirePermission } from "../../middleware/require-permission.js";
 import { AppError } from "../../shared/errors.js";
+import { denyInDemo } from "../demo/demo.guard.js";
 import * as issuesController from "./issues.controller.js";
 
 export const issuesRouter: RouterType = Router();
@@ -259,6 +260,7 @@ issuesRouter.post(
   requireProject,
   requireIssue,
   requirePermission("manage_issue"),
+  denyInDemo("Uploading files"),
   parseAttachmentUpload,
   issuesController.uploadAttachment,
 );

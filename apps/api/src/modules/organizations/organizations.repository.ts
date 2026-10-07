@@ -11,8 +11,9 @@ import { writeIssueEvent } from "../issues/issues.repository.js";
  */
 export async function findMembership(userId: string, organizationId: string) {
   const [membership] = await db
-    .select({ role: organizationMembers.role })
+    .select({ role: organizationMembers.role, demoExpiresAt: organizations.demoExpiresAt })
     .from(organizationMembers)
+    .innerJoin(organizations, eq(organizationMembers.organizationId, organizations.id))
     .where(
       and(
         eq(organizationMembers.userId, userId),
@@ -35,6 +36,7 @@ export async function findPrimaryOrganizationForUser(userId: string) {
       id: organizations.id,
       name: organizations.name,
       slug: organizations.slug,
+      demoExpiresAt: organizations.demoExpiresAt,
     })
     .from(organizationMembers)
     .innerJoin(organizations, eq(organizationMembers.organizationId, organizations.id))

@@ -56,6 +56,16 @@ export const oauthRateLimiter = rateLimit({
   handler: tooManyRequests,
 });
 
+// "Try the demo" builds several hundred rows per click (ADR 0044), so one address gets only a few a hour.
+export const demoStartRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: skipInTest,
+  handler: tooManyRequests,
+});
+
 // Spam account creation, not credential guessing — looser window is fine.
 export const registerRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

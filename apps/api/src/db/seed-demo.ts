@@ -50,6 +50,8 @@ import {
  * - Everything is relative to the moment it runs, so "overdue" and "due this week" are true whenever it is rebuilt.
  * - It refuses to run in production unless ALLOW_DEMO_SEED=true: a script that deletes an organization by name must not be
  *   pointed at real data by accident.
+ * - The same builder makes the private copies of "Try the demo" (ADR 0044): `createDemoCopy` gives the five people emails with a random
+ *   suffix, no password at all (nobody can log in to a copy by guessing) and an expiry time, so the organization can be deleted later.
  */
 
 const DAY = 86_400_000;
@@ -122,6 +124,16 @@ function expandMentions(
   return { body, mentioned };
 }
 
+/** Who a build of the demo is made of: the part that differs between the development demo and a visitor's private copy. */
+interface DemoIdentity {
+  emailOf: (key: PersonKey) => string;
+  orgSlug: string;
+  /** Null: nobody can log in with a password (a visitor's copy is entered through a session the server issues). */
+  passwordHash: string | null;
+  /** When the organization is to be deleted (a visitor's copy); null for the development demo, which stays. */
+  demoExpiresAt: Date | null;
+}
+
 export async function seedDemo(
   options: { reset?: boolean } = {},
 ): Promise<DemoSeedResult> {
@@ -148,6 +160,34 @@ export async function seedDemo(
   }
 
   const passwordHash = await argon2.hash(DEMO_PASSWORD, { type: argon2.argon2id });
+  return buildDemoOrganization({
+    emailOf: (key) => PEOPLE[key].email,
+    orgSlug: DEMO_ORG_SLUG,
+    passwordHash,
+    demoExpiresAt: null,
+  });
+}
+
+/**
+ * A private copy of the demo for one visitor (ADR 0044): the same data as the development demo, under emails and a slug with a random
+ * suffix, with no password and an expiry. Returns the organization and the owner (the person the visitor will be signed in as).
+ */
+export async function createDemoCopy(
+  demoExpiresAt: Date,
+): Promise<{ organizationId: string; ownerId: string }> {
+  const suffix = randomBytes(4).toString("hex");
+  const { organizationId, ownerId } = await buildDemoOrganization({
+    emailOf: (key) => `${key}.${suffix}@demo.flowdesk.test`,
+    orgSlug: `demo-${suffix}`,
+    passwordHash: null,
+    demoExpiresAt,
+  });
+  return { organizationId, ownerId };
+}
+
+async function buildDemoOrganization(
+  identity: DemoIdentity,
+): Promise<DemoSeedResult & { organizationId: string; ownerId: string }> {
   const now = Date.now();
   const ago = (days: number) => new Date(now - days * DAY);
   const dateOnly = (daysFromToday: number) =>
@@ -168,8 +208,8 @@ export async function seedDemo(
       const [row] = await tx
         .insert(users)
         .values({
-          email: person.email,
-          passwordHash,
+          email: identity.emailOf(key),
+          passwordHash: identity.passwordHash,
           name: person.name,
           jobTitle: person.jobTitle,
           bio: person.bio,
@@ -182,7 +222,7 @@ export async function seedDemo(
         .onConflictDoUpdate({
           target: users.email,
           set: {
-            passwordHash,
+            passwordHash: identity.passwordHash,
             name: person.name,
             jobTitle: person.jobTitle,
             bio: person.bio,
@@ -196,7 +236,12 @@ export async function seedDemo(
 
     const [org] = await tx
       .insert(organizations)
-      .values({ name: DEMO_ORG_NAME, slug: DEMO_ORG_SLUG, createdAt: ago(90) })
+      .values({
+        name: DEMO_ORG_NAME,
+        slug: identity.orgSlug,
+        demoExpiresAt: identity.demoExpiresAt,
+        createdAt: ago(90),
+      })
       .returning({ id: organizations.id });
     const organizationId = org!.id;
     await tx.insert(organizationMembers).values(
@@ -578,6 +623,8 @@ export async function seedDemo(
       comments: commentRows.length,
       events: eventRows.length,
       notifications: notificationRows.length,
+      organizationId,
+      ownerId: alex,
     };
   });
 }
