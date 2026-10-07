@@ -1,6 +1,8 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
 
+// The solid variants use `not-disabled:` (not `enabled:`) for their hover, ring and press effects: `:enabled` only ever matches a real <button>, so a
+// link that borrows the look (buttonVariants on a <Link>, like the landing page's "Create account") would have had no hover at all.
 const buttonVariantClasses = cva(
   "rounded-[var(--radius-control)] text-sm transition-[opacity,background-color,box-shadow] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-border-focus)]",
   {
@@ -16,16 +18,16 @@ const buttonVariantClasses = cva(
         secondary: "border border-[var(--color-border-input)] hover:bg-[var(--color-border-default)]",
         // Save / confirm: a solid green "go" button.
         success:
-          "bg-[var(--color-bg-action-success)] text-[var(--color-text-on-action-strong)] enabled:hover:bg-[var(--color-bg-action-success-hover)] enabled:hover:ring-2 enabled:hover:ring-[var(--color-ring-action-hover)] enabled:active:brightness-90",
+          "bg-[var(--color-bg-action-success)] text-[var(--color-text-on-action-strong)] not-disabled:hover:bg-[var(--color-bg-action-success-hover)] not-disabled:hover:ring-2 not-disabled:hover:ring-[var(--color-ring-action-hover)] not-disabled:active:brightness-90",
         // Create: a solid teal "add something new" button (New issue), the same in both themes. White text.
         create:
-          "bg-[var(--color-bg-action-create)] text-[var(--color-text-on-action-strong)] enabled:hover:bg-[var(--color-bg-action-create-hover)] enabled:hover:ring-2 enabled:hover:ring-[var(--color-ring-action-hover)] enabled:active:brightness-90",
+          "bg-[var(--color-bg-action-create)] text-[var(--color-text-on-action-strong)] not-disabled:hover:bg-[var(--color-bg-action-create-hover)] not-disabled:hover:ring-2 not-disabled:hover:ring-[var(--color-ring-action-hover)] not-disabled:active:brightness-90",
         // Delete: a solid red for the first click...
         danger:
-          "bg-[var(--color-bg-action-danger)] text-[var(--color-text-on-action-strong)] enabled:hover:bg-[var(--color-bg-action-danger-hover)] enabled:hover:ring-2 enabled:hover:ring-[var(--color-ring-action-hover)] enabled:active:brightness-90",
+          "bg-[var(--color-bg-action-danger)] text-[var(--color-text-on-action-strong)] not-disabled:hover:bg-[var(--color-bg-action-danger-hover)] not-disabled:hover:ring-2 not-disabled:hover:ring-[var(--color-ring-action-hover)] not-disabled:active:brightness-90",
         // ...and a stronger red for the final, irreversible confirm.
         dangerStrong:
-          "bg-[var(--color-bg-action-danger-strong)] text-[var(--color-text-on-action-strong)] enabled:hover:bg-[var(--color-bg-action-danger-strong-hover)] enabled:hover:ring-2 enabled:hover:ring-[var(--color-ring-action-hover)] enabled:active:brightness-90",
+          "bg-[var(--color-bg-action-danger-strong)] text-[var(--color-text-on-action-strong)] not-disabled:hover:bg-[var(--color-bg-action-danger-strong-hover)] not-disabled:hover:ring-2 not-disabled:hover:ring-[var(--color-ring-action-hover)] not-disabled:active:brightness-90",
         // Text that acts: an underlined link-coloured word (Edit, Remove, "View as table").
         // No padding (see the compound variant below); for a router <Link> or an <a>,
         // use buttonVariants({ variant: "link" }) so it looks the same.

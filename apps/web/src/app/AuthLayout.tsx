@@ -75,8 +75,8 @@ function AuthSwitch() {
     cn(
       "flex-1 rounded-[calc(var(--radius-control)-2px)] px-3 py-1.5 text-center text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-border-focus)]",
       isActive
-        ? "bg-[var(--color-bg-action-create)] text-[var(--color-text-on-action-strong)] shadow-sm"
-        : "text-[var(--color-text-muted)] hover:text-[var(--color-text-default)]",
+        ? "bg-[var(--color-bg-action-create)] text-[var(--color-text-on-action-strong)] shadow-sm hover:bg-[var(--color-bg-action-create-hover)]"
+        : "text-[var(--color-text-muted)] hover:bg-[var(--color-border-default)] hover:text-[var(--color-text-default)]",
     );
   return (
     <nav
