@@ -123,9 +123,8 @@ test("a click outside that lands on a link still works while the panel closes; c
   await expect(panelOf(page)).toHaveCount(0); // and the panel is gone
 });
 
-test("a reload keeps the panel open, and the full-page link and a Ctrl+click still go to the issue page", async ({
+test("a reload keeps the panel open, the full-page link goes to the issue page, and a Ctrl+click is left to the browser", async ({
   loggedInPage: page,
-  context,
 }) => {
   // Why: the URL is the source of truth, and a modified click must keep its normal meaning.
   const { listUrl } = await setup(page);
@@ -140,13 +139,27 @@ test("a reload keeps the panel open, and the full-page link and a Ctrl+click sti
   await expect(page.getByRole("heading", { level: 1, name: "Alpha issue" })).toBeVisible();
   await expect(panelOf(page)).toHaveCount(0);
 
+  // A modified click must keep the browser's own meaning (a new tab). Whether the browser then opens that tab is the browser's business, and on
+  // CI (Linux, headless) it was unreliable: the tab sometimes never appeared, sometimes had an empty address. What is OURS to get right is that
+  // the app does not take the click over: it must not cancel the browser's default action and must not open the panel. So: a listener on
+  // `document` (it runs after the app's own handlers) records whether the click was already cancelled, then cancels it itself so no real tab opens.
   await page.goto(listUrl);
-  const newTab = context.waitForEvent("page");
+  await expect(cardLink(page, "Beta issue")).toBeVisible();
+  await page.evaluate(() => {
+    const w = window as unknown as { __modifiedClick?: { cancelledByApp: boolean; ctrl: boolean } };
+    document.addEventListener(
+      "click",
+      (event) => {
+        w.__modifiedClick = { cancelledByApp: event.defaultPrevented, ctrl: event.ctrlKey };
+        event.preventDefault(); // after reading it: keep the test browser on this page
+      },
+      { once: true },
+    );
+  });
   await cardLink(page, "Beta issue").click({ modifiers: ["Control"] });
-  const tab = await newTab;
-  // The tab shows the issue's own page. Its address is not read: on CI (Linux, headless) Playwright kept reporting an empty address for this
-  // background tab for 5 seconds although the trace shows the page fully loaded, so the page's content is what proves it.
-  await expect(tab.getByRole("heading", { level: 1, name: "Beta issue" })).toBeVisible();
+  const seen = await page.evaluate(() => (window as unknown as { __modifiedClick?: { cancelledByApp: boolean; ctrl: boolean } }).__modifiedClick);
+  expect(seen, "the click reached the page").toEqual({ cancelledByApp: false, ctrl: true });
+  await expect(page).not.toHaveURL(/issue=/); // the panel was not opened by it
   await expect(panelOf(page)).toHaveCount(0);
 });
 

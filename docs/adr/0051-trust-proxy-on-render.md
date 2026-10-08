@@ -19,5 +19,5 @@ Express's `trust proxy` with a number N trusts the N addresses nearest the serve
 ## Limits, named
 
 - **A fixed hop count is brittle.** If Render or Cloudflare adds or removes a hop, the value is wrong again, silently. The signs: the logged visitor address turns into a 10.x or Cloudflare address, or the limiters trip for unrelated people. Re-read a log line after any Render change of infrastructure.
-- Not verified on the live site until `TRUST_PROXY` is changed there and redeployed, and a limit is then seen counting per visitor (for example from two different networks).
+- Verified on the live site (2026-10-08, after `TRUST_PROXY` was changed to 3 in the Render dashboard and redeployed): the login limit (10 per 15 minutes) counted separately on two networks. University wifi: remaining 8, then 7; a phone hotspot, one request later: remaining 8 (a shared bucket would have shown 6). Only these two paths were tried, from one country.
 - The rate limiters are in memory per server instance (unchanged, ADR 0044).
