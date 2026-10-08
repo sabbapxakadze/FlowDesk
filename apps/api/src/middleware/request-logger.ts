@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { pinoHttp } from "pino-http";
-import { logger } from "../lib/logger.js";
+import type { Logger } from "pino";
+import { logger as appLogger } from "../lib/logger.js";
 
 /**
  * Attaches req.id (a UUID, generated fresh unless the caller already sent
@@ -9,7 +10,7 @@ import { logger } from "../lib/logger.js";
  * the error handler echoes it back to the client — so a bug report that
  * includes a request id can be traced straight to the matching log lines.
  */
-export const requestLogger = pinoHttp({
+export const createRequestLogger = (logger: Logger) => pinoHttp({
   logger,
   genReqId: (req, res) => {
     const existing = req.headers["x-request-id"];
@@ -27,3 +28,5 @@ export const requestLogger = pinoHttp({
   customSuccessMessage: (req, res, responseTime) => `${req.method} ${req.url} ${res.statusCode} (${responseTime}ms)`,
   customErrorMessage: (req, res, error) => `${req.method} ${req.url} ${res.statusCode} (${error.message})`,
 });
+
+export const requestLogger = createRequestLogger(appLogger);
