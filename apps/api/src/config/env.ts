@@ -28,6 +28,12 @@ const envSchema = z.object({
   // directory for test runs, same pattern it already uses for
   // DATABASE_URL.
   UPLOADS_DIR: z.string().min(1).default("./uploads"),
+  // Where uploaded files live (ADR 0049). "local": the disk under UPLOADS_DIR. "disabled": uploads are refused with a clear message; the
+  // first deploy on Render uses it because its free disk is wiped on every restart, so a file would silently vanish. Real object storage
+  // (S3 / R2) comes with Phase 9 slice 9.5.
+  STORAGE_DRIVER: z.enum(["local", "disabled"]).default("local"),
+  // The most connections the pool opens to Postgres (ADR 0049). A free Neon database allows only a limited number of connections at once.
+  DB_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
   // Signs every attachment download token — anyone with this can forge a
   // valid download link. Same min(32) convention as JWT_SECRET.
   ATTACHMENT_SIGNING_SECRET: z
@@ -71,8 +77,16 @@ const envSchema = z.object({
   }
 });
 
+/**
+ * Reads and checks a set of variables. On Render the service's own address is given as RENDER_EXTERNAL_URL, so APP_URL is taken from it when
+ * APP_URL itself is not set (an APP_URL that is set always wins, e.g. a custom domain later). Pure (no exit), so it can be tested.
+ */
+export function parseEnv(source: NodeJS.ProcessEnv) {
+  return envSchema.safeParse({ ...source, APP_URL: source.APP_URL || source.RENDER_EXTERNAL_URL || undefined });
+}
+
 function loadEnv() {
-  const parsed = envSchema.safeParse(process.env);
+  const parsed = parseEnv(process.env);
 
   if (!parsed.success) {
     // Deliberately not using the pino logger here: logging itself depends on

@@ -1,0 +1,40 @@
+# Render Blueprint (ADR 0045, 0049): one free web service that serves the built web app, the API and Socket.IO on one address.
+# Create it in the Render dashboard with New > Blueprint. The database is NOT here: it lives on Neon (its direct connection string goes into
+# DATABASE_URL when Render asks for it). Values marked `sync: false` are asked for once, when the Blueprint is first created.
+services:
+  - type: web
+    name: flowdesk
+    runtime: node
+    plan: free
+    region: frankfurt # keep it close to the Neon database (also Frankfurt)
+    healthCheckPath: /api/health # does not touch the database, so a check never wakes a sleeping Neon
+    # corepack gives the pnpm version named in package.json ("packageManager"); `pnpm build` builds contracts, the API and the web app.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    # NODE_ENV is set here, in the start command only, so the install above still gets the build tools (devDependencies).
+    startCommand: NODE_ENV=production node apps/api/dist/index.js
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: SERVE_WEB
+        value: "true"
+      - key: RUN_MIGRATIONS
+        value: "true" # the schema is brought up to date when the server starts (under a database lock)
+      - key: TRUST_PROXY
+        value: "1" # one proxy (Render's) in front, so rate limits see the visitor
+      - key: DEMO_ENABLED
+        value: "true" # "Try the demo" on the landing page; capped by DEMO_MAX_ACTIVE and rate limited (ADR 0044)
+      - key: STORAGE_DRIVER
+        value: disabled # Render's free disk is wiped on restart: uploads are refused until real storage (slice 9.5)
+      - key: EMAIL_FROM
+        value: onboarding@resend.dev
+      - key: LOG_LEVEL
+        value: info
+      # APP_URL is not set: the server takes Render's own address (RENDER_EXTERNAL_URL). Set APP_URL later for a custom domain.
+      - key: DATABASE_URL
+        sync: false # the Neon DIRECT connection string (hostname without "-pooler")
+      - key: RESEND_API_KEY
+        sync: false # a placeholder until a domain exists (emails fail quietly and are logged)
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ATTACHMENT_SIGNING_SECRET
+        generateValue: true

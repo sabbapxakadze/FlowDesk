@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { app } from "../../app.js";
+import { env } from "../../config/env.js";
 import { clearTestUploads, resetDatabase } from "../../db/test-utils.js";
 
 /**
@@ -252,5 +253,30 @@ describe("attachments — HTTP", () => {
       await clearTestUploads();
       await request(app).get(res.body.data.downloadUrl).expect(404);
     });
+  });
+
+  it("with STORAGE_DRIVER=disabled an upload is refused with a clear message and nothing is stored or recorded (ADR 0049)", async () => {
+    // Why: on a host whose disk is wiped on restart (Render free) an accepted file would vanish silently; refusing it says so up front.
+    const userA = await registerAndLogIn("a@example.com", "Org A");
+    const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+    const issueId = await createIssue(userA.accessToken, userA.organizationId, projectId, "No uploads here");
+    const uploadUrl = `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issueId}/attachments`;
+
+    const before = env.STORAGE_DRIVER;
+    env.STORAGE_DRIVER = "disabled";
+    try {
+      const res = await request(app)
+        .post(uploadUrl)
+        .set("Authorization", `Bearer ${userA.accessToken}`)
+        .attach("file", Buffer.from("not kept"), { filename: "note.txt", contentType: "text/plain" });
+      expect(res.status).toBe(503);
+      expect(res.body.error.code).toBe("uploads_disabled");
+      expect(res.body.error.message).toContain("switched off");
+    } finally {
+      env.STORAGE_DRIVER = before;
+    }
+
+    const list = await request(app).get(uploadUrl).set("Authorization", `Bearer ${userA.accessToken}`).expect(200);
+    expect(list.body.data).toEqual([]);
   });
 });

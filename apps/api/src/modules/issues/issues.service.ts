@@ -359,6 +359,7 @@ export async function uploadAttachment(input: {
   /** Attach the file to this comment (must be the uploader's own, on this issue). */
   commentId?: string;
 }) {
+  storage.assertUploadsEnabled();
   // Validated BEFORE anything is written to disk, so a rejected comment id
   // never leaves an orphan file behind.
   if (input.commentId) {

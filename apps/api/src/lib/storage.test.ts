@@ -4,7 +4,7 @@ import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { env } from "../config/env.js";
 import { clearTestUploads } from "../db/test-utils.js";
-import { deleteFile, readFileStream, saveFile, signDownloadToken, verifyDownloadToken } from "./storage.js";
+import { assertUploadsEnabled, deleteFile, readFileStream, saveFile, signDownloadToken, verifyDownloadToken } from "./storage.js";
 
 /** Independent reimplementation of storage.ts's private sign() — proves
  * the module's own HMAC computation against a second, separately
@@ -72,5 +72,22 @@ describe("lib/storage — signed download tokens", () => {
     const validSignatureForThatExpiry = independentSign("attachment-1", expiredExpires);
 
     expect(verifyDownloadToken("attachment-1", expiredExpires, validSignatureForThatExpiry)).toBe(false);
+  });
+});
+
+describe("lib/storage - the disabled driver (ADR 0049)", () => {
+  it("refuses to save a file, and writes nothing, when uploads are switched off", async () => {
+    // Why: saveFile is the single door every upload goes through, so one switch here covers attachments, comments' files and photos.
+    await clearTestUploads();
+    const before = env.STORAGE_DRIVER;
+    env.STORAGE_DRIVER = "disabled";
+    try {
+      expect(() => assertUploadsEnabled()).toThrowError(expect.objectContaining({ code: "uploads_disabled", status: 503 }));
+      await expect(saveFile("never-saved", Buffer.from("x"))).rejects.toMatchObject({ code: "uploads_disabled" });
+      expect(existsSync(path.join(env.UPLOADS_DIR, "never-saved"))).toBe(false);
+    } finally {
+      env.STORAGE_DRIVER = before;
+    }
+    expect(() => assertUploadsEnabled()).not.toThrow(); // and the normal driver is untouched
   });
 });

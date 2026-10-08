@@ -1,0 +1,41 @@
+import { describe, expect, it } from "vitest";
+import { parseEnv } from "./env.js";
+
+const base = {
+  DATABASE_URL: "postgresql://u:p@localhost:5432/db",
+  JWT_SECRET: "x".repeat(32),
+  ATTACHMENT_SIGNING_SECRET: "y".repeat(32),
+  RESEND_API_KEY: "key",
+  EMAIL_FROM: "a@example.com",
+};
+
+describe("config/env - parseEnv", () => {
+  it("takes APP_URL from Render's RENDER_EXTERNAL_URL when APP_URL is not set", () => {
+    // Why: on Render the service's address is only known after it exists; reading it from the platform removes a manual step and a typo risk.
+    const parsed = parseEnv({ ...base, RENDER_EXTERNAL_URL: "https://flowdesk-abc.onrender.com" });
+    expect(parsed.success && parsed.data.APP_URL).toBe("https://flowdesk-abc.onrender.com");
+  });
+
+  it("an APP_URL that is set always wins over Render's address (a custom domain later)", () => {
+    const parsed = parseEnv({ ...base, APP_URL: "https://app.example.org", RENDER_EXTERNAL_URL: "https://flowdesk-abc.onrender.com" });
+    expect(parsed.success && parsed.data.APP_URL).toBe("https://app.example.org");
+  });
+
+  it("with neither, the server still refuses to start (a missing address must crash at boot, not at the first email)", () => {
+    const parsed = parseEnv({ ...base });
+    expect(parsed.success).toBe(false);
+    expect(parsed.success ? [] : Object.keys(parsed.error.flatten().fieldErrors)).toContain("APP_URL");
+  });
+
+  it("an empty APP_URL counts as not set", () => {
+    // Why: a platform form that leaves the field empty sends "", which must not mask the fallback.
+    const parsed = parseEnv({ ...base, APP_URL: "", RENDER_EXTERNAL_URL: "https://flowdesk-abc.onrender.com" });
+    expect(parsed.success && parsed.data.APP_URL).toBe("https://flowdesk-abc.onrender.com");
+  });
+
+  it("STORAGE_DRIVER defaults to local and DB_POOL_MAX to 10; an unknown driver is refused", () => {
+    const ok = parseEnv({ ...base, APP_URL: "http://localhost:5173" });
+    expect(ok.success && [ok.data.STORAGE_DRIVER, ok.data.DB_POOL_MAX]).toEqual(["local", 10]);
+    expect(parseEnv({ ...base, APP_URL: "http://localhost:5173", STORAGE_DRIVER: "s4" }).success).toBe(false);
+  });
+});

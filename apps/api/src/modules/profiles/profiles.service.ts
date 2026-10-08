@@ -3,7 +3,7 @@ import type { z } from "zod";
 import type { updateProfileRequestSchema } from "@flowdesk/contracts";
 import { processAvatar } from "../../lib/image.js";
 import { avatarStorageKey, avatarUrlFor } from "../../lib/avatar-url.js";
-import { deleteFile, saveFile } from "../../lib/storage.js";
+import { assertUploadsEnabled, deleteFile, saveFile } from "../../lib/storage.js";
 import { broadcastOrganizationChanged } from "../../realtime/socket-server.js";
 import { AppError } from "../../shared/errors.js";
 import * as profilesRepository from "./profiles.repository.js";
@@ -28,6 +28,7 @@ export async function updateMyProfile(userId: string, input: ParsedProfileInput)
  * an unused file, never a row pointing at nothing), and the old file is deleted AFTER the swap.
  */
 export async function setMyAvatar(userId: string, upload: Buffer): Promise<string> {
+  assertUploadsEnabled();
   const picture = await processAvatar(upload);
   const key = randomBytes(16).toString("hex");
   await saveFile(avatarStorageKey(key), picture);

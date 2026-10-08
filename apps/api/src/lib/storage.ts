@@ -3,7 +3,18 @@ import { createReadStream } from "node:fs";
 import { mkdir, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { env } from "../config/env.js";
+import { AppError } from "../shared/errors.js";
 import { logger } from "./logger.js";
+
+/**
+ * Refuses an upload when this deployment has no place to keep files (STORAGE_DRIVER=disabled, ADR 0049). Called at the START of an upload,
+ * before any image processing or database work is done for nothing.
+ */
+export function assertUploadsEnabled(): void {
+  if (env.STORAGE_DRIVER === "disabled") {
+    throw new AppError("uploads_disabled", 503, "File uploads are switched off on this deployment.");
+  }
+}
 
 /**
  * Local disk storage + our own signed download tokens — not real S3.
@@ -18,6 +29,7 @@ import { logger } from "./logger.js";
  * mimeType lives in the attachments table, not inferred from the path.
  */
 export async function saveFile(attachmentId: string, buffer: Buffer): Promise<string> {
+  assertUploadsEnabled();
   await mkdir(env.UPLOADS_DIR, { recursive: true });
   const storageKey = attachmentId;
   await writeFile(path.join(env.UPLOADS_DIR, storageKey), buffer);

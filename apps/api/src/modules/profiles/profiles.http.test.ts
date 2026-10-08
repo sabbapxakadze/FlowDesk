@@ -130,6 +130,22 @@ describe("the photo", () => {
     expect((await profileOf(owner, owner).expect(200)).body.data.avatarUrl).toBe(url);
   });
 
+  it("with STORAGE_DRIVER=disabled the photo is refused with a clear message and nothing changes (ADR 0049)", async () => {
+    // Why: a host with no persistent disk cannot keep the picture; the refusal comes before the image work and before any database change.
+    const owner = await registerAndLogIn("owner@example.com", "Org A");
+    const before = env.STORAGE_DRIVER;
+    env.STORAGE_DRIVER = "disabled";
+    try {
+      const res = await upload(owner, await picture());
+      expect(res.status).toBe(503);
+      expect(res.body.error.code).toBe("uploads_disabled");
+    } finally {
+      env.STORAGE_DRIVER = before;
+    }
+    expect(await avatarFiles()).toEqual([]);
+    expect((await profileOf(owner, owner).expect(200)).body.data.avatarUrl).toBeNull();
+  });
+
   it("refuses a file that is not really a picture, even when it claims to be one", async () => {
     // Why: the MIME type is the client's claim; decoding the bytes is the real check.
     const owner = await registerAndLogIn("owner@example.com", "Org A");
