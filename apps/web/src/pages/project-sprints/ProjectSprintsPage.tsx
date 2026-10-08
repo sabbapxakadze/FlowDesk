@@ -240,9 +240,12 @@ export function ProjectSprintsPage() {
   return (
     <Page width="wide">
       {/* From sm up the page fills the window: the Sprints list is capped and scrolls inside, and the two
-          lists take the height that is left (at least 24rem; a shorter window scrolls the page). The 4rem is
-          the Page's own vertical padding. On a phone everything stacks at its natural height. */}
-      <div className="flex flex-col sm:h-[calc(100dvh-4rem)] sm:min-h-[44rem]">
+          lists take the height that is left. The page is never shorter than 52rem: the title, the create
+          form and the capped Sprints list use about 36rem, which leaves the lists their own 16rem minimum
+          (`Lane`); with less, the lists hung out below the page and touched the bottom of the window with no
+          space under them (a window shorter than about 830px). A shorter window scrolls the page instead.
+          The 4rem is the Page's own vertical padding. On a phone everything stacks at its natural height. */}
+      <div className="flex flex-col sm:h-[calc(100dvh-4rem)] sm:min-h-[52rem]">
       <PageHeader eyebrow={project.name} title="Sprints" />
 
       <CreateSprintForm organizationId={organization!.id} projectId={project.id} />
@@ -336,7 +339,7 @@ export function ProjectSprintsPage() {
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
-          <div className="grid grid-cols-1 gap-4 sm:min-h-0 sm:flex-1 sm:grid-cols-2 sm:grid-rows-[minmax(0,1fr)]">
+          <div className="grid grid-cols-1 gap-4 sm:min-h-0 sm:flex-1 sm:grid-cols-2 sm:grid-rows-[minmax(16rem,1fr)]">
             {LISTS.map((listId) => {
               const ids = lists[listId];
               const listIssues = ids.flatMap((id) => {

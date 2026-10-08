@@ -123,6 +123,33 @@ test("a long backlog scrolls inside its own lane: the page does not grow, and th
   }
 });
 
+test("in a short window the sprints page scrolls, and the lists end with space under them instead of touching the window's bottom edge", async ({
+  loggedInPage: page,
+}) => {
+  // Why: below about 830px of window height the page reserved less room than the two lists' own minimum (16rem), so they hung out below the
+  // page: scrolled to the end, they were flush against the bottom of the window with no space (found by the owner scrolling down).
+  await page.setViewportSize({ width: 1280, height: 640 });
+  const { projectId } = await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: ["One", "Two"] });
+  // Enough sprints to fill the capped Sprints list (19rem): with a short list the lanes have room and the bug does not show.
+  const { headers, base } = await apiSession(page.request);
+  for (let i = 1; i <= 6; i++) {
+    const made = await page.request.post(`${base}/projects/${projectId}/sprints`, { headers, data: { name: `Sprint ${i}` } });
+    expect(made.status()).toBe(201);
+  }
+  await page.goto(`/projects/${projectId}/sprints`);
+  await expect(lane(page, "Backlog").getByRole("listitem").first()).toBeVisible();
+
+  const scrolls = await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight);
+  expect(scrolls, "a window this short must scroll the page").toBe(true);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  for (const name of ["Backlog", "Active sprint"] as const) {
+    const box = (await lane(page, name).boundingBox())!;
+    expect(box.height, `${name} keeps its minimum height of 16rem`).toBeGreaterThanOrEqual(256);
+    const spaceBelow = await page.evaluate(() => window.innerHeight) - (box.y + box.height);
+    expect(spaceBelow, `${name}: space under the list at the end of the page`).toBeGreaterThanOrEqual(24);
+  }
+});
+
 test("dragging a card near the bottom edge of a long list scrolls the list and drops it far down", async ({
   loggedInPage: page,
 }) => {
