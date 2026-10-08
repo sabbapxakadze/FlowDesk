@@ -1,5 +1,8 @@
 # Render Blueprint (ADR 0045, 0049): one free web service that serves the built web app, the API and Socket.IO on one address.
-# Create it in the Render dashboard with New > Blueprint. The database is NOT here: it lives on Neon (its direct connection string goes into
+# NOTE: the live service (flowdesk on Render) was created BY HAND in the dashboard with these same values, not from this file: the Blueprint
+# flow asked for a payment card up front and the manual flow did not stop at it (not tested whether the manual flow would have asked later).
+# So this file is the written record of the settings, and the dashboard is where they actually live; keep the two in step.
+# To create the service from it instead: New > Blueprint. The database is NOT here: it lives on Neon (its direct connection string goes into
 # DATABASE_URL when Render asks for it). Values marked `sync: false` are asked for once, when the Blueprint is first created.
 services:
   - type: web
@@ -8,8 +11,9 @@ services:
     plan: free
     region: frankfurt # keep it close to the Neon database (also Frankfurt)
     healthCheckPath: /api/health # does not touch the database, so a check never wakes a sleeping Neon
-    # corepack gives the pnpm version named in package.json ("packageManager"); `pnpm build` builds contracts, the API and the web app.
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    # Render detects pnpm by itself (its own default build command was pnpm), so no corepack step; `pnpm run build` builds contracts, the API
+    # and the web app. This is the command the live service uses.
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build
     # NODE_ENV is set here, in the start command only, so the install above still gets the build tools (devDependencies).
     startCommand: NODE_ENV=production node apps/api/dist/index.js
     envVars:

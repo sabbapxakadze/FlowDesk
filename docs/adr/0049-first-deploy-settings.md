@@ -31,6 +31,12 @@ API tests: the upload refusal through the real HTTP routes (attachment: refused,
 - `generateValue`'s length was not checked in the docs; the server refuses to start with a secret shorter than 32 characters, with a clear message, so a short one would show on the first deploy.
 - Auto deploy on every push to the linked branch is Render's default; deploying only after CI is green is a later option (not checked how Render offers it).
 
+## Result of the first deploy (2026-10-08)
+
+The service is live on Render's free plan at `https://flowdesk-yotg.onrender.com` (Frankfurt), database on Neon (Frankfurt, Postgres 18). Build and start took 1 min 15 s on the first deploy; the log shows `database migrations are up to date` (the migrations ran on Neon from empty), Render's health checks answer 200, and the security header already names the service's own address, so `APP_URL` from `RENDER_EXTERNAL_URL` worked. Read-only checks from outside passed (health, landing page and its headers, a deep link, a 404 for a missing file, a JSON 404 for an unknown API route, the demo info). The owner then ran the browser smoke test by hand (Try the demo, board, live update, register, log in): everything worked except email, as designed (placeholder `RESEND_API_KEY`).
+
+**How it was created, honestly:** by hand in the dashboard (New > Web Service), not from `render.yaml`. The Blueprint flow asked for a payment card first (a $1 verification hold was taken; a card ended up saved on the account, which the owner had not expected). Render's own default build command for the repository was pnpm, so `corepack enable` was dropped; `render.yaml` now matches what runs. Free plan on a Hobby workspace; the billing page showed no invoices and a $0.00 balance.
+
 ## Not verified
 
-Everything about Render itself: that its native build handles this pnpm workspace and `corepack enable`, the build's memory use on 512 MB, how its proxy forwards `X-Forwarded-For`, and how Neon behaves when it wakes. The Render build and start commands were run from a clean copy on this machine (see the roadmap entry), which does not prove them there. The first deploy is the test.
+Everything about Render itself: that its native build handles this pnpm workspace and `corepack enable`, the build's memory use on 512 MB, how its proxy forwards `X-Forwarded-For`, and how Neon behaves when it wakes. Of the list above, the first deploy settled: the native pnpm build, the connection to Neon (TLS, `channel_binding`), the migrations on Neon and `RENDER_EXTERNAL_URL`. Still open: the build's memory use on 512 MB under a larger bundle, how Render's proxy forwards `X-Forwarded-For` (the rate limits depend on it, `TRUST_PROXY=1`), and what a cold start after sleep and Neon's wake do to the first request.
