@@ -24,7 +24,7 @@ services:
       - key: RUN_MIGRATIONS
         value: "true" # the schema is brought up to date when the server starts (under a database lock)
       - key: TRUST_PROXY
-        value: "1" # one proxy (Render's) in front, so rate limits see the visitor
+        value: "3" # 3 hops in front on Render (internal proxy, Cloudflare, ...): measured from a live x-forwarded-for with three addresses (ADR 0051)
       - key: DEMO_ENABLED
         value: "true" # "Try the demo" on the landing page; capped by DEMO_MAX_ACTIVE and rate limited (ADR 0044)
       - key: STORAGE_DRIVER

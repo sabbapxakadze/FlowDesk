@@ -30,4 +30,18 @@ describe("proxy trust", () => {
     const res = await request(appWithTrust(1)).get("/ip").set("X-Forwarded-For", "203.0.113.50, 198.51.100.7");
     expect(res.body.ip).toBe("198.51.100.7");
   });
+
+  it("behind Render's real chain (3 hops: an internal proxy, Cloudflare, then the visitor), the visitor is the first address of the list", async () => {
+    // Why: the live log showed `x-forwarded-for: visitor, 162.158.x.x (Cloudflare), 10.x.x.x (Render internal)`. With 1 hop the server would take
+    // the internal 10.x address, so every visitor would share one rate limit; 3 reaches the visitor.
+    const chain = "146.255.1.1, 162.158.1.1, 10.20.3.4";
+    expect((await request(appWithTrust(1)).get("/ip").set("X-Forwarded-For", chain)).body.ip).toBe("10.20.3.4"); // the mistake we had
+    expect((await request(appWithTrust(3)).get("/ip").set("X-Forwarded-For", chain)).body.ip).toBe("146.255.1.1");
+  });
+
+  it("behind Render's chain (3), an address the visitor forged at the front still does not win", async () => {
+    // Why: each hop appends the address it saw, so a forged first entry only pushes the real chain to the right; the count from the server's end still lands on the real visitor.
+    const forged = "9.9.9.9, 146.255.1.1, 162.158.1.1, 10.20.3.4";
+    expect((await request(appWithTrust(3)).get("/ip").set("X-Forwarded-For", forged)).body.ip).toBe("146.255.1.1");
+  });
 });
