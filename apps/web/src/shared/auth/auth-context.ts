@@ -23,6 +23,8 @@ export interface AuthContextValue {
   logout: () => void;
   /** End the session because of `reason` (not a button press), so the login page can explain it. */
   endSession: (reason: SessionEndReason) => void;
+  /** The login page has been reached (and has the notice, if any), so a later visit to `/` is a visitor's again: the landing page. */
+  forgetSessionEnd: () => void;
 }
 
 // Split from AuthContext.tsx / useAuth.ts on purpose: a file that exports

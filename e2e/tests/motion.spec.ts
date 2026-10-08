@@ -127,6 +127,18 @@ test.describe("with animations on", () => {
     expect(await animationOf(page, "div.motion-rise-in")).toBe("motion-rise-in");
   });
 
+  test("logging out cross-fades from the app to the login page, with the login page already in place", async ({ loggedInPage: page }) => {
+    // Why: the app used to vanish in one frame and only then did the login card rise in, which read as a cut. The fade must start when
+    // the NEW page is in place (the log holds the page at that moment), or it would fade the app into itself.
+    await recordViewTransitions(page);
+    await page.goto("/");
+    await page.getByRole("heading", { level: 1, name: "My work" }).waitFor();
+    await page.getByRole("button", { name: "Log out" }).click();
+    await expect(page).toHaveURL(/\/login$/);
+    await page.waitForTimeout(500);
+    expect(await viewTransitionLog(page)).toEqual(["/login | Log in"]);
+  });
+
   test("a page change plays the rise-in, but a filter or the side panel (query string only) does not replay it", async ({
     loggedInPage: page,
   }) => {

@@ -5,6 +5,7 @@ import { setStoredAccessToken } from "./token-store";
 import { AuthContext, type AuthOrganization, type AuthUser, type SessionEndReason } from "./auth-context";
 import { connectSocket, disconnectSocket, reconnectSocket } from "../socket/socket-client";
 import { setTimezone } from "../lib/timezone";
+import { withViewTransition } from "../lib/motion";
 import { markTokenIssued, onSessionLost, onSessionRenewed, renewAccessToken, tokenAgeMs } from "./session-refresh";
 
 /** A tab that comes back to the foreground renews first when its access token (15 minutes) is older than this. */
@@ -60,8 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    setEndedReason("signed-out");
-    clearSession();
+    // The app cross-fades into the login page (a View Transition, like logging in) instead of vanishing in one frame.
+    withViewTransition(() => {
+      setEndedReason("signed-out");
+      clearSession();
+    });
     // Local state clears immediately either way; telling the server to
     // revoke the session is best-effort and shouldn't block the UI on it.
     void apiPostVoid("/v1/auth/logout").catch(() => undefined);
@@ -76,6 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [clearSession],
   );
+
+  const forgetSessionEnd = useCallback(() => setEndedReason(null), []);
 
   useEffect(() => {
     const stopRenewed = onSessionRenewed((session) => {
@@ -115,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [login, endSession]);
 
   return (
-    <AuthContext.Provider value={{ user, organization, accessToken, isLoading, endedReason, login, logout, endSession }}>
+    <AuthContext.Provider value={{ user, organization, accessToken, isLoading, endedReason, login, logout, endSession, forgetSessionEnd }}>
       {children}
     </AuthContext.Provider>
   );

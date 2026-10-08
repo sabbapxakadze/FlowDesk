@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { Navigate, useLocation } from "react-router";
+import { useLayoutEffect, type ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { useAuth } from "./useAuth";
 
 const SESSION_END_NOTICES = {
@@ -29,8 +29,21 @@ export function RequireAuth({ children, publicHome }: { children: ReactNode; pub
     if (publicHome && !endedReason && pathname === "/") return publicHome;
     // When the session ended on its own, the login page says why (NavigationNotice reads `state.notice`).
     const notice = endedReason && endedReason !== "signed-out" ? SESSION_END_NOTICES[endedReason] : undefined;
-    return <Navigate to="/login" replace state={notice ? { notice } : undefined} />;
+    return <RedirectToLogin state={notice ? { notice } : undefined} />;
   }
 
   return children;
+}
+
+/**
+ * Like `<Navigate to="/login" replace>`, but it redirects in a layout effect, so the login page is already rendered when the render that
+ * dropped the user finishes. With the router's own `Navigate` (a passive effect) the redirect came one step later, after a log out's
+ * View Transition had already taken its "after" picture, and the fade ended on a blank page.
+ */
+function RedirectToLogin({ state }: { state: { notice: string } | undefined }) {
+  const navigate = useNavigate();
+  useLayoutEffect(() => {
+    void navigate("/login", { replace: true, state });
+  }, [navigate, state]);
+  return null;
 }

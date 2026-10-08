@@ -1,5 +1,7 @@
 import { ArrowLeft } from "lucide-react";
+import { useEffect } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
+import { useAuth } from "../shared/auth/useAuth";
 import { buttonVariants, cn, FadeLink, ThemeSwitch } from "../shared/ui";
 
 /**
@@ -24,6 +26,9 @@ import { buttonVariants, cn, FadeLink, ThemeSwitch } from "../shared/ui";
  */
 export function AuthLayout() {
   const { pathname } = useLocation();
+  const { forgetSessionEnd } = useAuth();
+  // Having arrived here, the person has been told (or not) why; from now on `/` is the landing page again, so Home works after a log out.
+  useEffect(() => forgetSessionEnd(), [forgetSessionEnd]);
   const showSwitch = pathname === "/login" || pathname === "/register";
   return (
     <div className="relative flex min-h-screen flex-col items-center overflow-hidden px-4 pt-16 pb-12 sm:justify-center sm:py-12">

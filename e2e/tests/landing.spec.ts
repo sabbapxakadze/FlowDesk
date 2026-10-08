@@ -50,6 +50,20 @@ test("logging out while on / goes to the login page, not the landing page", asyn
   await expect(page).toHaveURL(/\/login$/);
 });
 
+test("after logging out, the Home button and the brand link lead to the landing page", async ({ loggedInPage: page }) => {
+  // Why: logging out leaves the page loaded, and "signed-out" used to stay remembered, so `/` sent the person straight back to /login
+  // and Home looked dead. Only a full reload worked.
+  await page.goto("/");
+  await page.getByRole("button", { name: "Log out" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  for (const link of ["Home", "FlowDesk"]) {
+    await page.getByRole("link", { name: link }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Plan the work. Follow it through." }), link).toBeVisible();
+    await page.getByRole("link", { name: "Log in" }).first().click();
+    await expect(page).toHaveURL(/\/login$/);
+  }
+});
+
 test("a session that ends while on / goes to the login page with the message", async ({ loggedInPage: page }) => {
   // Why: an expired session is not "a visitor": the login page must say why, as in ADR 0038, even when the person was on /.
   await page.goto("/");

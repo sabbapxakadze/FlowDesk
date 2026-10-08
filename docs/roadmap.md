@@ -2500,7 +2500,15 @@ Who does what: **the owner** creates the accounts, pushes to GitHub and pastes s
 - [ ] **9.8 Redis: deliberately skipped on the free plan.** One instance keeps the in-memory design correct. Add Redis (shared rate limits, Socket.IO adapter) the day there is a second instance.
 - [ ] **9.9 Ready to show.** A README (what it is, a screenshot, how to run it, how it is deployed, the decisions list), an uptime check, error tracking and a weekly `pg_dump` backup routine (free services for these were not checked), a security pass, a dependency audit, secrets rotation notes, and a read-only smoke run against the public address. *Done when:* a stranger can open the address, try the demo and read how it was built.
 
-**Decided: no Docker for now.** **Decisions still open:** keep-alive pings to stop the cold start (Render's view of it was not checked, and Neon still sleeps); buying a domain (needed for email to other people and a nicer address); whether R2 is acceptable if it asks for a card.
+**Decided: no Docker for now.**
+
+**Decisions made 2026-10-08 (after the first deploy):**
+- **No keep-alive pings.** The free server is allowed to sleep. A ping every 14 minutes would run it around the clock and use up almost all of the 750 free hours a month (a month has about 744), and it would hide the cold start instead of facing it. Revisit only if the cold start (measured, see 9.4) turns out to be a real problem for visitors; the alternative is a friendlier "waking up" state in the page.
+- **Render deploys only after CI is green: later, once CI is stable.** The option is "After CI Checks Pass" in the service's Settings (the docs support GitHub Actions; whether it works on a free service is not stated). Catch: if any check fails for a commit, Render deploys nothing for it, so a flaky red check blocks the deploy until it is re-run. Turn it on after CI has been green for a good stretch (the browser shards were flaky in the first runs).
+- **Required checks and pull requests on GitHub: at the very end.** Require the 7 checks (Lint and typecheck, API tests, Production build and smoke test, Browser tests shards 1 to 4) in Settings > Branches only when everything else is done; it forces a branch and pull request workflow.
+- **A nicer address: yes, wanted** (also needed before email to other people works). Two ways, to decide when it is started: a free `is-a.dev` subdomain (register it with a pull request to their `register` repository; point it at the Render service with a CNAME and add it as a custom domain in Render; email records would need a sub-subdomain because a CNAME cannot share a name with MX or TXT records; whether `is-a.dev` allows that, and whether it accepts email use, is not verified), or a bought domain (the sure route, roughly 10 dollars a year, price not checked). When the address changes, set `APP_URL` in Render (it overrides the automatic `RENDER_EXTERNAL_URL`), update the redirect URLs of the Google and GitHub sign-in apps, and re-measure `TRUST_PROXY` (ADR 0051: the hop count may differ behind a custom domain).
+
+**Decisions still open:** whether R2 is acceptable if it asks for a card (Neon Object Storage is tried first for 9.5).
 
 
 - [ ] **Make Google and GitHub sign-in real (ADR 0042; the code is built and tested with a fake, never run against the real providers).**
