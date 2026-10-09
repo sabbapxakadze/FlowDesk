@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import argon2 from "argon2";
 import { AppError } from "../../shared/errors.js";
+import { logger } from "../../lib/logger.js";
 import * as authRepository from "./auth.repository.js";
 import * as oauthRepository from "./oauth.repository.js";
 import * as organizationsRepository from "../organizations/organizations.repository.js";
@@ -327,7 +328,12 @@ export async function requestPasswordReset(email: string): Promise<void> {
   // The caller (controller) always responds the same way regardless.
   if (user) {
     const token = await issueAuthToken(user.id, "password_reset", PASSWORD_RESET_TTL_MS);
-    await sendPasswordResetEmail(user.email, token);
+    // Not awaited, on purpose (ADR 0054): waiting for the mail provider made this branch slower than the "no such account" branch, so the
+    // response TIME revealed which addresses are registered. A failed send is logged by the mail adapter; the catch is for the rare
+    // network error it does not handle, which must not become an unhandled rejection.
+    void sendPasswordResetEmail(user.email, token).catch((err: unknown) => {
+      logger.error({ err, to: user.email }, "failed to send password reset email");
+    });
   }
 }
 

@@ -9,3 +9,12 @@ allowBuilds:
   esbuild: true
   # Native resolver binary used by eslint-import-resolver-typescript.
   unrs-resolver: true
+
+# Security overrides (ADR 0054): the development tools below pull in old, flagged versions of these packages. None of them is in the
+# production runtime or the built web app (checked: `pnpm audit --prod` is clean and the built bundle has no trace of them), but they run on
+# the owner's machine and in CI, so they are pinned to the patched versions. `braces` has no patched version yet: left, noted in ADR 0054.
+overrides:
+  handlebars: ">=4.7.10"
+  seroval: ">=1.6.3"
+  source-map-js: ">=1.2.2"
+  "@esbuild-kit/core-utils>esbuild": "^0.25.0"

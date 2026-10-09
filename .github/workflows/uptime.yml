@@ -1,0 +1,26 @@
+# Daily uptime check (ADR 0055): once a day this runs the read-only smoke check against the live site. It uses GitHub's own scheduler, so there
+# is no third-party account, and ONE request a day: the free Render server is allowed to sleep (no keep-alive pings, ADR 0049/roadmap),
+# so the check waits up to 4 minutes for it to wake. A red run means the site did not answer, or a check failed (see apps/api/src/tools/smoke-live.ts).
+# It does not touch the database, so a database outage alone is not detected.
+name: Uptime
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # every day at 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: The live site answers
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # Change the address here when the site gets its own domain.
+      - run: node apps/api/src/tools/smoke-live.ts https://flowdesk-yotg.onrender.com 240

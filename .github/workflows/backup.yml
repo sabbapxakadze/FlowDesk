@@ -1,0 +1,62 @@
+# Weekly database backup (ADR 0055): a full dump of the live Neon database, ENCRYPTED, kept as a workflow artifact for 90 days.
+#
+# Why encrypted: this repository is public, and the artifacts of a public repository may be downloadable by anyone signed in to GitHub (not
+# verified), while the dump holds real people's emails and password hashes. The file is encrypted with AES-256 before it is uploaded; without
+# the passphrase it is unreadable. KEEP THE PASSPHRASE SOMEWHERE ELSE TOO (a password manager): GitHub's secret cannot be read back, and a
+# lost passphrase means every backup is useless.
+#
+# Needs two repository secrets (Settings, Secrets and variables, Actions): DATABASE_URL (Neon's DIRECT connection string) and BACKUP_PASSPHRASE.
+# Restore steps: docs/backups.md. Neon also keeps its own 6-hour history window; this backup is for older mistakes.
+name: Backup
+
+on:
+  schedule:
+    - cron: "23 3 * * 0" # every Sunday at 03:23 UTC
+  workflow_dispatch: # run it by hand once after adding the secrets, to see it work
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    name: Dump, encrypt, keep
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # pg_dump must be at least as new as the server. Neon runs Postgres 18 (set when the project was made); the runner's own client is older.
+      # If the server is ever upgraded past 18, pg_dump refuses with a version mismatch and this job turns red: raise the number here.
+      - name: Install the Postgres 18 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-18
+
+      - name: Dump the database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$DATABASE_URL" || { echo "The DATABASE_URL secret is not set"; exit 1; }
+          /usr/lib/postgresql/18/bin/pg_dump --format=custom --no-owner --no-privileges --file=flowdesk.dump "$DATABASE_URL"
+          # A dump that is not a readable archive, or has no users table, is a failed backup even if pg_dump said nothing.
+          /usr/lib/postgresql/18/bin/pg_restore --list flowdesk.dump | grep -q "TABLE public users"
+          ls -l flowdesk.dump
+
+      - name: Encrypt it (AES-256) and remove the plain copy
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "$BACKUP_PASSPHRASE" || { echo "The BACKUP_PASSPHRASE secret is not set"; exit 1; }
+          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -pass env:BACKUP_PASSPHRASE -in flowdesk.dump -out "flowdesk-$(date -u +%F).dump.enc"
+          rm flowdesk.dump
+          ls -l flowdesk-*.dump.enc
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: flowdesk-backup
+          path: flowdesk-*.dump.enc
+          retention-days: 90
+          if-no-files-found: error

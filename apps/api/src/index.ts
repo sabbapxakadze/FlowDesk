@@ -3,6 +3,7 @@ import { app } from "./app.js";
 import { env } from "./config/env.js";
 import { pool } from "./db/client.js";
 import { runMigrations } from "./db/run-migrations.js";
+import { flushErrorReporting, initErrorReporting } from "./lib/error-reporting.js";
 import { logger } from "./lib/logger.js";
 import { createShutdown } from "./lib/shutdown.js";
 import { attachSocketServer } from "./realtime/socket-server.js";
@@ -12,6 +13,9 @@ if (env.RUN_MIGRATIONS === "true") {
   await runMigrations();
   logger.info("database migrations are up to date");
 }
+
+// Error tracking is on only when SENTRY_DSN is set (ADR 0055); started before anything can fail.
+await initErrorReporting();
 
 // A real http.Server, not app.listen()'s implicit one — Socket.IO needs
 // to attach to it directly (see realtime/socket-server.ts).
@@ -38,6 +42,7 @@ const shutdown = createShutdown({
       },
     },
     { name: "database pool", close: () => pool.end() },
+    { name: "error reports", close: () => flushErrorReporting(2000) },
   ],
 });
 for (const signal of ["SIGINT", "SIGTERM"] as const) {

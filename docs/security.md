@@ -1,0 +1,52 @@
+# Security notes
+
+What was reviewed, what is accepted, what to rotate and when, and what only the owner can check. Written 2026-10-09 with the first security pass (ADR 0054). It records what was seen on that day; it is not a promise about later changes.
+
+## Findings of the first pass
+
+| # | Finding | Seen how | What was done |
+|---|---------|----------|---------------|
+| 1 | 8 audit findings (3 critical, 3 high, 2 moderate), all in development tools | `pnpm audit`; `pnpm audit --prod` is clean; built bundle searched | 7 pinned to patched versions; `braces` (high) has no patch and is reached only by the lint tooling |
+| 2 | A password reset request answered more slowly for a registered address | Read in `auth.service.ts` | The email is no longer awaited; a test fails without the change |
+| 3 | Registration says "email already registered" | Read in code | Accepted: the usual trade-off |
+| 4 | No rate limit on `/auth/refresh` and the one-time-token confirm endpoints | Read in the route list | Accepted: long random tokens; a refresh limit could sign out people behind one shared address |
+| 5 | The Content-Security-Policy allows inline styles | Live headers | Accepted: inline styles from the UI; no inline scripts |
+| 6 | The password rule is "8 characters or more" | Read in the contracts | Accepted for now |
+| 7 | Old Render log lines from before ADR 0050 may still contain login tokens and cookies | Found in the first deploy | Sign out of all devices (Account page) from the browsers that were used then |
+
+"Seen how" is what was actually done. Not done: a security scanner against the live site, a full secret scanner over the git history, a review of third-party code, a check of TLS on the Neon connection.
+
+## Secrets: where they live, and how to rotate
+
+None is in the repository. All live in Render's Environment page (and the provider's own console). Rotate one when it was shown to someone, pasted somewhere it should not be, or on a schedule you choose. After changing a value in Render, the service redeploys.
+
+| Secret | Where it comes from | To rotate | What changes for people (from reading the code, not tested) |
+|--------|--------------------|-----------|------------------------------------------------------------|
+| `JWT_SECRET` | Render generated it | Set a new long random value | Signed access tokens and the 10-minute sign-in-with-provider cookie stop working; sessions are renewed from the database-held refresh tokens, so people should not need to log in again |
+| `ATTACHMENT_SIGNING_SECRET` | Render generated it | New long random value | Download links already on a page stop working (they last 5 minutes); a reload makes new ones |
+| `DATABASE_URL` | Neon (direct connection string) | In Neon reset the role's password, copy the new string | None, after the redeploy |
+| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Neon credential `flowdesk-render` | Create a new credential (`storage:read`, `storage:write`), put it in Render, then delete the old one | None |
+| `GOOGLE_CLIENT_SECRET` | Google Cloud, the OAuth client | Add a new secret in the console, update Render, delete the old one | None |
+| `GITHUB_CLIENT_SECRET` | The GitHub OAuth App | Generate a new client secret, update Render, delete the old one | None |
+| `RESEND_API_KEY` | Resend (currently a placeholder) | New key in Resend | None |
+
+## Things only the owner can check (not visible from here)
+
+- **GitHub, Settings:** the repository is public, so anything ever committed is public. In Settings, Code security, check whether Dependabot alerts, Dependabot security updates and secret scanning are on (I believe they are free for public repositories; not verified), and whether private vulnerability reporting is on. Branch rules and required checks are planned for the very end (ADR 0047).
+- **Render:** who has access to the workspace, that pull request previews are off (a preview of someone's pull request would run their code with your environment), and that the service's environment variables are marked secret.
+- **Neon:** who has access to the project, and that the connection string in Render is the one for the role you expect.
+- **Google Cloud:** the OAuth client's authorized redirect URI is only the production one; the consent screen is in Testing with only the listed test users.
+- **Accounts:** two-factor sign-in on GitHub, Render, Neon, Google and Resend, because each one holds a key to the live app.
+
+## Added with ADR 0055 (watching the live site)
+
+- **Secrets in GitHub:** `DATABASE_URL` and `BACKUP_PASSPHRASE` (for the backup workflow) are repository secrets. Anyone who can edit workflows on the default branch could print them, so only the owner should have write access; pull requests from forks do not receive repository secrets. Rotate `BACKUP_PASSPHRASE` by changing the secret (old backups still need the old one: keep it).
+- **Error tracking (if switched on):** only the server reports, with the error text, request id, method and route pattern; no cookies, headers, bodies, addresses or people; email addresses inside error text are replaced. A third party (Sentry) then holds those error texts; whether a text can still contain something private (an id, a name) was reduced, not eliminated.
+- **The backup is encrypted** because the repository is public; losing the passphrase makes it useless.
+
+## Known limits, named
+
+- Rate limits are in memory, per instance, and reset on restart (fine for one instance; shared limits come with Redis, 9.8).
+- The demo is a public write endpoint (`DEMO_ENABLED=true`): five starts an hour per address, at most 40 live copies, and no invitations, email, password, upload or provider changes inside a demo (ADR 0044). A flood from many addresses can fill the 40 and show "demo is busy" until copies expire; nothing outside the demo is affected.
+- The attachment type is client-supplied (not sniffed from the bytes); files are served with their stored type and `nosniff`.
+- File bytes pass through the app server (ADR 0053).

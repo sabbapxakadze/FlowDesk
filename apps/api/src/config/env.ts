@@ -58,6 +58,10 @@ const envSchema = z.object({
   DEMO_ENABLED: z.enum(["true", "false"]).optional(),
   DEMO_TTL_MINUTES: z.coerce.number().int().min(1).max(24 * 60).default(120),
   DEMO_MAX_ACTIVE: z.coerce.number().int().min(1).max(1000).default(40),
+  // Error tracking (ADR 0055). Off unless SENTRY_DSN is set; the SDK is not even loaded then. RENDER_GIT_COMMIT is set by Render and names the
+  // deployed version on each report.
+  SENTRY_DSN: z.url("SENTRY_DSN must be a full URL").optional(),
+  RENDER_GIT_COMMIT: z.string().min(1).optional(),
   // Running in production (ADR 0046). TRUST_PROXY: how many proxies are in front of the server (Render: 1; nothing in front: 0), so the
   // rate limiters see the visitor and not the proxy. SERVE_WEB: serve the built web app from this process (WEB_DIST_DIR overrides where it
   // was built). RUN_MIGRATIONS: bring the database schema up to date when the server starts (Render's free plan has no pre-deploy step).

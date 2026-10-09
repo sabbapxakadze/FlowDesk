@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { reportError } from "../lib/error-reporting.js";
 import { AppError } from "../shared/errors.js";
 
 /**
@@ -33,6 +34,8 @@ export function errorHandler(
   }
 
   req.log.error({ err }, "unhandled error");
+  // The route PATTERN (/projects/:projectId), never the real address: real ones carry ids, and the query string can carry anything.
+  reportError(err, { requestId: String(req.id), method: req.method, route: req.route ? `${req.baseUrl}${String(req.route.path)}` : "no route" });
   res.status(500).json({
     error: {
       code: "internal_error",
