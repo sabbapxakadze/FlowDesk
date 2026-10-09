@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { app } from "../../app.js";
 import { env } from "../../config/env.js";
+import { startFakeS3 } from "../../lib/fake-s3.js";
 import { clearTestUploads, resetDatabase } from "../../db/test-utils.js";
 
 /**
@@ -278,5 +279,80 @@ describe("attachments — HTTP", () => {
 
     const list = await request(app).get(uploadUrl).set("Authorization", `Bearer ${userA.accessToken}`).expect(200);
     expect(list.body.data).toEqual([]);
+  });
+
+  it("with STORAGE_DRIVER=s3 the file lives in the bucket: upload, whole download, a byte range, and delete (ADR 0053)", async () => {
+    // Why: production keeps files in an object store, because Render's disk is wiped at every restart. This runs the real routes with the
+    // s3 driver against a fake S3 and checks the bytes really are in the bucket (not on disk), that a Range request (video seeking, ADR 0023)
+    // gets a 206 with only those bytes, and that deleting the attachment removes the object.
+    const fake = await startFakeS3("flowdesk-files");
+    const saved = { ...env };
+    Object.assign(env, {
+      STORAGE_DRIVER: "s3",
+      S3_ENDPOINT: fake.endpoint,
+      S3_REGION: "eu-central-1",
+      S3_BUCKET: "flowdesk-files",
+      S3_ACCESS_KEY_ID: "k",
+      S3_SECRET_ACCESS_KEY: "s",
+    });
+    try {
+      const userA = await registerAndLogIn("a@example.com", "Org A");
+      const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+      const issueId = await createIssue(userA.accessToken, userA.organizationId, projectId, "Bucket file");
+      const base = `/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issueId}/attachments`;
+      const bytes = Buffer.from("0123456789abcdefghij");
+
+      const up = await request(app)
+        .post(base)
+        .set("Authorization", `Bearer ${userA.accessToken}`)
+        .attach("file", bytes, { filename: "note.txt", contentType: "text/plain" })
+        .expect(201);
+      const attachmentId = up.body.data.id as string;
+      expect([...fake.objects.keys()]).toEqual([attachmentId]);
+      expect(fake.objects.get(attachmentId)?.toString()).toBe(bytes.toString());
+
+      const downloadUrl = up.body.data.downloadUrl as string;
+      expect((await request(app).get(downloadUrl).expect(200)).text).toBe(bytes.toString());
+      const part = await request(app).get(downloadUrl).set("Range", "bytes=5-9").expect(206);
+      expect(part.text).toBe("56789");
+      expect(part.headers["content-range"]).toBe("bytes 5-9/20");
+
+      await request(app).delete(`${base}/${attachmentId}`).set("Authorization", `Bearer ${userA.accessToken}`).expect(204);
+      expect(fake.objects.size).toBe(0);
+    } finally {
+      Object.assign(env, saved);
+      await fake.close();
+    }
+  });
+
+  it("with STORAGE_DRIVER=s3 an attachment whose object is gone answers 404, not an empty file or a crash", async () => {
+    // Why: the bucket and the database can disagree (an object deleted by hand, a failed upload cleanup). The download must say not found.
+    const fake = await startFakeS3("flowdesk-files");
+    const saved = { ...env };
+    Object.assign(env, {
+      STORAGE_DRIVER: "s3",
+      S3_ENDPOINT: fake.endpoint,
+      S3_REGION: "eu-central-1",
+      S3_BUCKET: "flowdesk-files",
+      S3_ACCESS_KEY_ID: "k",
+      S3_SECRET_ACCESS_KEY: "s",
+    });
+    try {
+      const userA = await registerAndLogIn("a@example.com", "Org A");
+      const projectId = await createProject(userA.accessToken, userA.organizationId, "AAA");
+      const issueId = await createIssue(userA.accessToken, userA.organizationId, projectId, "Lost file");
+      const up = await request(app)
+        .post(`/api/v1/organizations/${userA.organizationId}/projects/${projectId}/issues/${issueId}/attachments`)
+        .set("Authorization", `Bearer ${userA.accessToken}`)
+        .attach("file", Buffer.from("soon gone"), { filename: "note.txt", contentType: "text/plain" })
+        .expect(201);
+      fake.objects.clear();
+      const res = await request(app).get(up.body.data.downloadUrl as string);
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe("attachment_not_found");
+    } finally {
+      Object.assign(env, saved);
+      await fake.close();
+    }
   });
 });

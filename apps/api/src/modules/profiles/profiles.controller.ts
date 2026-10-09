@@ -78,7 +78,12 @@ export async function serveAvatar(req: Request, res: Response) {
   res.setHeader("X-Content-Type-Options", "nosniff");
   // The key changes with every new photo, so a given URL never changes meaning: cache it hard.
   res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-  const stream = readFileStream(storageKey);
+  let stream;
+  try {
+    stream = await readFileStream(storageKey);
+  } catch {
+    return void res.status(404).end(); // the photo's file is gone: the key exists, the bytes do not
+  }
   stream.on("error", () => {
     if (!res.headersSent) res.status(404).end();
     else res.destroy();

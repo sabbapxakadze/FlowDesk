@@ -617,10 +617,15 @@ export async function downloadAttachment(req: Request, res: Response) {
     return;
   }
 
-  const stream =
-    range.kind === "range"
-      ? storage.readFileStream(attachment.storageKey, range)
-      : storage.readFileStream(attachment.storageKey);
+  let stream;
+  try {
+    stream =
+      range.kind === "range"
+        ? await storage.readFileStream(attachment.storageKey, range)
+        : await storage.readFileStream(attachment.storageKey);
+  } catch {
+    throw new AppError("attachment_not_found", 404, "Attachment not found.");
+  }
   if (range.kind === "range") {
     res.status(206);
     res.setHeader("Content-Range", `bytes ${range.start}-${range.end}/${size}`);

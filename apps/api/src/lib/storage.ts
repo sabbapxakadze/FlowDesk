@@ -1,10 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { createReadStream } from "node:fs";
-import { mkdir, stat, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
+import type { Readable } from "node:stream";
 import { env } from "../config/env.js";
 import { AppError } from "../shared/errors.js";
-import { logger } from "./logger.js";
+import { createLocalStore } from "./storage-local.js";
+import { createS3Store } from "./storage-s3.js";
+import type { FileStore } from "./storage-store.js";
 
 /**
  * Refuses an upload when this deployment has no place to keep files (STORAGE_DRIVER=disabled, ADR 0049). Called at the START of an upload,
@@ -17,45 +17,52 @@ export function assertUploadsEnabled(): void {
 }
 
 /**
- * Local disk storage + our own signed download tokens — not real S3.
- * Confirmed with the owner: CLAUDE.md's stack list puts "S3-compatible
- * object storage" and Docker under Later (Phase 9), so this teaches the
- * real signed-URL *concept* (tamper-proof, time-boxed access, no cookie/
- * JWT needed) without pulling that infra forward. Real S3 would swap in
- * behind this same saveFile/deleteFile/sign/verify interface later.
- * See the Phase 7 slice 4 plan.
+ * Files, behind four functions (ADR 0053): `saveFile`, `readFileStream`, `statFile`, `deleteFile`. Which store really holds them is
+ * STORAGE_DRIVER: the disk (`local`, development and tests) or an S3-compatible bucket (`s3`, production on Render, whose own disk is wiped at
+ * every restart). Nothing outside this file knows which. The driver is read when a function is CALLED, not when the file is loaded, so a test
+ * can switch it. Download access is our own HMAC-signed, time-limited token (below), not a bucket link: the bucket stays private.
  *
- * Flat {attachmentId} filenames on disk — no extension needed, since
- * mimeType lives in the attachments table, not inferred from the path.
+ * Flat {attachmentId} keys, no extension: the mime type lives in the attachments table, not in the path.
  */
+let s3Store: { key: string; store: FileStore } | undefined;
+
+function currentStore(): FileStore {
+  if (env.STORAGE_DRIVER !== "s3") return localStore;
+  const config = {
+    endpoint: env.S3_ENDPOINT!,
+    region: env.S3_REGION!,
+    bucket: env.S3_BUCKET!,
+    accessKeyId: env.S3_ACCESS_KEY_ID!,
+    secretAccessKey: env.S3_SECRET_ACCESS_KEY!,
+  }; // the `!`s are safe: the config check in env.ts refuses to start with the s3 driver and any of them missing
+  const key = JSON.stringify(config);
+  if (s3Store?.key !== key) s3Store = { key, store: createS3Store(config) }; // one client, rebuilt only if the settings change
+  return s3Store.store;
+}
+
+const localStore = createLocalStore(() => env.UPLOADS_DIR);
+
 export async function saveFile(attachmentId: string, buffer: Buffer): Promise<string> {
   assertUploadsEnabled();
-  await mkdir(env.UPLOADS_DIR, { recursive: true });
   const storageKey = attachmentId;
-  await writeFile(path.join(env.UPLOADS_DIR, storageKey), buffer);
+  await currentStore().save(storageKey, buffer);
   return storageKey;
 }
 
-/** `range` is inclusive on both ends, like an HTTP byte range. */
-export function readFileStream(storageKey: string, range?: { start: number; end: number }) {
-  return createReadStream(path.join(env.UPLOADS_DIR, storageKey), range);
+/** `range` is inclusive on both ends, like an HTTP byte range. Rejects when the file is missing. */
+export function readFileStream(storageKey: string, range?: { start: number; end: number }): Promise<Readable> {
+  return currentStore().read(storageKey, range);
 }
 
 /** The stored file's size in bytes; rejects if the file is missing. */
-export async function statFile(storageKey: string): Promise<number> {
-  return (await stat(path.join(env.UPLOADS_DIR, storageKey))).size;
+export function statFile(storageKey: string): Promise<number> {
+  return currentStore().size(storageKey);
 }
 
-/** Best-effort — a failed delete here shouldn't fail the API response
- * (the DB row is already gone, which is what the user actually asked
- * for), but it's a real problem worth knowing about, so it's logged via
- * pino rather than silently swallowed. */
-export async function deleteFile(storageKey: string): Promise<void> {
-  try {
-    await unlink(path.join(env.UPLOADS_DIR, storageKey));
-  } catch (err) {
-    logger.warn({ err, storageKey }, "failed to delete attachment file from disk");
-  }
+/** Best-effort: a failed delete shouldn't fail the API response (the DB row is already gone, which is what the user asked for), but it is
+ * logged by the store rather than silently swallowed. */
+export function deleteFile(storageKey: string): Promise<void> {
+  return currentStore().remove(storageKey);
 }
 
 const DOWNLOAD_TOKEN_TTL_SECONDS = 5 * 60;

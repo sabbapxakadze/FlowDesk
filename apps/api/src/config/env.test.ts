@@ -38,4 +38,20 @@ describe("config/env - parseEnv", () => {
     expect(ok.success && [ok.data.STORAGE_DRIVER, ok.data.DB_POOL_MAX]).toEqual(["local", 10]);
     expect(parseEnv({ ...base, APP_URL: "http://localhost:5173", STORAGE_DRIVER: "s4" }).success).toBe(false);
   });
+
+  it("the s3 storage driver needs all five S3 settings; local and disabled need none", () => {
+    // Why: a deploy that says STORAGE_DRIVER=s3 but forgets one value must crash at boot with a clear message, not on the first upload.
+    const s3 = { S3_ENDPOINT: "https://br-x.storage.c-5.eu-central-1.aws.neon.tech", S3_REGION: "eu-central-1", S3_BUCKET: "flowdesk-files", S3_ACCESS_KEY_ID: "k", S3_SECRET_ACCESS_KEY: "s" };
+    const common = { ...base, APP_URL: "https://x.example.org" };
+    expect(parseEnv({ ...common, STORAGE_DRIVER: "s3", ...s3 }).success).toBe(true);
+    for (const name of Object.keys(s3)) {
+      const without = { ...s3 } as Record<string, string>;
+      delete without[name];
+      const parsed = parseEnv({ ...common, STORAGE_DRIVER: "s3", ...without });
+      expect(parsed.success, name).toBe(false);
+      expect(parsed.success ? [] : Object.keys(parsed.error.flatten().fieldErrors), name).toContain(name);
+    }
+    expect(parseEnv({ ...common, STORAGE_DRIVER: "local" }).success).toBe(true);
+    expect(parseEnv({ ...common, STORAGE_DRIVER: "disabled" }).success).toBe(true);
+  });
 });

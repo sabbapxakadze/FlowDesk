@@ -28,10 +28,15 @@ const envSchema = z.object({
   // directory for test runs, same pattern it already uses for
   // DATABASE_URL.
   UPLOADS_DIR: z.string().min(1).default("./uploads"),
-  // Where uploaded files live (ADR 0049). "local": the disk under UPLOADS_DIR. "disabled": uploads are refused with a clear message; the
-  // first deploy on Render uses it because its free disk is wiped on every restart, so a file would silently vanish. Real object storage
-  // (S3 / R2) comes with Phase 9 slice 9.5.
-  STORAGE_DRIVER: z.enum(["local", "disabled"]).default("local"),
+  // Where uploaded files live (ADR 0049, 0053). "local": the disk under UPLOADS_DIR. "s3": an S3-compatible bucket (Neon Object Storage), set
+  // up by the S3_* values below, all required with this driver. "disabled": uploads are refused with a clear message; the first deploy on
+  // Render used it because its free disk is wiped on every restart, so a file would silently vanish.
+  STORAGE_DRIVER: z.enum(["local", "s3", "disabled"]).default("local"),
+  S3_ENDPOINT: z.url("S3_ENDPOINT must be a full URL").optional(),
+  S3_REGION: z.string().min(1).optional(),
+  S3_BUCKET: z.string().min(1).optional(),
+  S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+  S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   // The most connections the pool opens to Postgres (ADR 0049). A free Neon database allows only a limited number of connections at once.
   DB_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
   // Signs every attachment download token — anyone with this can forge a
@@ -63,6 +68,11 @@ const envSchema = z.object({
 }).superRefine((value, ctx) => {
   if (value.OAUTH_FAKE === "true" && value.NODE_ENV === "production") {
     ctx.addIssue({ code: "custom", message: "OAUTH_FAKE must not be enabled in production", path: ["OAUTH_FAKE"] });
+  }
+  if (value.STORAGE_DRIVER === "s3") {
+    for (const name of ["S3_ENDPOINT", "S3_REGION", "S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"] as const) {
+      if (!value[name]) ctx.addIssue({ code: "custom", message: `${name} is required when STORAGE_DRIVER is s3`, path: [name] });
+    }
   }
   for (const provider of ["GOOGLE", "GITHUB"] as const) {
     const id = value[`${provider}_CLIENT_ID`];

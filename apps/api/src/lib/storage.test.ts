@@ -22,8 +22,8 @@ describe("lib/storage — file I/O", () => {
     const storageKey = await saveFile("round-trip-id", Buffer.from("hello attachment"));
 
     const chunks: Buffer[] = [];
+    const stream = await readFileStream(storageKey);
     await new Promise<void>((resolve, reject) => {
-      const stream = readFileStream(storageKey);
       stream.on("data", (chunk: Buffer) => chunks.push(chunk));
       stream.on("end", () => resolve());
       stream.on("error", reject);
