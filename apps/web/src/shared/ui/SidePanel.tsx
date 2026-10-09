@@ -18,7 +18,10 @@ import { useEffect, useRef, type ReactNode } from "react";
  *   make the two URL updates race. Inside/outside is decided from the event's original path
  *   (`composedPath`), because the clicked element may already have removed itself from the
  *   page by the time this runs (a Cancel button, say). Pressing the page's own scrollbar does
- *   not count as outside.
+ *   not count as outside. A press that BEGAN inside the panel is never a click outside, wherever it
+ *   ends: dragging a text selection out of the comment box and letting go over the page makes the
+ *   browser report a click on a shared parent of the two spots, which is outside the panel, and the
+ *   panel used to close with the comment half written. So where the press began is remembered.
  * - Focus moves into the panel when it opens and returns to whatever opened it on close.
  *
  * It is non-modal on purpose (aria-modal is false, nothing behind is made inert).
@@ -55,7 +58,20 @@ export function SidePanel({
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     ref.current?.focus({ preventScroll: true });
 
+    // Where the current press began (see the note above). Pointer events are listened to in the capture phase so a control inside the panel that
+    // stops them from bubbling cannot hide the press from us.
+    let pressBeganInside = false;
+    function onPointerDown(event: PointerEvent) {
+      pressBeganInside = ref.current !== null && event.composedPath().includes(ref.current);
+    }
+    function onPointerUp() {
+      // The click arrives right after the release; once it has been handled, forget the press (so a later keyboard click is judged on its own).
+      window.setTimeout(() => {
+        pressBeganInside = false;
+      }, 0);
+    }
     function onClick(event: MouseEvent) {
+      if (pressBeganInside) return;
       const target = event.target;
       if (!(target instanceof Element)) return;
       if (target === document.documentElement) return; // the page scrollbar
@@ -74,9 +90,13 @@ export function SidePanel({
       onCloseRef.current();
     }
 
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("pointerup", onPointerUp, true);
     document.addEventListener("click", onClick);
     document.addEventListener("keydown", onKeyDown);
     return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("pointerup", onPointerUp, true);
       document.removeEventListener("click", onClick);
       document.removeEventListener("keydown", onKeyDown);
       if (opener?.isConnected && opener !== document.body) opener.focus({ preventScroll: true });

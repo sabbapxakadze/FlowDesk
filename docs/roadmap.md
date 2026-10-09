@@ -2513,6 +2513,8 @@ Who does what: **the owner** creates the accounts, pushes to GitHub and pastes s
 
 **Formatted comments (owner's idea 2026-10-09, ADR 0056). BUILT 2026-10-10, to be confirmed by CI.** Bold, italic, strikethrough, code, links and lists in comments, with a toolbar and keyboard shortcuts (Ctrl+Shift+K for the link, since Ctrl+K is the search palette). Owner chose the "formatted while you type" editor (TipTap) and the same editor for issue descriptions later (not built). Stored as a small Markdown subset in the same field (no schema change). Slice 1 (a shared safe reader and drawing on the card), slices 2 to 4 (the editor, used in the comment box and in editing a comment, loaded on demand; the old text box deleted; the `/design-system` page now shows the real editor). Two bugs found on the way are fixed: the search palette also opened on Ctrl+Shift+K, and the person hover card could open below the window edge. **Not completed locally:** a final full run of the API and whole browser suites and the production smoke test (left to CI); not reviewed by me: the editor's look and feel, dark mode, phones, Safari and Firefox. **Still to do:** issue descriptions in the same editor; measure whether any real old comment now shows formatting it should not.
 
+**Small fix 2026-10-10:** the side panel no longer closes when a text selection started inside it is released over the page (ADR 0025 amended).
+
 **Decisions still open:** whether R2 is acceptable if it asks for a card (Neon Object Storage is tried first for 9.5).
 
 

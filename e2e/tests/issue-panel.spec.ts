@@ -387,3 +387,29 @@ for (const scheme of ["light", "dark"] as const) {
     expect(colours.card).not.toBe(colours.body);
   });
 }
+
+test("selecting text in the panel and letting go of the mouse outside it does not close the panel", async ({ loggedInPage: page }) => {
+  // Why: dragging a text selection out of the comment box and releasing over the page used to count as a click outside and closed the panel,
+  // throwing away what was being written. Only a press that STARTS outside the panel is a click outside.
+  const { listUrl } = await setup(page);
+  await page.goto(listUrl);
+  await cardLink(page, "Alpha issue").click();
+  const panel = panelOf(page);
+  const box = panel.getByRole("textbox", { name: "Comment", exact: true });
+  await box.fill("Some words to select");
+
+  const area = (await box.boundingBox())!;
+  await page.mouse.move(area.x + area.width - 20, area.y + 40);
+  await page.mouse.down();
+  await page.mouse.move(area.x - 150, area.y + 40, { steps: 8 });
+  await page.mouse.move(60, 500, { steps: 8 }); // over the page's left side, well outside the panel
+  await page.mouse.up();
+
+  await expect(panel).toBeVisible();
+  await expect(page).toHaveURL(/\?issue=WEB-1$/);
+  await expect(box).toContainText("Some words to select");
+
+  // A plain click on the page, pressed and released outside, still closes it.
+  await page.mouse.click(60, 500);
+  await expect(panel).toHaveCount(0);
+});
