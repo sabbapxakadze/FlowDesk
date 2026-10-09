@@ -21,7 +21,7 @@ The site is public and runs on free hosting that sleeps. Nobody would notice it 
 
 ## Not verified
 
-The two workflows running on GitHub (neither can run until they are pushed and, for the backup, the secrets exist); Sentry receiving a real event (the tests use a fake transport, so nothing was sent to Sentry); GitHub disabling scheduled workflows after a long quiet period in a public repository (I believe it does after 60 days without repository activity; not verified); Sentry's free-plan limits (from third-party summaries).
+A run of either workflow by the SCHEDULE (the owner ran both by hand on 2026-10-09 and reported both green; that proves the steps work on GitHub's machines, not that the timer fires); a restore into a real database; Sentry receiving a real event (the tests use a fake transport, so nothing was sent to Sentry); GitHub disabling scheduled workflows after a long quiet period in a public repository (I believe it does after 60 days without repository activity; not verified); Sentry's free-plan limits (from third-party summaries).
 
 ## What needs the owner
 

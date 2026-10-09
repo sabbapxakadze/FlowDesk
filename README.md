@@ -103,4 +103,4 @@ More: [`docs/architecture.md`](docs/architecture.md), [`docs/roadmap.md`](docs/r
 
 ## Licence
 
-No licence has been chosen yet, so by default all rights are reserved. The contact details are on the live site's landing page.
+All rights reserved: the code is public so it can be read, not so it can be copied or reused (see [`LICENSE`](LICENSE)). To ask for permission, use the contact details on the live site's landing page.
