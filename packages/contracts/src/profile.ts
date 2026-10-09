@@ -78,3 +78,6 @@ export type ProfileActivityResponse = z.infer<typeof profileActivityResponseSche
 
 /** Whether to show the "Finish your profile" card to the signed-in person (ADR 0028). */
 export const profileNudgeResponseSchema = z.object({ show: z.boolean() });
+
+/** Whether the guided tour should start by itself for the signed-in person: their first visit to the app. */
+export const tourPendingResponseSchema = z.object({ pending: z.boolean() });

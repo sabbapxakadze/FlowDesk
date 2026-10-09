@@ -1,5 +1,5 @@
 import { test as base, expect, type Page } from "@playwright/test";
-import { resetDatabase } from "./db";
+import { markTourSeen, resetDatabase } from "./db";
 
 export const TEST_USER = {
   name: "E2E User",
@@ -12,6 +12,7 @@ export const TEST_USER = {
 async function registerUser(page: Page) {
   const res = await page.request.post("/api/v1/auth/register", { data: TEST_USER });
   expect(res.status(), "register should succeed").toBe(201);
+  await markTourSeen(TEST_USER.email); // a new account's first visit starts the tour (ADR 0052); only the tour's own tests want that
 }
 
 /** Logs in through the real login form, the same way a person does. A login lands on My work (`/`). */

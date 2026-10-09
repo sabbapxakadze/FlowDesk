@@ -38,3 +38,7 @@ library, or a guided tour written in our own code. The owner chose the tour in o
 - A library (such as driver.js): less code and good positioning, but a new dependency and its look to bend to our design tokens; the owner preferred to write it.
 - A Help page with screenshots: never breaks and costs little, but it is not interactive and screenshots go stale with every redesign.
 - An "empty state" checklist ("create your first issue"): good for first-time users, but it does not show the parts of the app a person has not met yet.
+
+## Amended 2026-10-09: the tour starts by itself on a first visit (ADR 0052)
+
+The "no automatic offer to new people" limit above is lifted for one case: a person's first visit to the app. See ADR 0052.

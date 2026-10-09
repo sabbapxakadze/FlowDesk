@@ -6,6 +6,7 @@ import {
   type StartOAuthRequest,
 } from "@flowdesk/contracts";
 import { apiGet, apiPost } from "../../../shared/api/client";
+import { markOAuthTrip } from "../../../shared/auth/oauth-trip";
 
 /** Which providers the server has switched on. The sign-in buttons are drawn from this, so none is ever a dead button. */
 export function useOAuthProviders() {
@@ -24,6 +25,9 @@ export function useOAuthProviders() {
 export function useStartOAuth(intent: StartOAuthRequest["intent"]) {
   return useMutation({
     mutationFn: (provider: OAuthProviderName) => apiPost(`/v1/auth/oauth/${provider}/start`, { intent }, startOAuthResponseSchema),
-    onSuccess: ({ url }) => window.location.assign(url),
+    onSuccess: ({ url }) => {
+      markOAuthTrip(); // so the return fades the app in (shared/auth/oauth-trip.ts)
+      window.location.assign(url);
+    },
   });
 }

@@ -21,6 +21,9 @@ export const users = pgTable("users", {
   timezone: varchar("timezone", { length: 64 }),
   // When the person pressed "Not now" on the "Finish your profile" card; null = not dismissed.
   profileNudgeDismissedAt: timestamp("profile_nudge_dismissed_at", { withTimezone: true }),
+  // When the guided tour first started on its own for this person (on their first visit to the app); null = it has not yet. The migration
+  // that added it set every account that already existed, so only people who sign up afterwards get the tour. Demo copies are set at creation.
+  tourSeenAt: timestamp("tour_seen_at", { withTimezone: true }),
   // Null until a verify-email token is confirmed. Login is not gated on
   // this — see docs/adr and Phase 2 Slice 4's decisions. Tracked, not enforced.
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),

@@ -125,6 +125,15 @@ export async function shouldShowNudge(userId: string): Promise<boolean> {
   return !state.avatarKey && !state.jobTitle && !state.bio;
 }
 
+/** True for someone whose account has never had the guided tour started on its own (a person who signed up after the tour feature). */
+export async function isTourPending(userId: string): Promise<boolean> {
+  return (await profilesRepository.findTourSeenAt(userId)) === null;
+}
+
+export async function markTourSeen(userId: string): Promise<void> {
+  await profilesRepository.markTourSeen(userId);
+}
+
 export async function dismissNudge(userId: string): Promise<void> {
   await profilesRepository.dismissNudge(userId);
 }

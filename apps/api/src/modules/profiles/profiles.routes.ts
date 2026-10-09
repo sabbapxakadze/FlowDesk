@@ -46,6 +46,8 @@ profilesRouter.put("/users/me/avatar", requireAuth, denyInDemo("Uploading a phot
 profilesRouter.delete("/users/me/avatar", requireAuth, profilesController.removeAvatar);
 profilesRouter.get("/users/me/profile-nudge", requireAuth, profilesController.getNudge);
 profilesRouter.post("/users/me/profile-nudge/dismiss", requireAuth, profilesController.dismissNudge);
+profilesRouter.get("/users/me/tour", requireAuth, profilesController.getTour);
+profilesRouter.post("/users/me/tour/seen", requireAuth, profilesController.markTourSeen);
 
 profilesRouter.get(
   "/organizations/:organizationId/members/:userId/profile",

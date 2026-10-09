@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { test, expect } from "../support/fixtures";
+import { test, expect, logInThroughForm, TEST_USER } from "../support/fixtures";
 import { createIssueViaApi } from "../support/api";
 
 /**
@@ -36,6 +36,29 @@ async function advanceTo(page: Page, heading: string) {
   }
   throw new Error(`The tour never reached "${heading}"`);
 }
+
+test("a new account gets the tour by itself on its first visit, once: Esc, a reload and a second login do not bring it back", async ({ page }) => {
+  // Why: a new person should be shown around without finding the Tutorial row (ADR 0052), but never twice: the server remembers it on the
+  // account, so a reload, another login or "Skip" must not replay it. The fixture marks its own users as toured, so this test registers directly.
+  const res = await page.request.post("/api/v1/auth/register", { data: TEST_USER });
+  expect(res.status()).toBe(201);
+  await logInThroughForm(page);
+  await expect(card(page)).toBeVisible();
+  await expect(title(page)).toHaveText("Welcome to FlowDesk");
+  await page.keyboard.press("Escape");
+  await expect(card(page)).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "My work" })).toBeVisible();
+  await page.waitForTimeout(1000); // long enough for a tour that was going to start to start
+  await expect(card(page)).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Log out" }).click();
+  await logInThroughForm(page);
+  await expect(page.getByRole("heading", { level: 1, name: "My work" })).toBeVisible();
+  await page.waitForTimeout(1000);
+  await expect(card(page)).toHaveCount(0);
+});
 
 test("the Tutorial button starts the tour on a centered welcome; Next, Back and the arrow keys move; Esc ends it and focus returns to the button", async ({
   loggedInPage: page,

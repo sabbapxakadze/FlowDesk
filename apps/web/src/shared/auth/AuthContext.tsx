@@ -6,6 +6,7 @@ import { AuthContext, type AuthOrganization, type AuthUser, type SessionEndReaso
 import { connectSocket, disconnectSocket, reconnectSocket } from "../socket/socket-client";
 import { setTimezone } from "../lib/timezone";
 import { withViewTransition } from "../lib/motion";
+import { returnedFromOAuth } from "./oauth-trip";
 import { markTokenIssued, onSessionLost, onSessionRenewed, renewAccessToken, tokenAgeMs } from "./session-refresh";
 
 /** A tab that comes back to the foreground renews first when its access token (15 minutes) is older than this. */
@@ -96,13 +97,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (signedIn.current) endSession("expired");
     });
 
-    renewAccessToken()
-      .then(login)
-      .catch(() => {
+    // Coming back from Google or GitHub the page has been blank until now: fade the app in instead of cutting to it.
+    const fadeIn = returnedFromOAuth();
+    renewAccessToken().then(
+      (session) => {
+        const enter = () => {
+          login(session);
+          setIsLoading(false);
+        };
+        if (fadeIn) withViewTransition(enter);
+        else enter();
+      },
+      () => {
         // No valid cookie, or it's expired/already used — just means
         // nobody's logged in. Not an error worth surfacing.
-      })
-      .finally(() => setIsLoading(false));
+        setIsLoading(false);
+      },
+    );
 
     // Returning to a tab that sat in the background: its timers may have slept, so the token may be dead or about to be.
     // Renew before the screen's queries refetch with it, instead of letting them fail first.

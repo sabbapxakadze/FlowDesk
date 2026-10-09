@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Menu, X } from "lucide-react";
 import { Outlet, useLocation } from "react-router";
+import { FirstTour } from "../features/app-tour";
 import { useAuth } from "../shared/auth/useAuth";
 import { IconButton } from "../shared/ui";
 import { DemoBar } from "../widgets/demo-bar";
@@ -47,6 +48,15 @@ function useIsDesktop(): boolean {
  * slim top bar whose menu button opens the same sidebar as a drawer.
  */
 export function AppShell() {
+  return (
+    <>
+      <FirstTour />
+      <AppShellLayout />
+    </>
+  );
+}
+
+function AppShellLayout() {
   const { organization } = useAuth();
   useLiveOrganizationUpdates(organization?.id ?? "");
   const isDesktop = useIsDesktop();

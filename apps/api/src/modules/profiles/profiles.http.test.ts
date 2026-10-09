@@ -352,3 +352,35 @@ describe('the "Finish your profile" card', () => {
     await request(app).post("/api/v1/users/me/profile-nudge/dismiss").expect(401);
   });
 });
+
+describe("the first-visit guided tour", () => {
+  const tour = (s: Session) => request(app).get("/api/v1/users/me/tour").set(as(s));
+  const seen = (s: Session) => request(app).post("/api/v1/users/me/tour/seen").set(as(s));
+
+  it("is pending for a new account, and stays marked once it was started", async () => {
+    // Why: this is the whole feature. A new person gets the tour once; a reload or another device must not replay it.
+    const owner = await registerAndLogIn("owner@example.com", "Org A");
+    expect((await tour(owner).expect(200)).body).toEqual({ pending: true });
+    await seen(owner).expect(204);
+    expect((await tour(owner).expect(200)).body).toEqual({ pending: false });
+    const again = await logIn("owner@example.com");
+    expect((await tour(again).expect(200)).body.pending).toBe(false);
+  });
+
+  it("keeps the first time when it is marked twice, and one person's mark is not another's", async () => {
+    // Why: a second press must not move the time (idempotent), and the flag is on the account, not shared across people.
+    const owner = await registerAndLogIn("owner@example.com", "Org A");
+    const member = await addPerson(owner, "m@example.com", "member", "Max Member");
+    await seen(owner).expect(204);
+    const [first] = await db.select({ at: users.tourSeenAt }).from(users).where(eq(users.email, "owner@example.com"));
+    await seen(owner).expect(204);
+    const [second] = await db.select({ at: users.tourSeenAt }).from(users).where(eq(users.email, "owner@example.com"));
+    expect(second?.at?.getTime()).toBe(first?.at?.getTime());
+    expect((await tour(member).expect(200)).body.pending).toBe(true);
+  });
+
+  it("needs a login", async () => {
+    await request(app).get("/api/v1/users/me/tour").expect(401);
+    await request(app).post("/api/v1/users/me/tour/seen").expect(401);
+  });
+});

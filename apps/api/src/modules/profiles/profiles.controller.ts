@@ -4,6 +4,7 @@ import {
   profileActivityQuerySchema,
   profileActivityResponseSchema,
   profileNudgeResponseSchema,
+  tourPendingResponseSchema,
   profileResponseSchema,
   updateProfileRequestSchema,
 } from "@flowdesk/contracts";
@@ -87,6 +88,15 @@ export async function serveAvatar(req: Request, res: Response) {
 
 export async function getNudge(req: Request, res: Response) {
   res.json(profileNudgeResponseSchema.parse({ show: await profilesService.shouldShowNudge(requireUser(req)) }));
+}
+
+export async function getTour(req: Request, res: Response) {
+  res.json(tourPendingResponseSchema.parse({ pending: await profilesService.isTourPending(requireUser(req)) }));
+}
+
+export async function markTourSeen(req: Request, res: Response) {
+  await profilesService.markTourSeen(requireUser(req));
+  res.status(204).end();
 }
 
 export async function dismissNudge(req: Request, res: Response) {

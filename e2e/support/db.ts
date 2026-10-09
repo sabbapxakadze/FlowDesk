@@ -28,6 +28,14 @@ export async function resetDatabase() {
 }
 
 /**
+ * Marks a person's guided tour as already started (ADR 0052). A new account gets the tour on its own on its first visit, and its overlay
+ * would sit over the page in every test that is not about the tour, so the fixtures call this for the people they make.
+ */
+export async function markTourSeen(email: string) {
+  await pool.query("UPDATE users SET tour_seen_at = now() WHERE email = $1 AND tour_seen_at IS NULL", [email]);
+}
+
+/**
  * A second person in an organization, inserted directly (the invitation flow has
  * its own e2e test; most tests just need another member quickly): a new user that
  * reuses the existing user's password hash (so both log in with the same password,
@@ -44,8 +52,8 @@ export async function addOrgMember(
        WHERE u.email = $1
        LIMIT 1
      ), new_user AS (
-       INSERT INTO users (email, password_hash, name)
-       SELECT $2, password_hash, $3 FROM base
+       INSERT INTO users (email, password_hash, name, tour_seen_at)
+       SELECT $2, password_hash, $3, now() FROM base
        RETURNING id
      )
      INSERT INTO organization_members (organization_id, user_id, role)

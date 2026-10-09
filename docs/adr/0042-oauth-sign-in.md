@@ -41,7 +41,9 @@ The owner asked for OAuth on the login and register pages. Four choices were mad
 
 Verified by tests: every row of the decision table, the state checks (missing cookie, wrong state, replay, cookie made for another provider, cancelled), connect/disconnect and the last-method guard, passwordless accounts, the two real adapters' parsing against canned provider answers, and the whole browser flow with the fake. Mutation checks: skipping the state comparison, skipping the unverified-account takeover, skipping the last-method guard, forcing the "only method" notice off and echoing a raw error code were each caught.
 
-**Not verified: a real round trip with Google or GitHub.** That needs the owner's client ids and secrets. Whether GitHub enforces the PKCE parameters we send is also unchecked (the `state` check is the CSRF guard either way).
+**Real round trip (added 2026-10-09, Phase 9 slice 9.7).** Both providers are now configured on the live site (https://flowdesk-yotg.onrender.com): the server lists `google` and `github`, and the owner tried the sign-ins there and reported them working as expected. Not itemised: which cases were run (new account, second sign-in, connect and disconnect, cancel). Google runs in Testing mode, so only named test users can sign in until the app is verified by Google (not researched). GitHub's new OAuth App form has a list of redirect URIs (the exact callback is registered, wildcard matching off) and "Expire user access tokens" left on; our server uses the access token once and discards it. Both apps' redirect URLs must be updated if the address changes.
+
+**Still not verified:** whether GitHub enforces the PKCE parameters we send (the `state` check is the CSRF guard either way).
 
 ## Trade-offs, named
 

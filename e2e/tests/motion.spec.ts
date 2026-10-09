@@ -139,6 +139,28 @@ test.describe("with animations on", () => {
     expect(await viewTransitionLog(page)).toEqual(["/login | Log in"]);
   });
 
+  test("coming back from a provider sign-in fades the app in, with the app already in place; a plain reload does not fade", async ({
+    page,
+    baseURL,
+  }) => {
+    // Why: a provider sign-in is a full page load (the browser leaves and returns), so the app used to appear in one frame after a blank
+    // page. The fade must start when the app is already rendered, or it would fade a blank page into a blank page. A reload must stay a
+    // plain load: the fade belongs to the return from a provider only (the trip is remembered in sessionStorage).
+    await recordViewTransitions(page);
+    const profile = { providerUserId: "g-motion", email: "motion@example.com", emailVerified: true, name: "Motion Person" };
+    await page.context().addCookies([{ name: "flowdesk_fake_oauth", value: encodeURIComponent(JSON.stringify(profile)), url: baseURL! }]);
+    await page.goto("/login");
+    await page.getByRole("button", { name: "Continue with Google" }).click();
+    await expect(page.getByText("Hello, Motion Person")).toBeVisible();
+    await page.waitForTimeout(500);
+    expect((await viewTransitionLog(page)).at(-1)).toBe("/ | My work");
+
+    await page.reload();
+    await expect(page.getByText("Hello, Motion Person")).toBeVisible();
+    await page.waitForTimeout(500);
+    expect(await viewTransitionLog(page)).toEqual([]);
+  });
+
   test("a page change plays the rise-in, but a filter or the side panel (query string only) does not replay it", async ({
     loggedInPage: page,
   }) => {

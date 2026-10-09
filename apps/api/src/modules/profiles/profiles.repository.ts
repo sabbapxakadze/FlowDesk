@@ -155,6 +155,19 @@ export async function findNudgeState(userId: string) {
   return row;
 }
 
+export async function findTourSeenAt(userId: string): Promise<Date | null | undefined> {
+  const [row] = await db.select({ seenAt: users.tourSeenAt }).from(users).where(eq(users.id, userId)).limit(1);
+  return row?.seenAt;
+}
+
+/** Idempotent: the first time is kept. */
+export async function markTourSeen(userId: string): Promise<void> {
+  await db
+    .update(users)
+    .set({ tourSeenAt: sql`COALESCE(${users.tourSeenAt}, now())` })
+    .where(eq(users.id, userId));
+}
+
 /** Idempotent: pressing "Not now" twice keeps the first time. */
 export async function dismissNudge(userId: string): Promise<void> {
   await db

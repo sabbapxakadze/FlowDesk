@@ -216,6 +216,7 @@ async function buildDemoOrganization(
           timezone: person.timezone,
           emailVerifiedAt: ago(joinedAgo[key]),
           profileNudgeDismissedAt: ago(joinedAgo[key] - 1),
+          tourSeenAt: ago(joinedAgo[key] - 1), // the demo starts its own tour; nobody in it should get a second one
           createdAt: ago(joinedAgo[key]),
         })
         // A user from an earlier, partial run: make sure the login works and the profile is the demo one.
