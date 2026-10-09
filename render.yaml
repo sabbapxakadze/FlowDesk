@@ -28,7 +28,17 @@ services:
       - key: DEMO_ENABLED
         value: "true" # "Try the demo" on the landing page; capped by DEMO_MAX_ACTIVE and rate limited (ADR 0044)
       - key: STORAGE_DRIVER
-        value: disabled # Render's free disk is wiped on restart: uploads are refused until real storage (slice 9.5)
+        value: s3 # files live in a Neon Object Storage bucket (ADR 0053); Render's free disk is wiped on restart
+      - key: S3_ENDPOINT
+        sync: false # https://br-<branch>.storage.c-<n>.eu-central-1.aws.neon.tech
+      - key: S3_REGION
+        value: eu-central-1
+      - key: S3_BUCKET
+        value: flowdesk-files # a hyphen: an underscore here gave 400 InvalidArgument on the first live try
+      - key: S3_ACCESS_KEY_ID
+        sync: false # a Neon credential with storage:read and storage:write
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
       - key: EMAIL_FROM
         value: onboarding@resend.dev
       - key: LOG_LEVEL

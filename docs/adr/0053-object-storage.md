@@ -22,7 +22,8 @@ One set of checks runs against both stores (`file-stores.test.ts`): save and rea
 
 ## Not verified
 
-- **A real round trip with Neon.** The fake proves our requests are well formed S3 calls, not that Neon accepts them. The first real check is an upload on the live site, then a redeploy, then a download.
+- **The real round trip with Neon was done by the owner, not watched by me.** The fake proves our requests are well formed S3 calls, not that Neon accepts them. On 2026-10-09 the owner reported on the live site that a profile photo upload, an issue attachment, a video with seeking, and the same files after a redeploy all work. No sizes or browsers were recorded, and Neon's free limits were not checked.
+- **A found mistake, not a code bug:** the first live upload failed with `400 InvalidArgument` and `Resource: "/flowdesk_files/..."`: the `S3_BUCKET` value on Render had an underscore where the bucket name has a hyphen. The fake could not catch it, which is the limit of a fake. A storage failure shows the visitor only the generic 500 message; the real reason was in the log. A clearer 503 for a storage failure is possible and was not built.
 - Neon Object Storage's status: one source called it a beta not yet recommended for production; the official page fetched did not say. Its free limits (one summary said 5 GB of storage and 5 GB of egress per project) were not found in the documentation and were not confirmed. Whether it needs a card: not stated.
 - The bucket belongs to one Neon branch; what happens to it if that branch is deleted was not checked.
 
