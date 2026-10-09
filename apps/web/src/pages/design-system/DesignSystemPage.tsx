@@ -5,6 +5,7 @@ import type { IssueStatus } from "@flowdesk/contracts";
 import { IssueCardContent, IssueCardFrame } from "../../entities/issue";
 import { LabelPills } from "../../entities/label";
 import { ProviderButton } from "../../entities/oauth";
+import { CommentEditorProposal } from "./CommentEditorProposal";
 import {
   Avatar,
   Button,
@@ -826,6 +827,13 @@ export function DesignSystemPage() {
         note="Underline tabs that switch between two views of the same thing (owner's pick B, 2026-10-06). On a project, Issues and Board are the List and Board tabs in the page header (ADR 0034). Each tab is a link to its own address, so it is a nav with aria-current, not ARIA tabs. The underline sits on the header's bottom line. Shown below in both states (the links here only reload this page)."
       >
         <ViewTabsDemo />
+      </Section>
+
+      <Section
+        title="Proposal: formatted comments (not built)"
+        note="Bold, italic, code, links and lists in comments, with a toolbar and keyboard shortcuts. A design preview with the real components and tokens, proposed 2026-10-09; the owner chose option B on 2026-10-10 (ADR 0056). Posted comments already draw formatting (slice 1); the editor is not built yet, so the buttons here do nothing and only Write / Preview switches. Remove this section when the editor is built."
+      >
+        <CommentEditorProposal />
       </Section>
 
       <Section

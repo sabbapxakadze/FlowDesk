@@ -179,9 +179,9 @@ export function CommentCard({
             {editMutation.isError && <ErrorText>{editMutation.error.message}</ErrorText>}
           </div>
         ) : (
-          <p className="text-sm break-words whitespace-pre-wrap">
+          <div className="text-sm break-words">
             <MentionedText organizationId={organizationId} body={payload.body} />
-          </p>
+          </div>
         )}
 
         {files.length > 0 && (

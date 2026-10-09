@@ -23,6 +23,15 @@ export function parseMentions(body: string): MentionSegment[] {
   return segments;
 }
 
+/** A mention token that starts EXACTLY at `index`, with where it ends; undefined when the text there is not one. Used by the Markdown reader. */
+export function mentionTokenAt(text: string, index: number): { end: number; userId: string; name: string } | undefined {
+  const sticky = new RegExp(TOKEN.source, "iy");
+  sticky.lastIndex = index;
+  const match = sticky.exec(text);
+  if (!match) return undefined;
+  return { end: index + match[0].length, userId: (match[2] ?? "").toLowerCase(), name: match[1] ?? "" };
+}
+
 /** The distinct user ids mentioned in a body, in the order they first appear. */
 export function mentionedUserIds(body: string): string[] {
   const ids: string[] = [];

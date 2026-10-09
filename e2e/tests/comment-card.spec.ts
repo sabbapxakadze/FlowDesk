@@ -177,3 +177,39 @@ test("a very long unbroken word wraps inside the card instead of being cut off o
   }));
   expect(page_.scroll).toBeLessThanOrEqual(page_.client);
 });
+
+test("formatting in a comment is drawn as formatting, and nothing typed into one becomes markup or an unsafe link", async ({
+  loggedInPage: page,
+}) => {
+  // Why: formatted comments (ADR 0056) are written by anyone in the organization, and by every demo visitor. Bold, italic, code, lists and
+  // real links must look right, and a script, an event handler or a javascript: link must stay the text that was typed, never run or be clickable.
+  await openIssue(page);
+  const body = [
+    "**Bold** and *italic* and ~~gone~~ and `code`",
+    "[the docs](https://example.com/docs) and [bad](javascript:window.__pwned=3)",
+    '<img src=x onerror="window.__pwned=1"> <script>window.__pwned=2</script>',
+    "",
+    "- first",
+    "- second",
+  ].join("\n");
+  await postComment(page, body);
+
+  const card = page.locator("li", { hasText: "Bold" }).first();
+  await expect(card.locator("strong")).toHaveText("Bold");
+  await expect(card.locator("em")).toHaveText("italic");
+  await expect(card.locator("s")).toHaveText("gone");
+  await expect(card.locator("code")).toHaveText("code");
+  await expect(card.locator("ul li")).toHaveText(["first", "second"]);
+
+  const docs = card.getByRole("link", { name: "the docs" });
+  await expect(docs).toHaveAttribute("href", "https://example.com/docs");
+  await expect(docs).toHaveAttribute("target", "_blank");
+  expect(await docs.getAttribute("rel")).toContain("noopener");
+
+  // The unsafe link and the markup are shown as the text typed, not as a link, an image or a script.
+  await expect(card.getByRole("link", { name: "bad" })).toHaveCount(0);
+  await expect(card.getByText("[bad](javascript:window.__pwned=3)")).toBeVisible();
+  await expect(card.getByText('<img src=x onerror="window.__pwned=1">')).toBeVisible();
+  await expect(card.locator('img[src="x"], script')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { __pwned?: number }).__pwned)).toBeUndefined();
+});

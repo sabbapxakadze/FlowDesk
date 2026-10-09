@@ -2511,6 +2511,8 @@ Who does what: **the owner** creates the accounts, pushes to GitHub and pastes s
 
 **Small changes 2026-10-09 (found by the owner on the live site):** after logging out, Home and the brand link now reach the landing page (the "signed-out" memory was never cleared, so `/` bounced back to `/login`); logging out and returning from Google or GitHub now cross-fade (ADR 0029 amended); the guided tour starts by itself on a person's first visit (ADR 0052, migration 0030).
 
+**Formatted comments (owner's idea 2026-10-09, ADR 0056), in 4 slices.** Owner chose option B (formatted while you type, a TipTap editor) over a toolbar over a Markdown box, Ctrl+Shift+K for the link shortcut, and the same editor for issue descriptions later. Stored as a small subset of Markdown in the same field (no schema change). **Slice 1 DONE 2026-10-10:** a shared safe reader (`parseCommentMarkdown` in `packages/contracts`, 22 tests) and the comment card draws bold, italic, strikethrough, code, lists and safe links (browser test with script, `onerror` and `javascript:` attacks; mutation checks caught; the browser test also found and fixed a bug with double underscores). **Still to do:** slice 2 a proof that TipTap works here (React 19, the mention token, Markdown in and out); slice 3 the editor in the comment box and in editing a comment, lazy-loaded, with the @mention picker rebuilt, shortcuts and about six browser specs updated; slice 4 clean-up (remove the preview section on `/design-system`, tour text, descriptions later). A preview of the planned look is on `/design-system`, section "Proposal: formatted comments".
+
 **Decisions still open:** whether R2 is acceptable if it asks for a card (Neon Object Storage is tried first for 9.5).
 
 

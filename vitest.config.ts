@@ -5,10 +5,10 @@ import { defineConfig } from "vitest/config";
  * vitest.workspace.ts file from earlier Vitest versions). Each entry is a
  * directory containing its own vitest.config.ts; apps/api's needs a real
  * Postgres connection and a setup file, so it isn't shared config at the
- * root. apps/web gets an entry here once it has its own tests.
+ * root. packages/contracts has pure tests of its own. apps/web gets an entry here once it has its own tests.
  */
 export default defineConfig({
   test: {
-    projects: ["apps/api"],
+    projects: ["apps/api", "packages/contracts"],
   },
 });

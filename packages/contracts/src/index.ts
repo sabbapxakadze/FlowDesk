@@ -19,3 +19,4 @@ export * from "./account.js";
 export * from "./mentions.js";
 export * from "./oauth.js";
 export * from "./demo.js";
+export * from "./comment-markdown.js";
