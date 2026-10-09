@@ -47,7 +47,7 @@ async function attachAndPost(page: Page, body: string, name: string, type: strin
     },
     { name, type, base64 },
   );
-  await page.getByPlaceholder("Add a comment…").fill(body);
+  await page.getByRole("textbox", { name: "Comment", exact: true }).fill(body);
   await page.getByRole("button", { name: "Comment", exact: true }).click();
 }
 

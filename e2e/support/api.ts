@@ -99,3 +99,10 @@ export async function setTimezoneViaApi(request: APIRequestContext, timezone: st
   const res = await request.patch("/api/v1/users/me/timezone", { headers, data: { timezone } });
   expect(res.status()).toBe(200);
 }
+
+/** Stores a comment with exactly this body (raw Markdown), as the signed-in test user: for tests of how a stored body is DRAWN. */
+export async function createCommentViaApi(request: APIRequestContext, projectId: string, issueId: string, body: string) {
+  const { headers, base } = await apiSession(request);
+  const res = await request.post(`${base}/projects/${projectId}/issues/${issueId}/comments`, { headers, data: { body } });
+  expect(res.status()).toBe(201);
+}

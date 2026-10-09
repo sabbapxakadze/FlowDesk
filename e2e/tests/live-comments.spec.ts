@@ -36,14 +36,14 @@ test("a comment, an edit and a delete by one person show up live for another", a
   await expect(viewing.getByRole("link", { name: "Second Person" })).toBeVisible();
 
   // A posts: B sees it with no reload.
-  await pageA.getByPlaceholder("Add a comment…").fill("Hello from A");
+  await pageA.getByRole("textbox", { name: "Comment", exact: true }).fill("Hello from A");
   await pageA.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(pageB.getByText("Hello from A")).toBeVisible();
 
   // A edits: B sees the new text and "(edited)".
   const commentA = pageA.locator("li", { hasText: "Hello from A" });
   await commentA.getByRole("button", { name: "Edit" }).click();
-  await pageA.getByLabel("Edit comment").fill("Hello again from A");
+  await pageA.getByRole("textbox", { name: "Edit comment", exact: true }).fill("Hello again from A");
   await pageA.getByRole("button", { name: "Save" }).click();
   const commentB = pageB.locator("li", { hasText: "Hello again from A" });
   await expect(commentB).toBeVisible();

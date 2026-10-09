@@ -49,3 +49,7 @@ list of people opens under the comment box.
 - A separate `mentions` table: a second place to keep in step with the text; the body already says who is mentioned.
 - Storing a bare `@Name` and finding the person by name on the server: names repeat and change.
 - A rich-text editor: a large dependency and a new content format for one feature.
+
+## Amended 2026-10-10: the picker is the rich-text editor (ADR 0056)
+
+The `MentionTextarea` text box and the `encodeMentions` / `decodeMentions` helpers described above were replaced by the comment editor, whose mention is a node that reads and writes the same stored token. The token format, the server-side detection and the notification rules are unchanged.

@@ -135,7 +135,8 @@ export function CommandPalette() {
   useEffect(() => {
     if (!organization) return;
     function onKeyDown(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      // Ctrl+K only: with Shift or Alt it is another shortcut (the comment editor's link box is Ctrl+Shift+K, ADR 0056).
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsOpen((open) => !open);
       }

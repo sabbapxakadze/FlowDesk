@@ -99,7 +99,7 @@ export function CommentForm({
         name="body"
         rules={{ required: true }}
         render={({ field }) => (
-          <CommentBodyField organizationId={organizationId} value={field.value} onChange={field.onChange} placeholder="Add a comment…" rows={3} />
+          <CommentBodyField organizationId={organizationId} value={field.value} onChange={field.onChange} placeholder="Add a comment…" ariaLabel="Comment" />
         )}
       />
       {files.length > 0 && (

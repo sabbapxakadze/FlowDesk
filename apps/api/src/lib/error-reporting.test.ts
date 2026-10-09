@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import express from "express";
 import request from "supertest";
 import { errorHandler } from "../middleware/error-handler.js";
@@ -35,6 +35,12 @@ async function turnOn() {
   sent.length = 0;
   await initErrorReporting({ dsn: "https://publickey@o0.ingest.sentry.io/0", transport });
 }
+
+// The SDK is loaded on demand in production (about 0.4 s on a quiet machine). The first test would otherwise pay that cost inside its own 5 second
+// limit, and under the load of the whole suite it took 11 s once. Loading it here, with a long limit, keeps the tests about the behaviour.
+beforeAll(async () => {
+  await import("@sentry/node");
+}, 60_000);
 
 afterEach(async () => {
   await resetErrorReporting();

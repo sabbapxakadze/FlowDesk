@@ -28,7 +28,7 @@ async function openIssue(page: Page) {
   await expect(page.getByRole("img", { name: "Assigned to Second Person" })).toBeVisible();
   const url = `/projects/${projectId}/issues/${issueIds[0]}`;
   await page.goto(url);
-  await page.getByPlaceholder("Add a comment…").fill("A comment to hover");
+  await page.getByRole("textbox", { name: "Comment", exact: true }).fill("A comment to hover");
   await page.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(page.getByText("A comment to hover")).toBeVisible();
   return { url };
@@ -164,4 +164,24 @@ test("hovering anywhere else on a comment opens nothing; only the name and the p
   await expect(visibleCard(page)).toHaveCount(0);
   await comment.getByRole("link", { name: "E2E User" }).hover();
   await expect(visibleCard(page)).toContainText("e2e-user@example.com");
+});
+
+test("a hover card near the bottom of the window opens above the name, so all of it stays on screen", async ({ loggedInPage: page }) => {
+  // Why: the card is fixed to the window, so it adds no page height and cannot be scrolled to. Opening below a name near the bottom edge put its
+  // "View profile" link out of reach (found when the comment box got taller).
+  const { projectId, issueIds } = await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: ["Near the bottom"] });
+  await page.setViewportSize({ width: 1280, height: 560 });
+  await page.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
+  await expect(page.getByRole("heading", { name: "Near the bottom" })).toBeVisible();
+
+  const name = page.locator("li", { hasText: "created this issue" }).getByRole("link", { name: "E2E User" }).first(); // the creator, in the activity list
+  await name.evaluate((el) => el.scrollIntoView({ block: "end" }));
+  await name.hover();
+  const card = page.locator('[role="tooltip"]:visible');
+  await expect(card).toContainText("View profile");
+  const box = (await card.boundingBox())!;
+  const link = (await name.boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(560);
+  expect(box.y + box.height).toBeLessThanOrEqual(link.y + 8); // it is above the name, not below it
 });

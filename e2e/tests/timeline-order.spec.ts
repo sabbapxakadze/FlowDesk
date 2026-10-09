@@ -17,7 +17,7 @@ test("newest comment is on top, the first event is at the bottom, and the box is
   // Why: this is the feature itself, on the full issue page.
   await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: ["Order me"] });
   await page.goto("/projects/WEB/issues/WEB-1");
-  const box = page.getByPlaceholder("Add a comment…");
+  const box = page.getByRole("textbox", { name: "Comment", exact: true });
   await expect(box).toBeVisible();
 
   for (const text of ["First note", "Second note", "Third note"]) {
@@ -51,17 +51,17 @@ test("a comment posted live by someone else appears at the top, in the side pane
   await pageA.goto("/projects/WEB?issue=WEB-1");
   await pageB.goto("/projects/WEB/issues/WEB-1");
   const panel = pageA.locator('section[aria-label="Issue"]');
-  await expect(panel.getByPlaceholder("Add a comment…")).toBeVisible();
+  await expect(panel.getByRole("textbox", { name: "Comment", exact: true })).toBeVisible();
 
   for (const text of ["Older from B", "Newer from B"]) {
-    await pageB.getByPlaceholder("Add a comment…").fill(text);
+    await pageB.getByRole("textbox", { name: "Comment", exact: true }).fill(text);
     await pageB.getByRole("button", { name: "Comment", exact: true }).click();
     await expect(panel.locator("li", { hasText: text })).toBeVisible();
   }
 
   const older = panel.locator("li", { hasText: "Older from B" });
   const newer = panel.locator("li", { hasText: "Newer from B" });
-  expect(await top(panel.getByPlaceholder("Add a comment…"))).toBeLessThan(await top(newer));
+  expect(await top(panel.getByRole("textbox", { name: "Comment", exact: true }))).toBeLessThan(await top(newer));
   expect(await top(newer)).toBeLessThan(await top(older));
 
   await contextB.close();

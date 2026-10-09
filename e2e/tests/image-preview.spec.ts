@@ -24,7 +24,7 @@ async function postCommentWithFile(
     },
     { name, type, base64 },
   );
-  await page.getByPlaceholder("Add a comment…").fill(body);
+  await page.getByRole("textbox", { name: "Comment", exact: true }).fill(body);
   await page.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(
     page.locator("li", { hasText: body }).getByRole("link", { name }),

@@ -23,7 +23,7 @@ test("typing @ lists matching people under the box; Esc closes only the list; ke
   // Why: the picker is the feature's front door. It must filter as you type, work from the keyboard, and Esc must
   // not throw the text (or a panel behind it) away.
   await setup(page);
-  const box = page.getByPlaceholder("Add a comment…");
+  const box = page.getByRole("textbox", { name: "Comment", exact: true });
   await box.click();
   await box.pressSequentially("Hi @sec");
   const list = page.getByRole("listbox", { name: "Mention a person" });
@@ -32,7 +32,7 @@ test("typing @ lists matching people under the box; Esc closes only the list; ke
 
   await page.keyboard.press("Escape");
   await expect(list).toHaveCount(0);
-  await expect(box).toHaveValue("Hi @sec"); // the text stays
+  await expect(box).toHaveText("Hi @sec"); // the text stays
   await expect(page).toHaveURL(/issues\/WEB-1/); // and we are still on the issue
 
   await box.fill(""); // a fresh `@` opens the list again (Esc only closed it for the old one)
@@ -41,13 +41,13 @@ test("typing @ lists matching people under the box; Esc closes only the list; ke
   await page.keyboard.press("ArrowDown"); // the list is by name: E2E User, Second Person, Third Person
   await page.keyboard.press("Enter");
   await expect(list).toHaveCount(0);
-  await expect(box).toHaveValue("Hi @Second Person ");
+  await expect(box).toHaveText(/^Hi @Second Person\s*$/); // the picked person is a mention in the text
 });
 
-test("after Esc the list stays closed while you keep typing, and opens again when the text after the @ is replaced", async ({ loggedInPage: page }) => {
-  // Why: Esc used to close the list for that @ position for good, so replacing or pasting text there never reopened it.
+test("after Esc the list stays closed while you keep typing, and opens again at the next @", async ({ loggedInPage: page }) => {
+  // Why: Esc closes the list for that @ only; it must not stay shut for the rest of the comment, so the next @ opens it again.
   await setup(page);
-  const box = page.getByPlaceholder("Add a comment…");
+  const box = page.getByRole("textbox", { name: "Comment", exact: true });
   const list = page.getByRole("listbox", { name: "Mention a person" });
   await box.click();
   await box.pressSequentially("Hi @s");
@@ -57,7 +57,7 @@ test("after Esc the list stays closed while you keep typing, and opens again whe
   await box.pressSequentially("e"); // still the same mention, only longer: stays closed
   await expect(list).toHaveCount(0);
 
-  await box.fill("Hi @"); // the text replaced in one go (a paste): a different query, so it opens again
+  await box.pressSequentially(" and @"); // a new @: a new list
   await expect(list.getByRole("option")).toHaveCount(3);
 });
 
@@ -65,7 +65,7 @@ test("a posted mention is a link to the person; editing the comment keeps it", a
   // Why: the stored body holds a token, the box shows @Name. Posting encodes, editing decodes, and both must round-trip,
   // otherwise an edit would silently turn the mention into text (or show the raw token).
   await setup(page);
-  const box = page.getByPlaceholder("Add a comment…");
+  const box = page.getByRole("textbox", { name: "Comment", exact: true });
   await box.click();
   await box.pressSequentially("Please look @Second");
   await page.getByRole("option", { name: "Second Person" }).click(); // by mouse this time
@@ -78,10 +78,10 @@ test("a posted mention is a link to the person; editing the comment keeps it", a
   await expect(card).not.toContainText("user:"); // never the raw token
 
   await card.getByRole("button", { name: "Edit this comment" }).click();
-  const edit = page.getByLabel("Edit comment");
-  await expect(edit).toHaveValue("Please look @Second Person at this"); // decoded back to readable text
+  const edit = page.getByRole("textbox", { name: "Edit comment", exact: true });
+  await expect(edit).toHaveText("Please look @Second Person at this"); // the mention shows as a name, not as the stored token
   await expect(page.getByRole("button", { name: "Save" })).toBeDisabled(); // nothing changed yet
-  await edit.press("Control+End"); // the box opens with the caret at the start, as an edit box always did
+  await edit.press("Control+End");
   await edit.pressSequentially(" now");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(card.getByRole("link", { name: "Second Person" })).toBeVisible(); // still a mention
@@ -96,7 +96,7 @@ test("the person mentioned is told, in words that say so", async ({ loggedInPage
   const second = await ctx.newPage();
   await logInThroughForm(second, "e2e-second@example.com");
 
-  const box = owner.getByPlaceholder("Add a comment…");
+  const box = owner.getByRole("textbox", { name: "Comment", exact: true });
   await box.click();
   await box.pressSequentially("Over to you @Second");
   await owner.getByRole("option", { name: "Second Person" }).click();

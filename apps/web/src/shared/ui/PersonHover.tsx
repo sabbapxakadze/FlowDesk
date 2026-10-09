@@ -1,4 +1,4 @@
-import { useId, useState, type CSSProperties, type ReactNode } from "react";
+import { useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router";
 import { Avatar } from "./Avatar";
 import { buttonVariants } from "./buttonVariants";
@@ -29,7 +29,8 @@ const TRIGGER_CLASSES =
  * depends on the router for that one thing).
  *
  * Position: the card is `position: fixed`, placed under the name from its measured position when the pointer
- * or focus arrives. An absolutely positioned card inside a scrolling list (the issue timeline) was clipped by
+ * or focus arrives, or ABOVE the name when it would not fit below (a name near the bottom of the window: the card is fixed, so it adds no page
+ * height and could not be scrolled to). An absolutely positioned card inside a scrolling list (the issue timeline) was clipped by
  * the list and, even invisible, made it scrollable; a fixed card is neither.
  *
  * Touch screens: the card opens when the button gets focus on tap (not every
@@ -63,13 +64,20 @@ export function PersonHover({
 }) {
   const cardId = useId();
   const [place, setPlace] = useState<CSSProperties>({});
+  const [above, setAbove] = useState(false);
+  const cardRef = useRef<HTMLSpanElement>(null);
   function measure(element: HTMLElement) {
     const rect = element.getBoundingClientRect();
+    // The hidden card still has its size, so it can be measured before it shows. Above only when it does not fit below and does fit above.
+    const cardHeight = cardRef.current?.offsetHeight ?? 0;
+    const flip = cardHeight > 0 && window.innerHeight - rect.bottom < cardHeight + 8 && rect.top > cardHeight + 8;
+    setAbove(flip);
+    const vertical = flip ? { bottom: window.innerHeight - rect.top } : { top: rect.bottom };
     // The card is 16rem wide (or the window minus 2rem). A name near the right edge of the window would push it off
     // screen, so its left edge is held back far enough to keep the whole card in view.
     const cardWidth = Math.min(256, window.innerWidth - 32);
     const left = Math.max(8, Math.min(rect.left, window.innerWidth - cardWidth - 8));
-    setPlace(align === "right" ? { top: rect.bottom, right: window.innerWidth - rect.right } : { top: rect.bottom, left });
+    setPlace(align === "right" ? { ...vertical, right: window.innerWidth - rect.right } : { ...vertical, left });
   }
   return (
     <span
@@ -90,9 +98,10 @@ export function PersonHover({
       )}
       <span
         id={cardId}
+        ref={cardRef}
         role="tooltip"
         style={place}
-        className={`invisible fixed z-20 w-64 max-w-[calc(100vw-2rem)] pt-1 text-left text-xs font-normal opacity-0 transition-[opacity,visibility] delay-100 duration-150 group-focus-within/person:visible group-focus-within/person:opacity-100 group-focus-within/person:delay-300 group-hover/person:visible group-hover/person:opacity-100 group-hover/person:delay-300 motion-reduce:duration-0`}
+        className={`invisible fixed z-20 w-64 max-w-[calc(100vw-2rem)] ${above ? "pb-1" : "pt-1"} text-left text-xs font-normal opacity-0 transition-[opacity,visibility] delay-100 duration-150 group-focus-within/person:visible group-focus-within/person:opacity-100 group-focus-within/person:delay-300 group-hover/person:visible group-hover/person:opacity-100 group-hover/person:delay-300 motion-reduce:duration-0`}
       >
         <span className="block rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-3 text-[var(--color-text-default)] shadow-lg">
           {/* The picture and the name in the card are a link too (the owner's rule: every picture

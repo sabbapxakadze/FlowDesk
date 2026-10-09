@@ -96,7 +96,7 @@ test("another member finds the profile from the hover card and sees the title an
   const second = await ctx.newPage();
   await logInThroughForm(second, "e2e-second@example.com");
   await second.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
-  await second.getByPlaceholder("Add a comment…").fill("From the second person");
+  await second.getByRole("textbox", { name: "Comment", exact: true }).fill("From the second person");
   await second.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(second.getByText("From the second person")).toBeVisible();
 
@@ -147,7 +147,7 @@ test("clicking a person's picture (or name) in a comment goes to their profile",
     titles: ["Click through"],
   });
   await page.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
-  await page.getByPlaceholder("Add a comment…").fill("Look at me");
+  await page.getByRole("textbox", { name: "Comment", exact: true }).fill("Look at me");
   await page.getByRole("button", { name: "Comment", exact: true }).click();
   const header = page.locator("li", { hasText: "Look at me" });
   await header.getByRole("img", { name: "E2E User" }).click();
@@ -219,7 +219,7 @@ test("the back link on a profile goes back to where you came from, and to Member
   });
   const issueUrl = "/projects/WEB/issues/WEB-1"; // the readable address (an address with ids is rewritten to it)
   await page.goto(issueUrl);
-  await page.getByPlaceholder("Add a comment…").fill("Hello");
+  await page.getByRole("textbox", { name: "Comment", exact: true }).fill("Hello");
   await page.getByRole("button", { name: "Comment", exact: true }).click();
   const header = page.locator("li", { hasText: "Hello" });
   await header.getByRole("link", { name: "E2E User" }).click();

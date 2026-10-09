@@ -145,14 +145,7 @@ export function CommentCard({
       <div className="px-4 py-3">
         {isEditing ? (
           <div className="motion-rise-in flex flex-col gap-2">
-            <CommentBodyField
-              organizationId={organizationId}
-              value={draft}
-              onChange={setDraft}
-              rows={3}
-              aria-label="Edit comment"
-              autoFocus
-            />
+            <CommentBodyField organizationId={organizationId} value={draft} onChange={setDraft} ariaLabel="Edit comment" autoFocus />
             <div className="flex gap-2">
               <Button
                 size="sm"

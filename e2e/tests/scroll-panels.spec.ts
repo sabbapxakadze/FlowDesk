@@ -113,10 +113,10 @@ test("issue page: a long timeline scrolls inside its own area, the comment box s
   const rest = (await timeline.boundingBox())!;
   expect(rest.y + rest.height).toBeLessThanOrEqual(800);
 
-  const box = (await page.getByPlaceholder("Add a comment…").boundingBox())!;
+  const box = (await page.getByRole("textbox", { name: "Comment", exact: true }).boundingBox())!;
   const area = (await timeline.boundingBox())!;
   expect(box.y).toBeLessThan(area.y); // the box is above the scrolling area, never inside it
-  await page.getByPlaceholder("Add a comment…").fill("Brand new");
+  await page.getByRole("textbox", { name: "Comment", exact: true }).fill("Brand new");
   await page.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(timeline.getByText("Brand new")).toBeVisible(); // lands at the top of the area, in view
 });

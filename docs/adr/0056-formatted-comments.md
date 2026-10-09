@@ -1,6 +1,6 @@
 # 0056 - Formatted comments (bold, italic, lists, links)
 
-Status: Accepted - 2026-10-10 (slice 1 of 4 built; the editor is not built yet). Builds on ADR 0033 (@mentions), ADR 0053 (the same "build it behind a seam" habit).
+Status: Accepted - 2026-10-10. All four slices are built (the reader, the editor, the comment box, the clean-up); the last section below says what was and was not verified. Builds on ADR 0033 (@mentions), ADR 0053 (the same "build it behind a seam" habit).
 
 ## Context
 
@@ -23,3 +23,18 @@ Contracts (22): plain text and line breaks unchanged, every kind of formatting a
 ## Not verified
 
 The editor itself (not built); that TipTap works with React 19 here and can read and write the mention token (the first step of slice 2 is a proof of that); how the formatting looks to the owner in the app; that real stored comments (beyond the demo's) are unaffected.
+
+
+## Built in slices 2 to 4 (2026-10-10)
+
+- **The editor** (`shared/ui/rich-text/`, shown by `shared/ui/RichTextEditor.tsx`): TipTap with only the extensions comments allow (paragraph, bold, italic, strikethrough, code, link, bulleted and numbered lists, line break, undo, placeholder, mention), no heading, quote, code block or image. It reads and writes the same Markdown subset as the card's reader, so what the editor holds and what the card draws are the same text. A mention is its own node that reads and writes the stored token `@[Name](user:<id>)` byte for byte. It is loaded on demand: the build shows it as its own file, 481 kB (154 kB gzip), and the main bundle stayed at 354 kB gzip.
+- **Used in** the comment box and in editing a comment (`features/post-comment/ui/CommentBodyField.tsx`). The old text box (`MentionTextarea`) and its token helpers were deleted; ADR 0033's picker is now the editor's `@` list (same look and keys; one difference: after Esc the list opens again at the next `@` typed, not when text is replaced in place).
+- **Toolbar and shortcuts:** bold Ctrl+B, italic Ctrl+I, strikethrough Ctrl+Shift+X (the library's default, Ctrl+Shift+S, is "save as" in many apps), code Ctrl+E, link Ctrl+Shift+K, bulleted list Ctrl+Shift+8, numbered list Ctrl+Shift+7 (Cmd on a Mac). Typing Markdown marks (`**x**`, a dash then a space) also formats. The link box takes an address (a missing scheme gets `https://`), refuses anything that is not http, https or mailto, and lets a link be removed. Ctrl+Enter to send was NOT added (not asked for).
+- **Safety:** a link the reader would refuse (unsafe address, or one with a title) loads as the text it was; the link command refuses unsafe addresses; pasted HTML keeps only allowed formatting.
+- **Limits, named:** a mention carries no formatting (bold around one is dropped when a comment is opened for editing; the mention itself and the notification are unaffected). Bare addresses are not turned into links. Underline is not supported. Issue descriptions still use the plain text box (a later slice).
+- **Found by the browser tests, fixed:** the global search palette also opened on Ctrl+Shift+K (it ignored Shift and Alt), so the link shortcut opened the palette; and the person hover card always opened below the name, so with the taller comment box its "View profile" link could fall below the window and be unreachable. The card now opens above the name when it does not fit below.
+- **Tests:** the editor's pure behaviour in jsdom (17: Markdown round trips, mention token, allowed nodes only, safe links, every shortcut, line breaks, empty) with mutation checks (four caught; a fifth, `marks: ""` on the mention, could not be shown to matter and was removed); a browser spec for the editor (`comment-editor.spec.ts`: toolbar and shortcuts, typing Markdown, lists, the link box, Ctrl+K still opening the palette, editing keeps formatting and lines, pasted HTML) and a hover-card test; about 30 existing lookups of the comment box in 14 specs were changed from placeholder to role and name, and the mention tests were adapted.
+
+## What was and was not verified locally
+
+Passing at the end of the work: typecheck, lint, the editor and reader unit tests, the comment, mention, notification, my-work, panel, timeline, profile, hover-card, motion, image and video browser specs and the new editor spec (the last full pass of each after its last change; one theme test failed once under load and passed on rerun). **Not completed:** a final full run of the API suite and of the whole browser suite after the last edits, and the production build smoke test: the run was stopped at the owner's request so that the push (and CI) could do it. **Not checked by me:** how the editor looks and feels on a real screen, in dark mode, on a phone, or in Safari and Firefox.

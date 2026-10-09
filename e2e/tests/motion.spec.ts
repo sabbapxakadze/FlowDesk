@@ -441,7 +441,7 @@ test.describe("with animations on", () => {
     await page.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
     await expect(page.getByText("created this issue")).toBeVisible();
     expect(await rowAnimations(page)).toEqual([]);
-    await page.getByPlaceholder("Add a comment…").fill("Hello there");
+    await page.getByRole("textbox", { name: "Comment", exact: true }).fill("Hello there");
     await page.getByRole("button", { name: "Comment", exact: true }).click();
     // Wait for the POSTED comment: a row of the timeline. (getByText("Hello there") also matches the comment box itself the moment the text is
     // typed, before anything was posted, so the check below used to run too early.)

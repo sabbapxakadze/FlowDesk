@@ -76,7 +76,7 @@ test("a comment from someone else shows as unread here, clicking it opens the is
   await addOrgMember("e2e-user@example.com", { email: "e2e-second@example.com", name: "Second Person" });
   // The owner has to take part to be notified: one comment of their own first.
   await owner.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
-  await owner.getByPlaceholder("Add a comment…").fill("First, from the owner");
+  await owner.getByRole("textbox", { name: "Comment", exact: true }).fill("First, from the owner");
   await owner.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(owner.getByText("First, from the owner")).toBeVisible();
 
@@ -84,7 +84,7 @@ test("a comment from someone else shows as unread here, clicking it opens the is
   const other = await ctx.newPage();
   await logInThroughForm(other, "e2e-second@example.com");
   await other.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
-  await other.getByPlaceholder("Add a comment…").fill("Hello from Second");
+  await other.getByRole("textbox", { name: "Comment", exact: true }).fill("Hello from Second");
   await other.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(other.getByText("Hello from Second")).toBeVisible();
 

@@ -5,7 +5,7 @@ import type { IssueStatus } from "@flowdesk/contracts";
 import { IssueCardContent, IssueCardFrame } from "../../entities/issue";
 import { LabelPills } from "../../entities/label";
 import { ProviderButton } from "../../entities/oauth";
-import { CommentEditorProposal } from "./CommentEditorProposal";
+import { CommentEditorDemo } from "./CommentEditorDemo";
 import {
   Avatar,
   Button,
@@ -830,10 +830,10 @@ export function DesignSystemPage() {
       </Section>
 
       <Section
-        title="Proposal: formatted comments (not built)"
-        note="Bold, italic, code, links and lists in comments, with a toolbar and keyboard shortcuts. A design preview with the real components and tokens, proposed 2026-10-09; the owner chose option B on 2026-10-10 (ADR 0056). Posted comments already draw formatting (slice 1); the editor is not built yet, so the buttons here do nothing and only Write / Preview switches. Remove this section when the editor is built."
+        title="Comment editor"
+        note="Formatted comments (ADR 0056): the text is formatted while you type, with a toolbar and keyboard shortcuts (Ctrl+B bold, Ctrl+I italic, Ctrl+Shift+X strikethrough, Ctrl+E code, Ctrl+Shift+K link, Ctrl+Shift+8 and 7 lists; Cmd on a Mac). It stores a small Markdown subset, which the comment card draws. Loaded on demand. This is the real component."
       >
-        <CommentEditorProposal />
+        <CommentEditorDemo />
       </Section>
 
       <Section

@@ -80,7 +80,7 @@ test("pressing the empty page closes the panel; pressing inside it, or typing in
   await page.waitForTimeout(150);
   await expect(panel).toBeVisible();
 
-  await panel.getByPlaceholder("Add a comment…").fill("Written inside the panel");
+  await panel.getByRole("textbox", { name: "Comment", exact: true }).fill("Written inside the panel");
   await panel.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(panel.getByText("Written inside the panel")).toBeVisible();
   await expect(panel).toBeVisible();
@@ -240,7 +240,7 @@ test("a comment from another person shows up live in the open panel", async ({
   const other = await ctx.newPage();
   await logInThroughForm(other, "e2e-second@example.com");
   await other.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
-  await other.getByPlaceholder("Add a comment…").fill("Hello from Second");
+  await other.getByRole("textbox", { name: "Comment", exact: true }).fill("Hello from Second");
   await other.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(other.getByText("Hello from Second")).toBeVisible();
 
@@ -258,7 +258,7 @@ test("Esc inside an image preview closes only the preview, not the panel; pressi
   await page.goto(listUrl);
   await cardLink(page, "Alpha issue").click();
   const panel = panelOf(page);
-  await expect(panel.getByPlaceholder("Add a comment…")).toBeVisible(); // content loaded
+  await expect(panel.getByRole("textbox", { name: "Comment", exact: true })).toBeVisible(); // content loaded
   await panel.evaluate((_, base64) => {
     const input = document.querySelector('input[aria-label="Attach files to comment"]') as HTMLInputElement;
     const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
@@ -267,7 +267,7 @@ test("Esc inside an image preview closes only the preview, not the panel; pressi
     input.files = dt.files;
     input.dispatchEvent(new Event("change", { bubbles: true }));
   }, makePng(400, 300).toString("base64"));
-  await panel.getByPlaceholder("Add a comment…").fill("With a picture");
+  await panel.getByRole("textbox", { name: "Comment", exact: true }).fill("With a picture");
   await panel.getByRole("button", { name: "Comment", exact: true }).click();
   await panel.getByRole("link", { name: "Preview shot.png" }).click();
   const preview = page.getByRole("dialog", { name: "Preview of shot.png" });
@@ -328,7 +328,7 @@ test("the panel never scrolls sideways, and an uploader's hover card opens insid
   await page.goto(listUrl);
   await cardLink(page, "Alpha issue").click();
   const panel = panelOf(page);
-  await expect(panel.getByPlaceholder("Add a comment…")).toBeVisible(); // content loaded
+  await expect(panel.getByRole("textbox", { name: "Comment", exact: true })).toBeVisible(); // content loaded
   await page.evaluate(() => {
     const input = document.querySelector('input[aria-label="Attach files to comment"]') as HTMLInputElement;
     const dt = new DataTransfer();
@@ -336,7 +336,7 @@ test("the panel never scrolls sideways, and an uploader's hover card opens insid
     input.files = dt.files;
     input.dispatchEvent(new Event("change", { bubbles: true }));
   });
-  await panel.getByPlaceholder("Add a comment…").fill("With a file");
+  await panel.getByRole("textbox", { name: "Comment", exact: true }).fill("With a file");
   await panel.getByRole("button", { name: "Comment", exact: true }).click();
   const row = panel.getByRole("listitem").filter({ hasText: "notes.txt" }).filter({
     has: page.getByRole("button", { name: "Remove" }),
@@ -365,7 +365,7 @@ for (const scheme of ["light", "dark"] as const) {
     await page.goto(listUrl);
     await cardLink(page, "Alpha issue").click();
     const panel = panelOf(page);
-    await expect(panel.getByPlaceholder("Add a comment…")).toBeVisible();
+    await expect(panel.getByRole("textbox", { name: "Comment", exact: true })).toBeVisible();
     await page.evaluate(() => {
       const input = document.querySelector('input[aria-label="Attach files to comment"]') as HTMLInputElement;
       const dt = new DataTransfer();
@@ -373,7 +373,7 @@ for (const scheme of ["light", "dark"] as const) {
       input.files = dt.files;
       input.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    await panel.getByPlaceholder("Add a comment…").fill("With a file");
+    await panel.getByRole("textbox", { name: "Comment", exact: true }).fill("With a file");
     await panel.getByRole("button", { name: "Comment", exact: true }).click();
     const row = panel.getByRole("listitem").filter({ hasText: "notes.txt" }).filter({
       has: page.getByRole("button", { name: "Remove" }),

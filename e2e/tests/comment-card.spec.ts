@@ -1,5 +1,5 @@
 import { test, expect } from "../support/fixtures";
-import { createIssueViaApi } from "../support/api";
+import { createCommentViaApi, createIssueViaApi } from "../support/api";
 
 /** Posts a comment through the real form, optionally with one file (set the way the other e2e tests do). */
 async function postComment(
@@ -18,7 +18,7 @@ async function postComment(
       input.dispatchEvent(new Event("change", { bubbles: true }));
     }, file);
   }
-  await page.getByPlaceholder("Add a comment…").fill(body);
+  await page.getByRole("textbox", { name: "Comment", exact: true }).fill(body);
   await page.getByRole("button", { name: "Comment", exact: true }).click();
 }
 
@@ -64,7 +64,7 @@ test("a comment card shows who, when, the text and its files, and 'edited' after
 
   // Edit: marked as edited afterwards.
   await card.getByRole("button", { name: "Edit this comment" }).click();
-  await page.getByLabel("Edit comment").fill("Here is the screenshot, fixed typo");
+  await page.getByRole("textbox", { name: "Edit comment", exact: true }).fill("Here is the screenshot, fixed typo");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(card.getByText("(edited)")).toBeVisible();
 });
@@ -183,7 +183,9 @@ test("formatting in a comment is drawn as formatting, and nothing typed into one
 }) => {
   // Why: formatted comments (ADR 0056) are written by anyone in the organization, and by every demo visitor. Bold, italic, code, lists and
   // real links must look right, and a script, an event handler or a javascript: link must stay the text that was typed, never run or be clickable.
-  await openIssue(page);
+  // The body is stored through the API, exactly as written: this test is about how a STORED body is drawn (what the editor writes is tested in
+  // comment-editor.spec.ts), and the editor would turn typed attack text into harmless escaped text before it ever reached the card.
+  const { projectId, issueIds } = await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: ["Discuss me"] });
   const body = [
     "**Bold** and *italic* and ~~gone~~ and `code`",
     "[the docs](https://example.com/docs) and [bad](javascript:window.__pwned=3)",
@@ -192,7 +194,9 @@ test("formatting in a comment is drawn as formatting, and nothing typed into one
     "- first",
     "- second",
   ].join("\n");
-  await postComment(page, body);
+  await createCommentViaApi(page.request, projectId, issueIds[0]!, body);
+  await page.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
+  await expect(page.getByRole("heading", { name: "Discuss me" })).toBeVisible();
 
   const card = page.locator("li", { hasText: "Bold" }).first();
   await expect(card.locator("strong")).toHaveText("Bold");

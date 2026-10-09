@@ -23,14 +23,14 @@ test("create a project and an issue, then post, edit and delete a comment", asyn
   await expect(page.getByRole("heading", { name: "Fix the footer" })).toBeVisible();
 
   // Post
-  await page.getByPlaceholder("Add a comment…").fill("First version");
+  await page.getByRole("textbox", { name: "Comment", exact: true }).fill("First version");
   await page.getByRole("button", { name: "Comment", exact: true }).click();
   const comment = page.locator("li", { hasText: "First version" });
   await expect(comment).toBeVisible();
 
   // Edit
   await comment.getByRole("button", { name: "Edit" }).click();
-  await page.getByLabel("Edit comment").fill("Second version");
+  await page.getByRole("textbox", { name: "Edit comment", exact: true }).fill("Second version");
   await page.getByRole("button", { name: "Save" }).click();
   const edited = page.locator("li", { hasText: "Second version" });
   await expect(edited).toBeVisible();
