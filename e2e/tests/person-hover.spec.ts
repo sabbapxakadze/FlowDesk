@@ -173,6 +173,7 @@ test("a hover card near the bottom of the window opens above the name, so all of
   await page.setViewportSize({ width: 1280, height: 560 });
   await page.goto(`/projects/${projectId}/issues/${issueIds[0]}`);
   await expect(page.getByRole("heading", { name: "Near the bottom" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Comment", exact: true })).toBeVisible(); // the editor has arrived: it is loaded on demand, and the page must be still before we hover
 
   const name = page.locator("li", { hasText: "created this issue" }).getByRole("link", { name: "E2E User" }).first(); // the creator, in the activity list
   await name.evaluate((el) => el.scrollIntoView({ block: "end" }));

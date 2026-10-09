@@ -155,8 +155,11 @@ test("issue page: a person's hover card at the bottom of the timeline is not cli
   const card = page.getByRole("tooltip").filter({ hasText: "E2E User" }).last();
   await expect(card).toBeVisible();
   const box = (await card.boundingBox())!;
-  const area = (await timeline.boundingBox())!;
-  expect(box.y + box.height).toBeGreaterThan(area.y + area.height); // it reaches past the scrolling area
+  // The card is fixed to the window, so the scrolling timeline cannot clip it. It opens below the name when there is room and above it when there
+  // is not (a name near the bottom of the window), so this does not depend on which: it must be `fixed` and entirely on screen.
+  expect(await card.evaluate((el) => getComputedStyle(el).position)).toBe("fixed");
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize()!.height);
   const hit = await page.evaluate(
     ([x, y]) => document.elementFromPoint(x!, y!)?.closest('[role="tooltip"]') !== null,
     [box.x + box.width / 2, box.y + box.height / 2],

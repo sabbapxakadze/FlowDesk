@@ -2515,6 +2515,8 @@ Who does what: **the owner** creates the accounts, pushes to GitHub and pastes s
 
 **Small fix 2026-10-10:** the side panel no longer closes when a text selection started inside it is released over the page (ADR 0025 amended).
 
+**Dark theme lifted 2026-10-10 (ADR 0017 amended):** the owner found it too dark; chose option A, soft charcoal (still neutral gray, page and cards one step lighter, the sidebar darker than the page, chart grid lines moved so they stay visible). Light theme unchanged.
+
 **Decisions still open:** whether R2 is acceptable if it asks for a card (Neon Object Storage is tried first for 9.5).
 
 

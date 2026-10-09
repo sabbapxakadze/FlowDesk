@@ -7,14 +7,17 @@ export type { RichTextEditorProps } from "./rich-text/RichTextEditorImpl";
 // The editor library is about 150 KB of download (measured with a scratch bundle, ADR 0056), so it is fetched only when a comment box is shown.
 const Impl = lazy(() => import("./rich-text/RichTextEditorImpl"));
 
-/** The same frame as the editor, shown for the moment the library is still arriving, so the page does not jump when it appears. */
+/**
+ * The same frame as the editor, shown for the moment the library is still arriving, so the page does not jump when it appears. Its height is the
+ * editor's own at rest: the toolbar (36px) + the text area's minimum (4.5rem) + the two borders = 6.875rem. If either changes, change both.
+ */
 function EditorLoading({ className }: { className?: string }) {
   return (
     <div className={className}>
       <div
         role="status"
         className={cn(
-          "min-h-[7.5rem] rounded-[var(--radius-control)] border border-[var(--color-border-input)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm text-[var(--color-text-muted)]",
+          "min-h-[6.875rem] rounded-[var(--radius-control)] border border-[var(--color-border-input)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm text-[var(--color-text-muted)]",
         )}
       >
         Loading the editor…

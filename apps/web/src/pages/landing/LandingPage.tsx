@@ -21,7 +21,7 @@ const RIBBON_TONES = ["landing-ribbon-a", "landing-ribbon-b", "landing-ribbon-c"
  */
 export function LandingPage() {
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden bg-[var(--color-bg-backdrop)]">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         {RIBBON_TOPS.map((top, index) => (
           <div key={top} className={`landing-ribbon ${RIBBON_TONES[index % RIBBON_TONES.length]}`} style={{ top: `${top}rem` }} />

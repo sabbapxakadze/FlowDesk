@@ -58,6 +58,7 @@ const TOKEN_GROUPS: TokenGroup[] = [
     title: "Surfaces and text",
     tokens: [
       { name: "bg-page", cssVar: "--color-bg-page", kind: "fill" },
+      { name: "bg-backdrop", cssVar: "--color-bg-backdrop", kind: "fill" },
       { name: "bg-surface", cssVar: "--color-bg-surface", kind: "fill" },
       { name: "bg-action-primary", cssVar: "--color-bg-action-primary", kind: "fill" },
       { name: "bg-action-success", cssVar: "--color-bg-action-success", kind: "fill" },

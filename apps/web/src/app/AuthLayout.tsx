@@ -31,7 +31,7 @@ export function AuthLayout() {
   useEffect(() => forgetSessionEnd(), [forgetSessionEnd]);
   const showSwitch = pathname === "/login" || pathname === "/register";
   return (
-    <div className="relative flex min-h-screen flex-col items-center overflow-hidden px-4 pt-16 pb-12 sm:justify-center sm:py-12">
+    <div className="relative flex min-h-screen flex-col items-center overflow-hidden bg-[var(--color-bg-backdrop)] px-4 pt-16 pb-12 sm:justify-center sm:py-12">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 flex items-center justify-center"

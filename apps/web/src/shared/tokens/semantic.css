@@ -14,6 +14,10 @@
  */
 @theme static {
   --color-bg-page: var(--color-neutral-100);
+  /* The backdrop of the public pages with the soft coloured ribbons (the landing page, log in, create account). The same as the page in the light
+     theme; in the dark theme it stays the near black of before (neutral-950), because the ribbons glow against black and look hazy on the lighter gray
+     the app now uses (ADR 0017, amended 2026-10-10). */
+  --color-bg-backdrop: var(--color-bg-page);
   --color-bg-surface: var(--color-white);
   /* A "lane": the panel a board column or a sprints-page list sits in. A shade apart from the page, with the
      cards (bg-surface) standing out on it. */
@@ -114,11 +118,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg-page: var(--color-neutral-950);
-    --color-bg-surface: var(--color-neutral-900);
+    --color-bg-page: var(--color-neutral-900);
+    --color-bg-backdrop: var(--color-neutral-950);
+    --color-bg-surface: var(--color-neutral-800);
     /* Dark: lighter than the cards (they sit in it like wells), because a lane between the page and the cards
        would be almost the same shade as both. */
-    --color-bg-lane: var(--color-neutral-800);
+    --color-bg-lane: var(--color-neutral-775);
 
     --color-text-default: var(--color-neutral-100);
     --color-text-muted: var(--color-neutral-400);
@@ -145,8 +150,8 @@
     --color-bg-action-danger-strong-hover: var(--color-red-700);
     --color-ring-action-hover: oklch(1 0 0 / 0.5);
 
-    --color-border-default: var(--color-neutral-800);
-    --color-border-input: var(--color-neutral-500);
+    --color-border-default: var(--color-neutral-725);
+    --color-border-input: var(--color-neutral-475);
 
     --color-border-focus: var(--color-accent-400);
 
@@ -159,23 +164,25 @@
     --color-event-changed: var(--color-accent-400);
 
     --color-chart-primary: var(--color-accent-400);
-    --color-chart-grid: var(--color-neutral-800);
+    --color-chart-grid: var(--color-neutral-725);
     --color-chart-axis: var(--color-neutral-400);
 
-    --color-bg-sidebar: var(--color-neutral-950);
+    --color-bg-sidebar: var(--color-neutral-925);
     --color-text-sidebar: var(--color-neutral-400);
     --color-text-sidebar-active: var(--color-neutral-100);
-    --color-bg-sidebar-active: var(--color-neutral-800);
-    --color-border-sidebar: var(--color-neutral-800);
+    --color-bg-sidebar-active: var(--color-neutral-775);
+    --color-border-sidebar: var(--color-neutral-750);
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-bg-page: var(--color-neutral-950);
-  --color-bg-surface: var(--color-neutral-900);
-  --color-bg-lane: var(--color-neutral-800);
+  --color-bg-page: var(--color-neutral-900);
+
+  --color-bg-backdrop: var(--color-neutral-950);
+  --color-bg-surface: var(--color-neutral-800);
+  --color-bg-lane: var(--color-neutral-775);
 
   --color-text-default: var(--color-neutral-100);
   --color-text-muted: var(--color-neutral-400);
@@ -202,8 +209,8 @@
   --color-bg-action-danger-strong-hover: var(--color-red-700);
   --color-ring-action-hover: oklch(1 0 0 / 0.5);
 
-  --color-border-default: var(--color-neutral-800);
-  --color-border-input: var(--color-neutral-500);
+  --color-border-default: var(--color-neutral-725);
+  --color-border-input: var(--color-neutral-475);
 
   --color-border-focus: var(--color-accent-400);
 
@@ -216,12 +223,12 @@
   --color-event-changed: var(--color-accent-400);
 
   --color-chart-primary: var(--color-accent-400);
-  --color-chart-grid: var(--color-neutral-800);
+  --color-chart-grid: var(--color-neutral-725);
   --color-chart-axis: var(--color-neutral-400);
 
-  --color-bg-sidebar: var(--color-neutral-950);
+  --color-bg-sidebar: var(--color-neutral-925);
   --color-text-sidebar: var(--color-neutral-400);
   --color-text-sidebar-active: var(--color-neutral-100);
-  --color-bg-sidebar-active: var(--color-neutral-800);
-  --color-border-sidebar: var(--color-neutral-800);
+  --color-bg-sidebar-active: var(--color-neutral-775);
+  --color-border-sidebar: var(--color-neutral-750);
 }
