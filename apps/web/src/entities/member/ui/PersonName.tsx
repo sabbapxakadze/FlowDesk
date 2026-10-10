@@ -1,3 +1,4 @@
+import { personPath } from "../../../shared/lib/paths";
 import { Avatar, PersonHover } from "../../../shared/ui";
 import { useMembers } from "../api/useMembers";
 import { ROLE_LABELS } from "../lib/roleLabels";
@@ -45,7 +46,7 @@ export function PersonName({
       avatarUrl={member?.avatarUrl}
       jobTitle={member?.jobTitle}
       // Only people still in the organization have a profile to open.
-      profileHref={member ? `/people/${member.userId}` : undefined}
+      profileHref={member ? personPath(member.name, member.userId) : undefined}
       align={align}
     >
       {avatarOnly ? (

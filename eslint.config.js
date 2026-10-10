@@ -147,6 +147,7 @@ export default tseslint.config(
       "apps/web/src/widgets/sidebar/Sidebar.tsx", // sidebar items and Log out use the sidebar colours
       "apps/web/src/features/app-tour/ui/TourButton.tsx", // a sidebar row, drawn with the sidebar's own row look passed in by the sidebar
       "apps/web/src/entities/label/ui/LabelPills.tsx", // a coloured pill that is also a filter button, not a Button look
+      "apps/web/src/entities/label/ui/LabelColorPicker.tsx", // the colour swatches: a coloured circle that picks, not a Button look
       "apps/web/src/pages/my-work/MyWorkPage.tsx", // notification rows: a whole row is the button, like the bell's
       "apps/web/src/pages/design-system/**", // documents raw controls on purpose
     ],

@@ -67,7 +67,7 @@ export function App() {
             <Route path="/labels" element={<LabelsPage />} />
             <Route path="/members" element={<MembersPage />} />
             <Route path="/audit-log" element={<AuditLogPage />} />
-            <Route path="/people/:userId" element={<ProfilePage />} />
+            <Route path="/people/:person" element={<ProfilePage />} />
             <Route path="/profile" element={<ProfileEditPage />} />
             <Route path="/account" element={<AccountPage />} />
             </Route>

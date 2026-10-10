@@ -46,12 +46,12 @@ test("Profile -> Edit profile -> Back lands on the profile, and Back there goes 
   // Why: the edit page's link used to push a new profile page, so Back from the profile returned to Edit, and so on, round and round.
   await page.goto("/members");
   await page.getByRole("navigation").getByRole("link", { name: /E2E User/ }).or(page.getByRole("link", { name: /E2E User/ }).last()).first().click();
-  await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/people\/[a-z0-9-]+-[0-9a-f]{8}$/);
   await page.getByRole("link", { name: "Edit profile" }).click();
   await expect(page).toHaveURL(/\/profile$/);
 
   await page.getByRole("link", { name: "Back", exact: true }).click();
-  await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/people\/[a-z0-9-]+-[0-9a-f]{8}$/);
   await page.getByRole("link", { name: "Back", exact: true }).click();
   await expect(page).toHaveURL(/\/members$/); // where we started, not /profile again
 });
@@ -59,7 +59,7 @@ test("Profile -> Edit profile -> Back lands on the profile, and Back there goes 
 test("Account -> Back returns to Edit profile", async ({ loggedInPage: page }) => {
   // Why: the same loop was possible between Edit profile and Account.
   await page.goto("/profile");
-  await page.getByRole("link", { name: /Account settings/ }).click();
+  await page.getByRole("main").getByRole("link", { name: /Account settings/ }).click(); // the sidebar has a link of this name too
   await expect(page).toHaveURL(/\/account$/);
   await page.getByRole("link", { name: "Back", exact: true }).click();
   await expect(page).toHaveURL(/\/profile$/);

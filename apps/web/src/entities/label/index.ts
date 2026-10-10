@@ -3,3 +3,5 @@ export { useLabels } from "./api/useLabels";
 export { labelKeys } from "./api/queryKeys";
 export { LabelBadge } from "./ui/LabelBadge";
 export { LabelPills } from "./ui/LabelPills";
+export { LabelColorPicker } from "./ui/LabelColorPicker";
+export { LABEL_COLORS } from "./lib/labelColors";

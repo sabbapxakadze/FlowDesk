@@ -26,7 +26,7 @@ test("editing the profile shows on the profile page, the members list and the si
 
   await expect(sidebarPerson(page)).toContainText("Renamed Person");
   await sidebarPerson(page).click();
-  await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/people\/[a-z0-9-]+-[0-9a-f]{8}$/);
   await expect(page.getByRole("heading", { name: "Renamed Person" })).toBeVisible();
   await expect(page.getByText("Backend engineer").first()).toBeVisible();
   await expect(page.getByText("I keep the API fast.")).toBeVisible();
@@ -106,7 +106,7 @@ test("another member finds the profile from the hover card and sees the title an
   await expect(card).toContainText("Team lead");
   await card.getByRole("link", { name: "View profile" }).click();
 
-  await expect(second).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+  await expect(second).toHaveURL(/\/people\/[a-z0-9-]+-[0-9a-f]{8}$/);
   await expect(second.getByRole("heading", { name: "E2E User" })).toBeVisible();
   await expect(second.getByText("Team lead").first()).toBeVisible();
   await expect(second.getByText("Hello there")).toBeVisible();
@@ -151,12 +151,12 @@ test("clicking a person's picture (or name) in a comment goes to their profile",
   await page.getByRole("button", { name: "Comment", exact: true }).click();
   const header = page.locator("li", { hasText: "Look at me" });
   await header.getByRole("img", { name: "E2E User" }).click();
-  await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/people\/[a-z0-9-]+-[0-9a-f]{8}$/);
   await expect(page.getByRole("heading", { name: "E2E User" })).toBeVisible();
 
   await page.goBack();
   await header.getByRole("link", { name: "E2E User" }).click();
-  await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/people\/[a-z0-9-]+-[0-9a-f]{8}$/);
 });
 
 test("the card's own picture and name lead to the profile, and so do the Members page picture and name", async ({
@@ -166,11 +166,11 @@ test("the card's own picture and name lead to the profile, and so do the Members
   await page.goto("/members");
   const row = page.getByRole("list", { name: "Members" }).getByRole("listitem").first();
   await row.getByRole("img", { name: "E2E User" }).click();
-  await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/people\/[a-z0-9-]+-[0-9a-f]{8}$/);
 
   await page.goto("/members");
   await row.getByRole("link", { name: "E2E User" }).last().click();
-  await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/people\/[a-z0-9-]+-[0-9a-f]{8}$/);
 
   // Inside the hover card: its picture-and-name block is a link too.
   await page.goto("/members");
@@ -178,7 +178,7 @@ test("the card's own picture and name lead to the profile, and so do the Members
   const card = page.locator('[role="tooltip"]:visible');
   await expect(card).toBeVisible();
   await card.getByRole("img", { name: "E2E User" }).click();
-  await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/people\/[a-z0-9-]+-[0-9a-f]{8}$/);
 });
 
 test('the "Finish your profile" card shows to a new person, "Not now" hides it for good, and it survives a reload', async ({
@@ -223,7 +223,7 @@ test("the back link on a profile goes back to where you came from, and to Member
   await page.getByRole("button", { name: "Comment", exact: true }).click();
   const header = page.locator("li", { hasText: "Hello" });
   await header.getByRole("link", { name: "E2E User" }).click();
-  await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/people\/[a-z0-9-]+-[0-9a-f]{8}$/);
   await page.getByRole("link", { name: "Back", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${issueUrl}$`));
 
@@ -237,4 +237,30 @@ test("the back link on a profile goes back to where you came from, and to Member
   await expect(page.getByRole("link", { name: "Back", exact: true })).toHaveCount(0);
   await page.locator("main").getByRole("link", { name: "Members" }).click();
   await expect(page).toHaveURL(/\/members$/);
+});
+
+test("a profile has a readable address; an old id address and a stale name are rewritten to it, and nonsense is 'not found'", async ({ loggedInPage: page }) => {
+  // Why: /people/<36 characters of id> was the one long address left (ADR 0030 did the projects and issues). The address is now name plus the start of the
+  // id; the id part alone finds the person, so a changed name or an old link still works and is tidied.
+  const { headers, base } = await apiSession(page.request);
+  const members = await (await page.request.get(`${base}/members`, { headers })).json();
+  const me = members.data[0].userId as string;
+  const readable = `/people/e2e-user-${me.slice(0, 8)}`;
+
+  await page.goto(readable);
+  await expect(page.getByRole("heading", { level: 1, name: "E2E User" })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`${readable}$`));
+
+  await page.goto(`/people/${me}`); // an old link with the whole id
+  await expect(page.getByRole("heading", { level: 1, name: "E2E User" })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`${readable}$`));
+
+  await page.goto(`/people/somebody-else-${me.slice(0, 8)}`); // a wrong or old name, the right id part
+  await expect(page.getByRole("heading", { level: 1, name: "E2E User" })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`${readable}$`));
+
+  await page.goto("/people/nobody-here");
+  await expect(page.getByRole("heading", { name: "Person not found" })).toBeVisible();
+  await page.goto("/people/nobody-00000000"); // looks right, but nobody in the organization has that id
+  await expect(page.getByRole("heading", { name: "Person not found" })).toBeVisible();
 });

@@ -117,7 +117,7 @@ test("no link in the app carries a database id: lists, board, sprints, sidebar",
     await page.goto(path);
     await expect(page.getByRole("link", { name: /Website|Alpha/ }).first()).toBeVisible();
     const hrefs = await page.locator("a[href]").evaluateAll((links) => links.map((a) => a.getAttribute("href") ?? ""));
-    const withIds = hrefs.filter((href) => UUID.test(href) && !href.startsWith("/api/") && !href.startsWith("/people/"));
+    const withIds = hrefs.filter((href) => UUID.test(href) && !href.startsWith("/api/"));
     expect(withIds, `${path}: links that still carry an id`).toEqual([]);
   }
 });

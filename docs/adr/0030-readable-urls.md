@@ -47,3 +47,7 @@ keys people already read on cards (`WEB`, `WEB-12`) in the address bar.
   invalidation and socket rooms would see two spellings of one project.
 - **Short random ids or slugs:** a new column and backfill, and no more readable than the key.
 - **Keeping the ids and hiding them with router state:** breaks reload, sharing and Back.
+
+## Amended 2026-10-10 (ADR 0058)
+
+- People got the same treatment: `/people/daniel-okafor-b50fc811` (name for reading, the first 8 characters of the id for finding), with old full-id addresses rewritten. See ADR 0058.

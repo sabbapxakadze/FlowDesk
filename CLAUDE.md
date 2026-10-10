@@ -117,7 +117,7 @@ link on the hover card; photos are re-made on upload (256x256 WebP) and served f
 "Finish your profile" card on Projects invites people with a bare profile (dismissal stored on the account).
 The sprints-page backlog and active sprint are drag-sortable (`backlog_rank`, ADR 0008 amended), and the board and sprints
 page scroll inside tinted lanes (`shared/ui/Lane`, `shared/dnd/multiList`).
-Addresses are readable (ADR 0030): `/projects/WEB`, `/projects/WEB/issues/WEB-12`, `?issue=WEB-12`; ids still resolve and are
+Addresses are readable (ADR 0030, 0058): `/projects/WEB`, `/projects/WEB/issues/WEB-12`, `?issue=WEB-12`, `/people/daniel-okafor-b50fc811` (name for reading, the first 8 characters of the id for finding); ids still resolve and are
 rewritten; ids remain the identity inside the app and the API.
 The app has a motion language (ADR 0029): page fade-and-rise, panel slide, dialog fade-and-grow, rows that open and close,
 button press/spinner/tick, theme cross-fade; all off under reduced motion, and the e2e suite runs with reduced motion on.

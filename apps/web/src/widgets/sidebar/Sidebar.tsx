@@ -4,7 +4,7 @@ import { Link, NavLink, useMatch } from "react-router";
 import { useProjects } from "../../entities/project";
 import { useMembers, useMyRole } from "../../entities/member";
 import { useAuth } from "../../shared/auth/useAuth";
-import { isUuid, projectPath } from "../../shared/lib/paths";
+import { isUuid, personPath, projectPath } from "../../shared/lib/paths";
 import { useSearchPalette } from "../../shared/search-palette/useSearchPalette";
 import { TourButton } from "../../features/app-tour";
 import { Avatar, cn, Skeleton, ThemeSwitch } from "../../shared/ui";
@@ -160,13 +160,14 @@ export function Sidebar({ actions }: { actions?: ReactNode }) {
       <div className="mt-2 flex flex-col gap-0.5 border-t border-[var(--color-border-sidebar)] pt-3">
         <TourButton className={cn(LINK, "w-full text-left")} />
         <SideLink to="/design-system">Design system</SideLink>
+        <SideLink to="/account">Account settings</SideLink>
         <div data-tour="theme-switch" className="px-2.5 pt-2">
           <ThemeSwitch variant="sidebar" />
         </div>
         {user && (
           <div className="flex items-center justify-between gap-2 px-2.5 pt-2 text-sm">
             <NavLink
-              to={`/people/${user.id}`}
+              to={personPath(me?.name ?? user.name, user.id)}
               className="flex min-w-0 items-center gap-2 rounded-sm text-[var(--color-text-sidebar-active)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text-sidebar-active)]"
             >
               <Avatar name={me?.name ?? user.name} src={me?.avatarUrl} size="md" />

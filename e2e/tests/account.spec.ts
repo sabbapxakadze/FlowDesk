@@ -15,7 +15,7 @@ const NEW_PASSWORD = "a-brand-new-pass-1";
 test("Account settings is reached from Edit profile and shows the email, password and timezone sections", async ({ loggedInPage: page }) => {
   // Why: the page needs a way in (profile settings, the owner's idea) and shows the current email and its state.
   await page.goto("/profile");
-  await page.getByRole("link", { name: /Account settings/ }).click();
+  await page.getByRole("main").getByRole("link", { name: /Account settings/ }).click(); // the sidebar has a link of this name too
   await expect(page).toHaveURL(/\/account$/);
   await expect(page.getByRole("heading", { level: 1, name: "Account" })).toBeVisible();
   const email = section(page, "Email");
@@ -192,4 +192,18 @@ test("the timezone can be chosen, shows the time there, is used for the exact ti
   await combobox(page, "Timezone").click();
   await page.getByRole("option", { name: /Browser setting/ }).click();
   await expect(combobox(page, "Timezone")).toContainText("Browser setting");
+});
+
+test("the sidebar has an Account settings link below Design system that opens the account page", async ({ loggedInPage: page }) => {
+  // Why: the account page (email, password, timezone, sign-in methods) was only reachable through Edit profile. It is named "Account settings" so it
+  // is never mistaken for a project's own Settings link, which sits higher in the same sidebar.
+  await page.goto("/projects");
+  const design = page.getByRole("link", { name: "Design system", exact: true });
+  const account = page.getByRole("link", { name: "Account settings", exact: true });
+  await expect(account).toBeVisible();
+  const [designBox, accountBox] = [await design.boundingBox(), await account.boundingBox()];
+  expect(accountBox!.y).toBeGreaterThan(designBox!.y); // below it
+  await account.click();
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(account).toHaveAttribute("aria-current", "page");
 });

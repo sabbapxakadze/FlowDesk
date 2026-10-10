@@ -37,7 +37,7 @@ test("the card's circle shows the photo, opens the person card, and a click goes
   await page.goto("/projects/WEB");
   const card = page.getByRole("listitem").filter({ hasText: "Mine" });
   const circle = card.getByRole("link", { name: "Assigned to E2E User" });
-  await expect(circle).toHaveAttribute("href", `/people/${me}`);
+  await expect(circle).toHaveAttribute("href", `/people/e2e-user-${me.slice(0, 8)}`);
   const photo = circle.locator("img");
   await expect(photo).toHaveAttribute("src", /^\/api\/v1\/avatars\/[a-f0-9]{32}$/);
   await expect.poll(() => photo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBeGreaterThan(0);
@@ -62,7 +62,7 @@ test("the card's circle shows the photo, opens the person card, and a click goes
   await page.keyboard.press("Escape"); // the panel floats over the right edge, where the circle is
   await expect(panel).toHaveCount(0);
   await circle.click();
-  await expect(page).toHaveURL(new RegExp(`/people/${me}$`));
+  await expect(page).toHaveURL(new RegExp(`/people/e2e-user-${me.slice(0, 8)}$`));
 });
 
 test("on the board the circle is a profile link too, and grabbing a card by its circle still drags it", async ({
@@ -89,7 +89,7 @@ test("on the board the circle is a profile link too, and grabbing a card by its 
 
   // A plain click on the circle goes to the profile.
   await column("In progress").getByRole("link", { name: "Assigned to E2E User" }).click();
-  await expect(page).toHaveURL(new RegExp(`/people/${me}$`));
+  await expect(page).toHaveURL(new RegExp(`/people/e2e-user-${me.slice(0, 8)}$`));
 });
 
 test("a drag that starts and ends on the circle does not open the profile", async ({ loggedInPage: page }) => {

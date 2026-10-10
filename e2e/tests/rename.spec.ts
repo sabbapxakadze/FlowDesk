@@ -20,7 +20,7 @@ test("an owner renames a project from its settings, the key stays, a member cann
 
   await page.goto(`/projects/${projectId}`);
   const sidebar = page.getByRole("navigation", { name: "Main" });
-  await sidebar.getByRole("link", { name: "Settings" }).click();
+  await sidebar.getByRole("link", { name: "Settings", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
   await expect(page.getByText("The key cannot be changed")).toBeVisible();
 
@@ -51,7 +51,7 @@ test("an owner renames a project from its settings, the key stays, a member cann
   await membersLoaded;
   const sidebarB = pageB.getByRole("navigation", { name: "Main" });
   await expect(sidebarB.getByRole("link", { name: "Sprints" })).toBeVisible();
-  await expect(sidebarB.getByRole("link", { name: "Settings" })).toHaveCount(0);
+  await expect(sidebarB.getByRole("link", { name: "Settings", exact: true })).toHaveCount(0);
   await pageB.goto(`/projects/${projectId}/settings`);
   await expect(
     pageB.getByText("Only owners and admins can change project settings."),

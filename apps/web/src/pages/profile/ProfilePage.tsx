@@ -1,12 +1,13 @@
 import { Calendar, Mail } from "lucide-react";
-import { Link, useParams } from "react-router";
+import { useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router";
 import type { IssueEvent, Profile, ProfileActivityItem } from "@flowdesk/contracts";
 import { describeEvent } from "../../entities/issue";
-import { ROLE_LABELS } from "../../entities/member";
+import { ROLE_LABELS, useMembers } from "../../entities/member";
 import { useProfile, useProfileActivity } from "../../entities/profile";
 import { ApiError } from "../../shared/api/client";
 import { useAuth } from "../../shared/auth/useAuth";
-import { projectPath } from "../../shared/lib/paths";
+import { parsePersonRef, personPath, projectPath } from "../../shared/lib/paths";
 import {
   Avatar,
   Button,
@@ -139,34 +140,56 @@ function RecentActivity({ organizationId, profile }: { organizationId: string; p
  * is not in it is "not found".
  */
 export function ProfilePage() {
-  const { userId = "" } = useParams();
+  const { person: ref = "" } = useParams();
+  const navigate = useNavigate();
   const { organization, user } = useAuth();
   const organizationId = organization!.id;
-  const profile = useProfile(organizationId, userId);
+
+  // The address names the person as a name plus the first 8 characters of the id (ADR 0058), or by the whole id (an old link). Everything below
+  // works with the full id, found once here from the people of the organization the app already loads.
+  const members = useMembers(organizationId);
+  const parsed = parsePersonRef(ref);
+  const userId =
+    parsed.kind === "uuid"
+      ? parsed.id
+      : parsed.kind === "short"
+        ? (members.data?.find((member) => member.userId.toLowerCase().startsWith(parsed.short))?.userId ?? null)
+        : null;
+  const resolving = parsed.kind === "short" && members.isPending;
+
+  const profile = useProfile(organizationId, userId ?? "", { enabled: userId !== null });
   const isMe = user?.id === userId;
 
-  if (profile.isPending) {
+  // An old address (the whole id) or a stale name is rewritten, once and in place, to the current readable one. The page waits for it.
+  const canonical = profile.isSuccess ? personPath(profile.data.name, profile.data.userId) : null;
+  const needsRewrite = canonical !== null && canonical !== `/people/${ref}`;
+  useEffect(() => {
+    if (needsRewrite && canonical) navigate(canonical, { replace: true });
+  }, [needsRewrite, canonical, navigate]);
+
+  if (resolving || (userId !== null && profile.isPending) || needsRewrite) {
     return (
       <Page>
         <Skeleton className="h-64 w-full" />
       </Page>
     );
   }
-  if (profile.isError) {
-    const notFound = profile.error instanceof ApiError && profile.error.status === 404;
+  if (userId === null || profile.isError) {
+    const notFound = userId === null || (profile.error instanceof ApiError && profile.error.status === 404);
     return (
       <Page>
         <PageHeader title={notFound ? "Person not found" : "Could not load this profile"} back={{ to: "/members", label: "Members", history: true }} />
         <p className={`text-sm ${MUTED}`}>
           {notFound
             ? "This person is not in your organization, or no longer is."
-            : profile.error.message}
+            : profile.error?.message}
         </p>
       </Page>
     );
   }
 
   const person = profile.data;
+  if (person === undefined) return null; // not reachable: the guards above cover loading, not found and errors
   return (
     <Page>
       <PageHeader title={person.name} back={{ to: "/members", label: "Members", history: true }} />

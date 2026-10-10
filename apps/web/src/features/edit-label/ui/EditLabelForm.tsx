@@ -1,17 +1,16 @@
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Label } from "@flowdesk/contracts";
 import { issueKeys } from "../../../entities/issue";
-import { labelKeys } from "../../../entities/label";
+import { LabelBadge, LabelColorPicker, labelKeys } from "../../../entities/label";
 import { Button, ErrorText, Input } from "../../../shared/ui";
 import { updateLabel } from "../api/updateLabel";
 
 type FormValues = { name: string; color: string };
 
 /**
- * Inline edit for one label: a name box and a colour picker. A native
- * <input type="color"> always yields "#rrggbb", which is what the contract
- * accepts. Sends only what changed (the API needs at least one field).
+ * Inline edit for one label: preset colours (and the native picker for others), a name box and a live preview. The colour is always
+ * "#rrggbb", which is what the contract accepts. Sends only what changed (the API needs at least one field).
  */
 export function EditLabelForm({
   organizationId,
@@ -23,9 +22,12 @@ export function EditLabelForm({
   onDone: () => void;
 }) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, control } = useForm<FormValues>({
     defaultValues: { name: label.name, color: label.color.toLowerCase() },
   });
+
+  const color = useWatch({ control, name: "color" });
+  const name = useWatch({ control, name: "name" });
 
   const mutation = useMutation({
     mutationFn: (data: FormValues) =>
@@ -54,17 +56,15 @@ export function EditLabelForm({
       })}
       className="motion-rise-in flex flex-wrap items-center gap-2"
     >
-      <input
-        type="color"
-        aria-label="Label colour"
-        {...register("color")}
-        className="h-8 w-10 cursor-pointer rounded-[var(--radius-control)] border border-[var(--color-border-input)] bg-transparent p-0.5"
-      />
+      <LabelColorPicker value={color} onChange={(next) => setValue("color", next, { shouldDirty: true })} />
       <Input
         {...register("name", { required: true })}
         aria-label="Label name"
         className="w-56"
       />
+      <span className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+        Preview <LabelBadge label={{ name: name.trim() || label.name, color }} />
+      </span>
       <Button type="submit" size="sm" pending={mutation.isPending} variant="success">
         {mutation.isPending ? "Saving…" : "Save"}
       </Button>
