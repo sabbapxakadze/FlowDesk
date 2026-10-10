@@ -24,6 +24,15 @@ projectsRouter.get(
   projectsController.listProjects,
 );
 
+// The numbers behind the Projects page (ADR 0059). Any member who can see projects can see these; "summary" is a fixed word, not a project id.
+projectsRouter.get(
+  "/organizations/:organizationId/projects/summary",
+  requireAuth,
+  requireOrgMembership,
+  requirePermission("view_project"),
+  projectsController.listSummaries,
+);
+
 projectsRouter.post(
   "/organizations/:organizationId/projects",
   requireAuth,

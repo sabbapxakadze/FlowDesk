@@ -84,3 +84,11 @@ test("a label row shows its colour code and the day it was created", async ({ lo
   await expect(row).toContainText("#15803D");
   await expect(row).toContainText(String(new Date().getFullYear()));
 });
+
+test("the New label button sits above the header's line, not on it", async ({ loggedInPage: page }) => {
+  // Why: the same title-row layout as the Projects page; the button needs a little room under it or it sits on the header's line.
+  await page.goto("/labels");
+  const button = (await page.getByRole("button", { name: "New label" }).boundingBox())!;
+  const header = (await page.getByRole("heading", { level: 1, name: "Labels" }).locator("xpath=..").boundingBox())!;
+  expect(header.y + header.height - (button.y + button.height)).toBeGreaterThanOrEqual(4);
+});

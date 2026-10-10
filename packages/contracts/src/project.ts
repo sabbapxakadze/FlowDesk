@@ -76,3 +76,28 @@ export const deleteProjectRequestSchema = z.object({
 });
 
 export type DeleteProjectRequest = z.infer<typeof deleteProjectRequestSchema>;
+
+/**
+ * One project's numbers for the Projects page (ADR 0059), all in one read: the open issues (not done), how many of those are in progress, how many
+ * are overdue (a due day before `today`, not done), how many are done and the total. `activeSprint` is the project's running sprint, if any (a
+ * project has at most one). `lastChangeAt` is the latest change to any of its issues (null for a project with none): a cheap "updated", not a
+ * count of comments.
+ */
+export const projectSummarySchema = z.object({
+  projectId: z.uuid(),
+  open: z.number().int(),
+  inProgress: z.number().int(),
+  overdue: z.number().int(),
+  done: z.number().int(),
+  total: z.number().int(),
+  activeSprint: z.object({ name: z.string(), endDate: z.iso.date().nullable() }).nullable(),
+  lastChangeAt: z.iso.datetime().nullable(),
+});
+export type ProjectSummary = z.infer<typeof projectSummarySchema>;
+
+/** `today` is the caller's own calendar day (ADR 0032), so "overdue" agrees with the markers on the cards; without it the server's UTC day is used. */
+export const projectSummaryQuerySchema = z.object({ today: z.iso.date().optional() });
+export type ProjectSummaryQuery = z.infer<typeof projectSummaryQuerySchema>;
+
+export const listProjectSummariesResponseSchema = z.object({ data: z.array(projectSummarySchema) });
+export type ListProjectSummariesResponse = z.infer<typeof listProjectSummariesResponseSchema>;

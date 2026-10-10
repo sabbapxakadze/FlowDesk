@@ -129,6 +129,7 @@ Comments support @mentions (ADR 0033): type `@` and pick a member; the mentioned
 Board and sprint cards show label pills; the Account page has a "Sign out of all devices" button.
 A project's Issues and Board pages share List / Board tabs in their headers (ADR 0034; one "Issues" sidebar link); merging them into one page is step 2.
 Issues are created with a "New issue" button and popup on both pages (the C key too; ADR 0035); the inline form is gone.
+The Projects page (ADR 0059) is a grid of cards with their numbers (done bar, open / in progress / overdue, the running sprint) from one read, `GET .../projects/summary`; "New project" is a popup for owners and admins.
 The Issues list is one surface of two-line rows under a column header (ADR 0036), stacking by its own width (also beside the side panel); board and sprint cards stay cards.
 The board and sprint cards (and the drag preview) have a colored priority edge, the assignee at the top right and a labels/priority footer (ADR 0037); dragging is unchanged.
 The access token is renewed silently (on a rejected request, and on returning to a tab) and an inactive person is warned and then signed out after 30 minutes (ADR 0038); nobody should see "Invalid or expired access token".

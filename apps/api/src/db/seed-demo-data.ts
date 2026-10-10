@@ -30,7 +30,6 @@ export interface PersonSpec {
   role: Role;
   jobTitle: string;
   bio: string;
-  timezone: string;
 }
 
 export const PEOPLE: Record<PersonKey, PersonSpec> = {
@@ -40,7 +39,6 @@ export const PEOPLE: Record<PersonKey, PersonSpec> = {
     role: "owner",
     jobTitle: "Engineering Manager",
     bio: "I run the product team. Ask me about priorities, sprints, or where the coffee is.",
-    timezone: "America/New_York",
   },
   nino: {
     email: "nino.beridze@flowdesk.test",
@@ -48,7 +46,6 @@ export const PEOPLE: Record<PersonKey, PersonSpec> = {
     role: "admin",
     jobTitle: "Tech Lead",
     bio: "Backend and infrastructure. I review most pull requests before lunch.",
-    timezone: "Asia/Tbilisi",
   },
   marcus: {
     email: "marcus.lee@flowdesk.test",
@@ -56,7 +53,6 @@ export const PEOPLE: Record<PersonKey, PersonSpec> = {
     role: "member",
     jobTitle: "Frontend Engineer",
     bio: "Web and mobile front ends. Performance numbers make me happy.",
-    timezone: "Asia/Singapore",
   },
   sofia: {
     email: "sofia.rossi@flowdesk.test",
@@ -64,7 +60,6 @@ export const PEOPLE: Record<PersonKey, PersonSpec> = {
     role: "member",
     jobTitle: "Product Designer",
     bio: "Design systems, prototypes and the occasional illustration.",
-    timezone: "Europe/Rome",
   },
   daniel: {
     email: "daniel.okafor@flowdesk.test",
@@ -72,7 +67,6 @@ export const PEOPLE: Record<PersonKey, PersonSpec> = {
     role: "viewer",
     jobTitle: "QA Analyst",
     bio: "I read everything and break what I can. Viewer access: I comment, I do not edit.",
-    timezone: "Africa/Lagos",
   },
 };
 

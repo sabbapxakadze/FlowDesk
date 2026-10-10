@@ -1,4 +1,3 @@
-import { useSyncExternalStore } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { NewIssueAnywhere } from "../../features/create-issue";
 import { describeEventFor, useAssignedIssues, useLiveMyWork, useWeekProgress } from "../../entities/issue";
@@ -13,9 +12,10 @@ import { useAuth } from "../../shared/auth/useAuth";
 import { addDays, todayKey } from "../../shared/lib/dueDate";
 import { issuePath } from "../../shared/lib/paths";
 import { useTimezone } from "../../shared/lib/timezone";
-import { Button, EmptyState, ErrorText, Page, ScrollPanel, Skeleton } from "../../shared/ui";
+import { Button, cn, EmptyState, ErrorText, Page, ScrollPanel, Skeleton } from "../../shared/ui";
 import { useIssuePanel } from "../../widgets/issue-detail";
 import { greetingFor, hourIn, longDateIn } from "./lib/greeting";
+import { useElementWidth } from "./lib/useElementWidth";
 import { bucketIssues, mondayOf, summarize, weekStartFromParam } from "./lib/week";
 import { MyWorkHeader } from "./ui/MyWorkHeader";
 import { MyWorkIssuePanel } from "./ui/MyWorkIssuePanel";
@@ -27,20 +27,8 @@ import { WeekAgenda } from "./ui/WeekAgenda";
 const ASSIGNED_LOADED = 50;
 const UNREAD_SHOWN = 5;
 
-const WIDE_QUERY = "(min-width: 1024px)";
-
-/** True from the width where the page is two columns (Tailwind's `lg`): there the columns scroll inside the window; below it the page just scrolls. */
-function useIsWide(): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
-      const media = window.matchMedia(WIDE_QUERY);
-      media.addEventListener("change", onChange);
-      return () => media.removeEventListener("change", onChange);
-    },
-    () => window.matchMedia(WIDE_QUERY).matches,
-    () => true,
-  );
-}
+/** The content width from which the page is two columns. Below it (a small window, or the side panel taking most of a medium one) the columns stack and the page scrolls. */
+const TWO_COLUMNS_FROM = 880;
 
 function Heading({ title, count }: { title: string; count?: number }) {
   return (
@@ -54,7 +42,7 @@ function Heading({ title, count }: { title: string; count?: number }) {
 /**
  * "My work", the page `/` opens, as option D2a of the owner's design pass (2026-10-10, ADR 0057): a header with a greeting, one
  * sentence about what is on and the week ring; the week as an agenda (one row per day, the week moved with `?week=`); and on the
- * right what is overdue, the unread notifications and what changed lately. On a wide screen the two columns scroll inside the window, so the page itself does not scroll. The numbers come from two reads: my open issues across
+ * right what is overdue, the unread notifications and what changed lately. Where the content is wide enough for two columns they scroll inside the window, so the page itself does not scroll; narrower (a small window, or the side panel open) they stack and the page scrolls. The numbers come from two reads: my open issues across
  * projects (`GET .../my-work/issues`) and, for the ring, how many of those due in the shown week are done (`.../my-work/week`).
  * "Today" is the person's own calendar day (ADR 0031, 0032). A click on an issue opens the side panel (ADR 0025). It is live: it joins every project's room and re-reads on any issue change.
  */
@@ -64,7 +52,9 @@ export function MyWorkPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const timezone = useTimezone();
-  const wide = useIsWide();
+  // Two columns by the room the content really has (the side panel takes 31rem of it), not by the window width.
+  const [gridRef, gridWidth] = useElementWidth<HTMLDivElement>();
+  const twoColumns = gridWidth >= TWO_COLUMNS_FROM;
   const panel = useIssuePanel();
 
   const now = new Date();
@@ -117,7 +107,7 @@ export function MyWorkPage() {
         action={<NewIssueAnywhere organizationId={organizationId} defaultProjectId={issues?.[0]?.projectId} />}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+      <div ref={gridRef} className={cn("grid gap-6", twoColumns && "grid-cols-[minmax(0,2fr)_minmax(0,1fr)]")}>
         <div>
           {assigned.isPending ? (
             <div className="flex flex-col gap-2" aria-label="Loading your issues">
@@ -139,7 +129,7 @@ export function MyWorkPage() {
                   weekStart={weekStart}
                   today={today}
                   thisMonday={thisMonday}
-                  fit={wide}
+                  fit={twoColumns}
                   onOpen={panel.open}
                   onWeekChange={showWeek}
                 />
@@ -153,7 +143,7 @@ export function MyWorkPage() {
           )}
         </div>
 
-        <ScrollPanel label="Overdue and notifications" fitWindow={wide} bottomGap={40}>
+        <ScrollPanel label="Overdue and notifications" fitWindow={twoColumns} bottomGap={40} className="overflow-x-hidden">
         <div className="space-y-5">
           {buckets && <NeedsYouToday overdue={buckets.overdue} onOpen={panel.open} />}
 

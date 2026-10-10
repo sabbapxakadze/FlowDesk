@@ -4,6 +4,8 @@ import {
   createProjectResponseSchema,
   deleteProjectRequestSchema,
   listProjectsResponseSchema,
+  listProjectSummariesResponseSchema,
+  projectSummaryQuerySchema,
   updateProjectRequestSchema,
   updateProjectResponseSchema,
 } from "@flowdesk/contracts";
@@ -122,4 +124,20 @@ export async function deleteProject(req: Request, res: Response) {
   }
 
   res.status(204).end();
+}
+
+export async function listSummaries(req: Request, res: Response) {
+  if (!req.ctx) {
+    throw new Error("listSummaries requires requireOrgMembership to have run first");
+  }
+  const parsed = projectSummaryQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    throw new AppError("validation_error", 400, "Invalid query", parsed.error.flatten().fieldErrors);
+  }
+  const rows = await projectsService.listSummaries(req.ctx.organizationId, parsed.data.today);
+  res.json(
+    listProjectSummariesResponseSchema.parse({
+      data: rows.map((row) => ({ ...row, lastChangeAt: row.lastChangeAt ? row.lastChangeAt.toISOString() : null })),
+    }),
+  );
 }

@@ -103,3 +103,13 @@ export async function deleteProject(input: {
   for (const userId of result.affectedUserIds) broadcastNotificationCreated(userId);
   return { status: "deleted" } as const;
 }
+
+/** The Projects page's numbers: counts and the latest change per project, with the running sprint added. `today` defaults to the server's UTC day. */
+export async function listSummaries(organizationId: string, today: string = new Date().toISOString().slice(0, 10)) {
+  const [rows, active] = await Promise.all([
+    projectsRepository.summarizeByOrganization(organizationId, today),
+    projectsRepository.listActiveSprints(organizationId),
+  ]);
+  const sprintByProject = new Map(active.map((sprint) => [sprint.projectId, { name: sprint.name, endDate: sprint.endDate }]));
+  return rows.map((row) => ({ ...row, activeSprint: sprintByProject.get(row.projectId) ?? null }));
+}

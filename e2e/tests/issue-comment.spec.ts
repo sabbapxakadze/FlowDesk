@@ -5,6 +5,7 @@ test("create a project and an issue, then post, edit and delete a comment", asyn
 }) => {
   // Why: the core flow a team uses all day, end to end through the real UI,
   // including the comment edit/delete behaviour added in Phase 8.5 slice 1.
+  await page.getByRole("button", { name: "New project" }).click();
   await page.getByLabel("Name", { exact: true }).fill("Website");
   await page.getByLabel("Key").fill("WEB");
   await page.getByRole("button", { name: "Add project" }).click();

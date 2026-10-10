@@ -210,3 +210,16 @@ describe("demo: what a demo copy may not do", () => {
     expect(change.status).toBe(200);
   });
 });
+
+describe("demo: times are shown in the visitor's own timezone", () => {
+  it("signs the visitor in with no saved timezone, and nobody in the copy has one", async () => {
+    // Why: the demo people used to carry made-up zones (the visitor, the owner of the copy, was in New York), so a visitor saw every time in a zone that was not theirs.
+    // A null timezone means "the browser's" (ADR 0031), which is what a visitor expects.
+    env.DEMO_ENABLED = "true";
+    const res = await request(app).post("/api/v1/demo/start").expect(201);
+    expect(res.body.user.timezone).toBeNull();
+    const people = await db.select({ email: users.email, timezone: users.timezone }).from(users).where(like(users.email, "%@demo.flowdesk.test"));
+    expect(people).toHaveLength(5);
+    expect(people.filter((person) => person.timezone !== null)).toEqual([]);
+  });
+});

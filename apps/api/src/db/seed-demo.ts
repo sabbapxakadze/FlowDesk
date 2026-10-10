@@ -213,7 +213,7 @@ async function buildDemoOrganization(
           name: person.name,
           jobTitle: person.jobTitle,
           bio: person.bio,
-          timezone: person.timezone,
+          // No saved timezone: every time shows in the viewer's own zone (the browser's), not in a made-up one.
           emailVerifiedAt: ago(joinedAgo[key]),
           profileNudgeDismissedAt: ago(joinedAgo[key] - 1),
           tourSeenAt: ago(joinedAgo[key] - 1), // the demo starts its own tour; nobody in it should get a second one
@@ -227,7 +227,7 @@ async function buildDemoOrganization(
             name: person.name,
             jobTitle: person.jobTitle,
             bio: person.bio,
-            timezone: person.timezone,
+            timezone: null, // back to "the browser's" on a re-run of the seed
             emailVerifiedAt: ago(joinedAgo[key]),
           },
         })

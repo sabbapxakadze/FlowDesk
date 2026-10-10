@@ -30,7 +30,6 @@ test("pressing Submit on an empty inline create form moves nothing: not the labe
   });
 
   const forms = [
-    { url: "/projects", submit: "Add project", error: "Name is required" },
     { url: `/projects/${projectId}/sprints`, submit: "Create sprint", error: "Name is required" },
   ];
   for (const { url, submit, error } of forms) {

@@ -44,3 +44,9 @@ very good, testable data.
 ## Noted 2026-10-07 (ADR 0044)
 
 The same builder now also makes the private, passwordless, self-deleting copies of "Try the demo" (`createDemoCopy`); `seedDemo` and its fixed `demo@flowdesk.test` login are unchanged and stay for development. The 14 seed tests passed unchanged after the refactor.
+
+## Amended 2026-10-11: no fixed timezones
+
+The five people had saved timezones (New York, Tbilisi, Singapore, Rome, Lagos) "to look real". Someone who pressed "Try the demo" is signed in as the copy's owner, so they saw every time in New York, not in their own zone (the owner noticed
+on the live site). The seed no longer sets one, and a re-run of `pnpm db:seed:demo` sets it back to none (null means "the browser's", ADR 0031). Nobody else sees another person's timezone, so nothing about the demo's realism is lost.
+An API test (`demo.http.test.ts`) checks that a started copy signs the visitor in with no timezone and that none of its five people has one. Copies already alive on the live site keep New York until they expire (two hours).

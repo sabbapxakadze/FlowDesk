@@ -12,7 +12,7 @@ const at = (day: string) => new Date(`${day}T00:00:00Z`);
 
 function TileGrid({ children }: { children: ReactNode }) {
   // A lone tile takes the whole row (two columns), so a long title is not squeezed into half of it.
-  return <ul className="grid flex-1 gap-2 sm:grid-cols-2 [&>li:only-child]:sm:col-span-2">{children}</ul>;
+  return <ul className="grid flex-1 gap-2 @2xl:grid-cols-2 [&>li:only-child]:@2xl:col-span-2">{children}</ul>;
 }
 
 /**
@@ -65,7 +65,7 @@ export function WeekAgenda({
         </div>
       </div>
 
-      <ScrollPanel label="Week and issues" fitWindow={fit} bottomGap={40}>
+      <ScrollPanel label="Week and issues" fitWindow={fit} bottomGap={40} className="@container overflow-x-hidden">
       <div className="space-y-2">
         {days.map((day) => {
           const issues = buckets.byDay.get(day) ?? [];

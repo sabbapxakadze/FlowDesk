@@ -72,3 +72,11 @@ dropped), the page must not scroll (its lists scroll inside their own areas), an
 - The e2e run logged "ResizeObserver loop completed with undelivered notifications" from Vite's client. **Fixed later the same day:** `ScrollPanel`'s re-fit now runs in the next animation frame
   instead of inside the observer's own callback (its likely cause, not isolated by a separate test). A 4.3 minute run of 57 tests that used to show the message several times showed it none.
 - Behind the panel the page still scrolls its own lists; keyboard focus handling is the panel's (ADR 0025).
+
+## Amended 2026-10-11: two columns by the content's width, not the window's
+
+The owner showed My work at about 1270 CSS pixels with the side panel open: the page chose two columns because the WINDOW was at least 1024 wide, but the panel (31rem) takes most of the rest, so each column got a few hundred
+pixels, titles broke after a word and the lists grew sideways scrollbars. The page now measures the width of its own content (`useElementWidth`, a ResizeObserver on the grid) and uses two columns only from 880px of it
+(`TWO_COLUMNS_FROM`); narrower, the columns stack, the lists stop scrolling inside the window (the page scrolls), and the agenda's tile grid uses a container query (`@2xl`) so two tiles sit side by side only when the row is wide.
+Both lists also hide sideways overflow. e2e (`my-work.spec.ts`): at 1270x850 with the panel open the two areas share a left edge, are at least 380px wide and do not scroll sideways; at 1440x850 they sit side by side. Breaking it on
+purpose (two columns forced) failed that test. **Not checked:** other pages at such widths (the Issues list already lays out by its own width, ADR 0036; the board, profile and analytics were not looked at).

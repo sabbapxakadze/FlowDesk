@@ -262,3 +262,34 @@ test("a change made anywhere shows on My work at once, with no reload", async ({
   expect(renamed.status()).toBe(200);
   await expect(agenda.getByRole("link", { name: /Second, renamed/ })).toBeVisible();
 });
+
+test("with the side panel open on a medium window the columns stack instead of being squeezed, with nothing scrolling sideways", async ({ loggedInPage: page }) => {
+  // Why: the page chose two columns by the window's width, so at about 1270px with the 31rem side panel open each column got a few hundred pixels:
+  // titles broke after a word and every list grew a sideways scrollbar. It now chooses by the width its content really has.
+  const { projectId, issueIds } = await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: ["A fairly long issue title that needs room to read properly"] });
+  const { me } = await myId(page);
+  await assign(page, projectId, issueIds[0]!, me, undefined, await browserDay(page, -1));
+  const boxes = async () => {
+    const agenda = page.getByRole("group", { name: "Week and issues" });
+    const side = page.getByRole("group", { name: "Overdue and notifications" });
+    await expect(agenda).toBeVisible();
+    await expect(side).toBeVisible();
+    return { agenda: (await agenda.boundingBox())!, side: (await side.boundingBox())!, agendaEl: agenda, sideEl: side };
+  };
+  const noSidewaysScroll = (element: import("@playwright/test").Locator) => element.evaluate((node) => node.scrollWidth <= node.clientWidth);
+
+  await page.setViewportSize({ width: 1270, height: 850 });
+  await page.goto("/?issue=WEB-1");
+  await expect(page.getByRole("dialog", { name: "Issue", exact: true })).toBeVisible();
+  const narrow = await boxes();
+  expect(narrow.side.x).toBeCloseTo(narrow.agenda.x, 0); // stacked: the same left edge
+  expect(narrow.side.y).toBeGreaterThan(narrow.agenda.y);
+  expect(narrow.agenda.width).toBeGreaterThan(380);
+  expect(await noSidewaysScroll(narrow.agendaEl)).toBe(true);
+  expect(await noSidewaysScroll(narrow.sideEl)).toBe(true);
+
+  await page.setViewportSize({ width: 1440, height: 850 });
+  await page.goto("/");
+  const wide = await boxes();
+  expect(wide.side.x).toBeGreaterThan(wide.agenda.x + wide.agenda.width - 1); // two columns, side by side
+});

@@ -1,6 +1,6 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, max, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { attachments, issueEvents, issues, projects } from "../../db/schema/index.js";
+import { attachments, issueEvents, issues, projects, sprints } from "../../db/schema/index.js";
 import * as auditRepository from "../audit/audit.repository.js";
 
 /**
@@ -136,4 +136,34 @@ export async function remove(input: { organizationId: string; projectId: string;
       affectedUserIds: [...affected],
     };
   });
+}
+
+/**
+ * The numbers behind the Projects page: for every project of the organization, its issue counts by state and the latest change, in one grouped query
+ * (a project with no issues still comes back, with zeros: it is the LEFT side of the join). Scoped through the project's organization; issues belong to a
+ * project, so nothing of another organization can be counted. "Overdue" is a due day before `today` on an issue that is not done.
+ */
+export async function summarizeByOrganization(organizationId: string, today: string) {
+  return db
+    .select({
+      projectId: projects.id,
+      open: sql<number>`count(${issues.id}) filter (where ${issues.status} <> 'done')`.mapWith(Number),
+      inProgress: sql<number>`count(${issues.id}) filter (where ${issues.status} = 'in_progress')`.mapWith(Number),
+      overdue: sql<number>`count(${issues.id}) filter (where ${issues.status} <> 'done' and ${issues.dueDate} < ${today})`.mapWith(Number),
+      done: sql<number>`count(${issues.id}) filter (where ${issues.status} = 'done')`.mapWith(Number),
+      total: sql<number>`count(${issues.id})`.mapWith(Number),
+      lastChangeAt: max(issues.updatedAt),
+    })
+    .from(projects)
+    .leftJoin(issues, eq(issues.projectId, projects.id))
+    .where(eq(projects.organizationId, organizationId))
+    .groupBy(projects.id);
+}
+
+/** The running sprint of each project that has one (the database allows at most one per project, ADR 0008). */
+export async function listActiveSprints(organizationId: string) {
+  return db
+    .select({ projectId: sprints.projectId, name: sprints.name, endDate: sprints.endDate })
+    .from(sprints)
+    .where(and(eq(sprints.organizationId, organizationId), eq(sprints.status, "active")));
 }

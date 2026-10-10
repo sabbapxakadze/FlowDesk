@@ -395,6 +395,7 @@ test.describe("with animations on", () => {
     await expect(page.locator("main ul li")).toHaveCount(1);
     expect(await rowAnimations(page)).toEqual([]); // the first load is not a change
 
+    await page.getByRole("button", { name: "New project" }).click();
     await page.getByPlaceholder("Website", { exact: true }).fill("Second");
     await page.getByPlaceholder("WEB", { exact: true }).fill("SEC");
     await page.getByRole("button", { name: /Add project/ }).click();
@@ -516,6 +517,7 @@ test.describe("with reduced motion", () => {
     await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: [] });
     await page.goto("/projects");
     await expect(page.locator("main ul li")).toHaveCount(1);
+    await page.getByRole("button", { name: "New project" }).click();
     await page.getByPlaceholder("Website", { exact: true }).fill("Second");
     await page.getByPlaceholder("WEB", { exact: true }).fill("SEC");
     await page.getByRole("button", { name: /Add project/ }).click();

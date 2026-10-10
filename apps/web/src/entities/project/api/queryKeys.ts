@@ -8,4 +8,6 @@
 export const projectKeys = {
   all: ["organizations", "projects"] as const,
   list: (organizationId: string) => [...projectKeys.all, organizationId] as const,
+  // The Projects page's numbers (ADR 0059): under `list`, so creating, renaming or deleting a project (which invalidate `list`) refreshes them too.
+  summaries: (organizationId: string) => [...projectKeys.list(organizationId), "summaries"] as const,
 };
