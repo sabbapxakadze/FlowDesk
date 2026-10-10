@@ -23,6 +23,7 @@ import { issuePath, projectPath } from "../../shared/lib/paths";
 import {
   Button,
   buttonVariants,
+  Card,
   DueDate,
   IconButton,
   Page,
@@ -31,6 +32,7 @@ import {
   ScrollPanel,
   Skeleton,
   StatusBadge,
+  Time,
   useAnimatedList,
   useRowMotionProps,
   type RowState,
@@ -116,7 +118,19 @@ export function IssueFrame({
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--color-bg-page)] p-4">{children}</div>
     </>
   ) : (
-    <Page>{children}</Page>
+    <Page>
+      <div className="mx-auto max-w-3xl">{children}</div>
+    </Page>
+  );
+}
+
+/** One labelled value of the full page's properties card. */
+function Property({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="mb-1 text-xs text-[var(--color-text-muted)]">{label}</dt>
+      <dd className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">{children}</dd>
+    </div>
   );
 }
 
@@ -281,7 +295,7 @@ export function IssueDetail({
     return frame(<p className="text-[var(--color-text-danger)]">Issue not found.</p>);
   }
 
-  const header = (title: string, children?: ReactNode) =>
+  const header = (title: string, children?: ReactNode, aside?: ReactNode) =>
     panel ? (
       <header className="mb-4">
         <h2 className="font-display text-xl leading-tight">{title}</h2>
@@ -294,6 +308,7 @@ export function IssueDetail({
         back={{ to: projectPath(project.key), label: project.name, history: true }}
         eyebrow={`${project.key}-${issue.number}`}
         title={title}
+        aside={aside}
       >
         {children}
       </PageHeader>
@@ -311,56 +326,135 @@ export function IssueDetail({
           onConflict={() => setShowConflictNotice(true)}
         />
       )}
-      {header(
-        issue.title,
-        <>
-          <div className="flex items-center gap-3">
-            <StatusBadge status={issue.status} />
-            <PriorityBadge priority={issue.priority} />
-            <DueDate dueDate={issue.dueDate} done={issue.status === "done"} />
-            {nameOf(issue.assigneeId) && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
-                <PersonName
-                  organizationId={organization!.id}
-                  userId={issue.assigneeId!}
-                  name={nameOf(issue.assigneeId)!}
-                  withAvatar
-                />
-              </span>
-            )}
-            <Button
-              type="button"
-              variant="link"
-              onClick={() => {
-                setShowConflictNotice(false);
-                setIsEditing(true);
-              }}
-            >
-              Edit
-            </Button>
-          </div>
-          {issueLabels && issueLabels.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1" aria-label="Labels" role="group">
-              {issueLabels.map((label) => (
-                <LabelBadge key={label.id} label={label} />
-              ))}
+      {panel ? (
+        header(
+          issue.title,
+          <>
+            <div className="flex items-center gap-3">
+              <StatusBadge status={issue.status} />
+              <PriorityBadge priority={issue.priority} />
+              <DueDate dueDate={issue.dueDate} done={issue.status === "done"} />
+              {nameOf(issue.assigneeId) && (
+                <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+                  <PersonName
+                    organizationId={organization!.id}
+                    userId={issue.assigneeId!}
+                    name={nameOf(issue.assigneeId)!}
+                    withAvatar
+                  />
+                </span>
+              )}
+              <Button
+                type="button"
+                variant="link"
+                onClick={() => {
+                  setShowConflictNotice(false);
+                  setIsEditing(true);
+                }}
+              >
+                Edit
+              </Button>
             </div>
-          )}
-          {otherViewers.length > 0 && (
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+            {issueLabels && issueLabels.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1" aria-label="Labels" role="group">
+                {issueLabels.map((label) => (
+                  <LabelBadge key={label.id} label={label} />
+                ))}
+              </div>
+            )}
+            {otherViewers.length > 0 && (
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                <Viewers viewers={otherViewers} organizationId={organization!.id} />
+              </p>
+            )}
+          </>,
+        )
+      ) : (
+        header(
+          issue.title,
+          otherViewers.length > 0 ? (
+            <p className="text-xs text-[var(--color-text-muted)]">
               <Viewers viewers={otherViewers} organizationId={organization!.id} />
             </p>
-          )}
-        </>,
+          ) : undefined,
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setShowConflictNotice(false);
+              setIsEditing(true);
+            }}
+          >
+            Edit
+          </Button>,
+        )
+      )}
+      {!panel && (
+        <Card className="mb-6 p-4">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+            <Property label="Status">
+              <StatusBadge status={issue.status} />
+            </Property>
+            <Property label="Priority">
+              <PriorityBadge priority={issue.priority} />
+            </Property>
+            <Property label="Assignee">
+              {nameOf(issue.assigneeId) ? (
+                <PersonName organizationId={organization!.id} userId={issue.assigneeId!} name={nameOf(issue.assigneeId)!} withAvatar />
+              ) : (
+                <span className="text-[var(--color-text-muted)]">Unassigned</span>
+              )}
+            </Property>
+            <Property label="Due">
+              {issue.dueDate ? <DueDate dueDate={issue.dueDate} done={issue.status === "done"} /> : <span className="text-[var(--color-text-muted)]">No due date</span>}
+            </Property>
+            <Property label="Labels">
+              {issueLabels && issueLabels.length > 0 ? (
+                <div className="flex flex-wrap gap-1" aria-label="Labels" role="group">
+                  {issueLabels.map((label) => (
+                    <LabelBadge key={label.id} label={label} />
+                  ))}
+                </div>
+              ) : (
+                <span className="text-[var(--color-text-muted)]">None</span>
+              )}
+            </Property>
+            <Property label="Reporter">
+              {nameOf(issue.reporterId) ? (
+                <PersonName organizationId={organization!.id} userId={issue.reporterId} name={nameOf(issue.reporterId)!} withAvatar />
+              ) : (
+                <span className="text-[var(--color-text-muted)]">Not in the organization</span>
+              )}
+            </Property>
+            <Property label="Created">
+              <Time iso={issue.createdAt} />
+            </Property>
+            <Property label="Updated">
+              <Time iso={issue.updatedAt} />
+            </Property>
+          </dl>
+        </Card>
       )}
       {showConflictNotice && (
         <p className="mb-4 text-sm text-[var(--color-text-warning)]">
           This issue was updated by someone else — showing the latest version.
         </p>
       )}
-      {issue.description && <p className="mb-4 whitespace-pre-wrap [overflow-wrap:anywhere]">{issue.description}</p>}
+      {panel ? (
+        issue.description && <p className="mb-4 whitespace-pre-wrap [overflow-wrap:anywhere]">{issue.description}</p>
+      ) : (
+        <Card className="mb-2 p-4">
+          <h2 className="mb-2 text-sm font-semibold">Description</h2>
+          {issue.description ? (
+            <p className="text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">{issue.description}</p>
+          ) : (
+            <p className="text-sm text-[var(--color-text-muted)]">No description.</p>
+          )}
+        </Card>
+      )}
 
-      <Heading className="mt-6 mb-2 text-lg font-semibold">Attachments</Heading>
+      <Heading className={panel ? "mt-6 mb-2 text-lg font-semibold" : "mt-6 mb-2 text-sm font-semibold"}>Attachments</Heading>
       <AttachmentList
         organizationId={organization!.id}
         projectId={project.id}
@@ -382,7 +476,7 @@ export function IssueDetail({
         />
       </div>
 
-      <Heading className="mt-6 mb-2 text-lg font-semibold">Activity</Heading>
+      <Heading className={panel ? "mt-6 mb-2 text-lg font-semibold" : "mt-6 mb-2 text-sm font-semibold"}>Activity</Heading>
       <div className="mb-4">
         <CommentForm
           organizationId={organization!.id}
