@@ -30,6 +30,7 @@ import {
   PageHeader,
   PriorityBadge,
   ScrollPanel,
+  ShowMore,
   Skeleton,
   StatusBadge,
   Time,
@@ -381,6 +382,8 @@ export function IssueDetail({
             type="button"
             variant="secondary"
             size="sm"
+            // Room under the button: in the page header's right side it would otherwise sit on the header's line.
+            className="mb-2"
             onClick={() => {
               setShowConflictNotice(false);
               setIsEditing(true);
@@ -447,7 +450,10 @@ export function IssueDetail({
         <Card className="mb-2 p-4">
           <h2 className="mb-2 text-sm font-semibold">Description</h2>
           {issue.description ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">{issue.description}</p>
+            // A very long description is folded (about 15rem) with Show more / Show less, instead of pushing everything below it out of sight.
+            <ShowMore>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">{issue.description}</p>
+            </ShowMore>
           ) : (
             <p className="text-sm text-[var(--color-text-muted)]">No description.</p>
           )}

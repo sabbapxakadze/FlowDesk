@@ -52,3 +52,29 @@ test("the side panel keeps its compact layout: no properties card", async ({ log
   await expect(panel.getByText("Reporter", { exact: true })).toHaveCount(0);
   await expect(panel.locator("dl")).toHaveCount(0);
 });
+
+test("a very long description is folded with Show more and Show less; a short one has no button", async ({ loggedInPage: page }) => {
+  // Why: a description of dozens of lines pushed the attachments and the whole activity out of sight. It is folded (about 15rem) and opens on request.
+  const { projectId, issueIds } = await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: ["Long one", "Short one"] });
+  const { headers, base } = await apiSession(page.request);
+  const long = Array.from({ length: 80 }, (_, index) => `Line number ${index + 1} of a very long description`).join("\n");
+  expect((await page.request.patch(`${base}/projects/${projectId}/issues/${issueIds[0]}`, { headers, data: { version: 1, description: long } })).status()).toBe(200);
+  expect((await page.request.patch(`${base}/projects/${projectId}/issues/${issueIds[1]}`, { headers, data: { version: 1, description: "Just one line." } })).status()).toBe(200);
+
+  await page.goto("/projects/WEB/issues/WEB-1");
+  const more = page.getByRole("button", { name: "Show more" });
+  await expect(more).toBeVisible();
+  const text = page.getByText("Line number 1 of");
+  const folded = await text.locator("xpath=../..").evaluate((node) => node.clientHeight);
+  expect(folded).toBeLessThanOrEqual(241);
+  await more.click();
+  await expect(page.getByRole("button", { name: "Show less" })).toBeVisible();
+  const open = await text.locator("xpath=../..").evaluate((node) => node.clientHeight);
+  expect(open).toBeGreaterThan(folded * 3);
+  await page.getByRole("button", { name: "Show less" }).click();
+  await expect(more).toBeVisible();
+
+  await page.goto("/projects/WEB/issues/WEB-2");
+  await expect(page.getByText("Just one line.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Show more" })).toHaveCount(0);
+});

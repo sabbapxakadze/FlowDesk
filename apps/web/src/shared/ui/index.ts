@@ -41,3 +41,4 @@ export { NavigationNotice } from "./NavigationNotice";
 export { MediaPreviewDialog } from "./MediaPreviewDialog";
 export { SidePanel } from "./SidePanel";
 export { PersonHover } from "./PersonHover";
+export { ShowMore } from "./ShowMore";
