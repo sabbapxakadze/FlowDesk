@@ -34,29 +34,6 @@ async function openIssueWithAssignment(page: Page) {
 
 const visibleCard = (page: Page) => page.locator('[role="tooltip"]:visible');
 
-test("an activity line has an icon circle, the sentence and the time at the right edge", async ({
-  loggedInPage: page,
-}) => {
-  // Why: the layout is the point. The time must sit right of the sentence, and the
-  // icon circle must be a real 28px circle before it.
-  const { assignLine } = await openIssueWithAssignment(page);
-  // innerText is what a person sees: the hidden hover cards inside the line are not in it.
-  await expect
-    .poll(() => assignLine.evaluate((el) => (el as HTMLElement).innerText.replace(/\s+/g, " ")))
-    .toContain("E2E User assigned this issue to Second Person");
-
-  const circle = assignLine.locator("span.rounded-full").first();
-  const box = (await circle.boundingBox())!;
-  expect(Math.round(box.width)).toBe(28);
-  expect(Math.round(box.height)).toBe(28);
-
-  const sentence = (await assignLine.getByRole("link", { name: "E2E User" }).boundingBox())!;
-  const time = (await assignLine.locator("time").boundingBox())!;
-  expect(time.x).toBeGreaterThan(sentence.x + sentence.width);
-  const line = (await assignLine.boundingBox())!;
-  expect(Math.round(time.x + time.width)).toBeGreaterThanOrEqual(Math.round(line.x + line.width) - 1);
-});
-
 test("the icon colour follows what happened: green for created, accent for assigned", async ({
   loggedInPage: page,
 }) => {

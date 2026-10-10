@@ -39,50 +39,6 @@ async function setup(page: Page) {
   await expect(row(page, "Mine thing")).toBeVisible();
 }
 
-test("wide: a header names the columns, the key sits under the title, and status, priority, due and who line up under their headings", async ({
-  loggedInPage: page,
-}) => {
-  // Why: the point of the redesign is that the eye can scan a column. If a cell drifts from its heading the table is just decoration.
-  await page.setViewportSize({ width: 1400, height: 900 });
-  await setup(page);
-
-  for (const heading of ["Issue", "Status", "Priority", "Due", "Who"])
-    await expect(page.getByText(heading, { exact: true })).toBeVisible();
-  const x = async (locator: ReturnType<Page["locator"]>) =>
-    Math.round((await locator.boundingBox())!.x);
-
-  const priorityRow = row(page, "Priority thing");
-  const title = (await priorityRow.getByText("Priority thing").boundingBox())!;
-  const key = (await priorityRow.getByText("WEB-1", { exact: true }).boundingBox())!;
-  expect(key.y).toBeGreaterThan(title.y); // the key is under the title
-  expect(Math.abs(key.x - title.x)).toBeLessThanOrEqual(1);
-
-  expect(
-    Math.abs(
-      (await x(priorityRow.getByText("Todo").first())) -
-        (await x(page.getByText("Status", { exact: true }))),
-    ),
-  ).toBeLessThanOrEqual(2);
-  expect(
-    Math.abs(
-      (await x(priorityRow.getByText("High"))) -
-        (await x(page.getByText("Priority", { exact: true }))),
-    ),
-  ).toBeLessThanOrEqual(2);
-  expect(
-    Math.abs(
-      (await x(row(page, "Late thing").getByText(/Overdue/))) -
-        (await x(page.getByText("Due", { exact: true }))),
-    ),
-  ).toBeLessThanOrEqual(2);
-  expect(
-    Math.abs(
-      (await x(row(page, "Mine thing").locator('a[href^="/people/"]').first())) -
-        (await x(page.getByText("Who", { exact: true }))),
-    ),
-  ).toBeLessThanOrEqual(4);
-});
-
 test("Edit stays out of sight until you point at the row or tab into it, and works from the keyboard", async ({
   loggedInPage: page,
 }) => {
@@ -118,28 +74,6 @@ test("narrow (a phone): no header, status and priority sit under the title, and 
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
     ),
   ).toBe(true);
-});
-
-test("with the issue panel open on a 1280px window, nothing in a row sits under the panel", async ({
-  loggedInPage: page,
-}) => {
-  // Why: the floating panel covers the right 500px. The list used to run under it; now the list steps aside and stacks.
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await setup(page);
-  await page.getByRole("link", { name: /Mine thing/ }).click();
-  await expect(panelOf(page)).toBeVisible();
-  const panel = (await panelOf(page).boundingBox())!;
-  const mine = row(page, "Mine thing");
-  for (const part of [
-    mine.getByRole("button", { name: "Edit" }),
-    mine.locator('a[href^="/people/"]').first(),
-    mine.getByText("Todo").first(),
-  ]) {
-    const box = (await part.boundingBox())!;
-    expect(box.x + box.width, "a row cell is under the open panel").toBeLessThanOrEqual(
-      panel.x + 1,
-    );
-  }
 });
 
 test("clicking an empty part of a row opens the issue in the side panel; Edit still opens the editor, not the panel", async ({

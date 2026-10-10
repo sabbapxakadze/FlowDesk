@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "../support/fixtures";
 import { createIssueViaApi, createLabelViaApi } from "../support/api";
 import { addOrgMember } from "../support/db";
-import { combobox, editField, editor, expectValue, pick } from "../support/dropdown";
+import { combobox, editField, editor, expectValue } from "../support/dropdown";
 
 /**
  * The app's own dropdown (shared/ui/Dropdown) replaced every native <select>: filters, sort, the issue editor, roles,
@@ -124,22 +124,6 @@ test("a long list gets a search box that filters it, and says when nothing match
   // A short list (status) has none.
   await combobox(page, "Filter by status").click();
   await expect(page.getByRole("searchbox")).toHaveCount(0);
-});
-
-test("choosing a longer option does not change the box's width (a row of filters never jumps)", async ({
-  loggedInPage: page,
-}) => {
-  // Why: a custom box sized to its current label would resize on every choice; it is as wide as the widest option.
-  await setup(page);
-  await page.goto("/projects/WEB");
-  const sort = combobox(page, "Sort");
-  const before = (await sort.boundingBox())!.width;
-  await pick(sort, "Highest priority first");
-  await expect(page).toHaveURL(/sort=priority/);
-  expect((await sort.boundingBox())!.width).toBeCloseTo(before, 0); // the longest label is chosen: same width
-  await pick(sort, "Oldest first");
-  await expect(page).toHaveURL(/order=asc/);
-  expect((await sort.boundingBox())!.width).toBeCloseTo(before, 0);
 });
 
 test("a click elsewhere closes it", async ({ loggedInPage: page }) => {

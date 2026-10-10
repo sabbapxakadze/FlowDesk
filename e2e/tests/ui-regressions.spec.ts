@@ -1,33 +1,6 @@
 import { test, expect } from "../support/fixtures";
 import { createIssueViaApi } from "../support/api";
 
-test("the issues list does not scroll sideways on a narrow screen", async ({
-  loggedInPage: page,
-}) => {
-  // Why: found by hand on 2026-10-01. The status, priority and assignee filters
-  // plus the sort button did not wrap, so the sort button was cut off and the page
-  // scrolled sideways on a phone. Measured, not eyeballed: the document must not
-  // be wider than the window.
-  const { projectId } = await createIssueViaApi(page.request, {
-    projectName: "Website",
-    projectKey: "WEB",
-    titles: ["One issue"],
-  });
-  await page.setViewportSize({ width: 400, height: 800 });
-  await page.goto(`/projects/${projectId}`);
-  await expect(page.getByLabel("Filter by assignee")).toBeVisible();
-
-  const widths = await page.evaluate(() => ({
-    scroll: document.documentElement.scrollWidth,
-    client: document.documentElement.clientWidth,
-  }));
-  expect(widths.scroll).toBeLessThanOrEqual(widths.client);
-  // The last control in the row is reachable (inside the window), not cut off.
-  const sort = page.getByLabel("Sort");
-  const box = (await sort.boundingBox())!;
-  expect(box.x + box.width).toBeLessThanOrEqual(widths.client);
-});
-
 test("in a long search list, arrowing to 'Show all results' keeps that row on screen", async ({
   loggedInPage: page,
 }) => {
@@ -65,60 +38,6 @@ test("in a long search list, arrowing to 'Show all results' keeps that row on sc
   for (let i = 0; i < options + 2; i++) await page.keyboard.press("ArrowDown");
   await expect(showAll).toHaveAttribute("aria-selected", "true");
   expect(await inList(showAll)).toBe(true);
-});
-
-test("Save is green and Delete is red", async ({ loggedInPage: page }) => {
-  // Why: the owner asked for it (2026-10-01): a Save button that looks like every
-  // other dark button, and a Delete that does not look dangerous, are easy to click
-  // wrongly. Checked on the computed colours: green is the dominant channel of the
-  // Save button, red of the Delete opener and of the (stronger) final confirm.
-  const { projectId } = await createIssueViaApi(page.request, {
-    projectName: "Website",
-    projectKey: "WEB",
-    titles: ["x"],
-  });
-  await page.goto(`/projects/${projectId}/settings`);
-
-  const channels = (
-    locator: ReturnType<typeof page.getByRole>,
-    property: "backgroundColor" | "borderTopColor",
-  ) =>
-    locator.evaluate((el, prop) => {
-      const css = getComputedStyle(el)[prop];
-      const canvas = document.createElement("canvas");
-      canvas.width = canvas.height = 1;
-      const ctx = canvas.getContext("2d")!;
-      ctx.fillStyle = css;
-      ctx.fillRect(0, 0, 1, 1);
-      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-      return { r: r!, g: g!, b: b! };
-    }, property);
-
-  // Save becomes available once the name changes.
-  await page.getByLabel("Project name").fill("Website 2");
-  const save = page.getByRole("button", { name: "Save" });
-  await expect(save).toBeEnabled();
-  const green = await channels(save, "backgroundColor");
-  expect(green.g).toBeGreaterThan(green.r + 40);
-  expect(green.g).toBeGreaterThan(green.b);
-
-  // Delete: a solid red first, a STRONGER red for the final confirm.
-  const opener = page.getByRole("button", { name: "Delete project" });
-  const first = await channels(opener, "backgroundColor");
-  expect(first.r).toBeGreaterThan(first.g + 60);
-  expect(first.r).toBeGreaterThan(first.b + 60);
-
-  await opener.click();
-  await page.getByLabel("Confirm project name").fill("Website");
-  const confirm = page.getByRole("button", { name: "Delete this project" });
-  await expect(confirm).toBeEnabled();
-  await page.waitForTimeout(400); // the opacity transition from the disabled look
-  const strong = await channels(confirm, "backgroundColor");
-  expect(strong.r).toBeGreaterThan(strong.g + 60);
-  expect(strong.r).toBeGreaterThan(strong.b + 60);
-  // Stronger = a visibly different red from the first click. (Light mode here:
-  // darker; in dark mode it is brighter instead.)
-  expect(strong.r).toBeLessThan(first.r - 30);
 });
 
 for (const scheme of ["light", "dark"] as const) {

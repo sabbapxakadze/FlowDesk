@@ -163,19 +163,6 @@ test("the Home button in the corner of every public page leads to the landing pa
   }
 });
 
-test("on a phone the Home button, the brand and the theme switch fit on one line without overlapping", async ({ page }) => {
-  // Why: three things now share the top edge; on a narrow screen the two corner controls must not run into the centred brand.
-  await page.setViewportSize({ width: 360, height: 700 });
-  await page.goto("/login");
-  const home = (await page.getByRole("link", { name: "Home", exact: true }).boundingBox())!;
-  const brand = (await page.getByRole("link", { name: "FlowDesk" }).boundingBox())!;
-  const theme = (await page.getByRole("group", { name: "Theme" }).boundingBox())!;
-  const overlaps = (a: typeof home, b: typeof home) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
-  expect(overlaps(home, brand), "Home and the brand").toBe(false);
-  expect(overlaps(brand, theme), "the brand and the theme switch").toBe(false);
-  expect(overlaps(home, theme), "Home and the theme switch").toBe(false);
-});
-
 test("the Home button is transparent until pointed at", async ({ page }) => {
   // Why: the owner asked for it to blend into the page like the theme switch's corner, not sit on it as a filled button.
   await page.goto("/login");

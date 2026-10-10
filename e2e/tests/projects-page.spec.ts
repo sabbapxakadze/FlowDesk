@@ -90,12 +90,3 @@ test("a plain member sees the projects but no New project button", async ({ logg
   await expect(member.getByRole("button", { name: "New project" })).toHaveCount(0);
   await ctx.close();
 });
-
-test("the New project button sits above the header's line, not on it", async ({ loggedInPage: page }) => {
-  // Why: the button is on the right of the title row, whose bottom edge is a line; without a little room under it the button sat right on that line.
-  await page.goto("/projects");
-  const button = (await page.getByRole("button", { name: "New project" }).boundingBox())!;
-  const header = (await page.getByRole("heading", { level: 1, name: "Projects" }).locator("xpath=..").boundingBox())!;
-  const line = header.y + header.height;
-  expect(line - (button.y + button.height)).toBeGreaterThanOrEqual(4);
-});

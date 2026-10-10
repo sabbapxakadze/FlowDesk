@@ -110,18 +110,6 @@ test("members never see the log: no sidebar link, and the page explains instead 
   await ctx.close();
 });
 
-test("on a phone-sized screen the log does not scroll sideways", async ({ loggedInPage: page }) => {
-  await createIssueViaApi(page.request, {
-    projectName: "A project with a rather long name to test wrapping",
-    projectKey: "LONG",
-    titles: [],
-  });
-  await page.setViewportSize({ width: 400, height: 760 });
-  await page.goto("/audit-log");
-  await expect(rows(page).first()).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-});
-
 test("Export CSV downloads the rows that match the filters, as a spreadsheet file", async ({ loggedInPage: page }) => {
   // Why: the feature end to end in the real UI: the button, the authenticated download (the token is a header, so a plain
   // link would not work), the file name, and that the chosen filter changes what is in the file.

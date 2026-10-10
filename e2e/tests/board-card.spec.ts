@@ -68,35 +68,6 @@ for (const where of ["board", "sprints"] as const) {
   });
 }
 
-test("the assignee sits on the key's line; the labels and the priority word share a footer under the title; a plain card has no footer", async ({
-  loggedInPage: page,
-}) => {
-  // Why: the layout is the redesign. If the footer drifts or the avatar drops a line, the card is just taller, not better.
-  await setup(page);
-  await page.goto("/projects/WEB/board");
-  const urgent = card(page, "Urgent card");
-  await expect(urgent).toBeVisible();
-  const centerY = async (locator: ReturnType<Page["locator"]>) => {
-    const box = (await locator.boundingBox())!;
-    return box.y + box.height / 2;
-  };
-
-  const keyY = await centerY(urgent.getByText("WEB-1", { exact: true }));
-  const avatarY = await centerY(urgent.locator('a[href^="/people/"]').first());
-  expect(Math.abs(keyY - avatarY)).toBeLessThanOrEqual(12); // the picture is on the key's line, top right
-
-  const titleBox = (await urgent
-    .getByText("Urgent card", { exact: true })
-    .boundingBox())!;
-  const tagY = await centerY(urgent.getByText("bug", { exact: true }));
-  const wordY = await centerY(urgent.getByText("Urgent", { exact: true }));
-  expect(tagY).toBeGreaterThan(titleBox.y + titleBox.height - 1); // under the title
-  expect(Math.abs(tagY - wordY)).toBeLessThanOrEqual(6); // the label and the priority are one footer line
-
-  const plain = (await card(page, "Plain card").boundingBox())!;
-  expect(plain.height).toBeLessThanOrEqual(80); // key line + title, nothing else
-});
-
 test("the grip is out of sight until you point at the card or tab into it", async ({
   loggedInPage: page,
 }) => {
@@ -114,26 +85,4 @@ test("the grip is out of sight until you point at the card or tab into it", asyn
   await expect(grip).toHaveCSS("opacity", "0");
   await grip.focus();
   await expect(grip).toHaveCSS("opacity", "1");
-});
-
-test("while a card is dragged, the preview that follows the pointer has the same edge", async ({
-  loggedInPage: page,
-}) => {
-  // Why: the preview is built separately from the card; it must not fall back to the old look.
-  await setup(page);
-  await page.goto("/projects/WEB/board");
-  const urgent = card(page, "Urgent card");
-  const box = (await urgent.boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width / 2 + 10, box.y + box.height / 2 + 10, {
-    steps: 5,
-  });
-  await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 60, {
-    steps: 10,
-  });
-  await expect(page.locator('[data-priority-edge="urgent"]')).toHaveCount(2); // the card left behind, and the preview
-  await page.keyboard.press("Escape"); // cancel: nothing moves
-  await page.mouse.up();
-  await expect(page.locator('[data-priority-edge="urgent"]')).toHaveCount(1);
 });

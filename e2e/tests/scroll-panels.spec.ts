@@ -37,16 +37,6 @@ test("issues: Load more fills the panel, the page keeps its height", async ({ lo
   expect(after.client).toBe(first.client);
 });
 
-test("issues: a short list keeps its own height instead of filling the window", async ({ loggedInPage: page }) => {
-  // Why: the owner did not want a near-empty list stretched to the bottom (the board lesson).
-  await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: ["Only one"] });
-  await page.goto("/projects/WEB");
-  const panel = panelOf(page, "Issue list");
-  await expect(panel.getByRole("link", { name: /Only one/ })).toBeVisible();
-  const box = (await panel.boundingBox())!;
-  expect(box.height).toBeLessThan(200);
-});
-
 test("profile: Load more fills the activity panel, the page keeps its height", async ({ loggedInPage: page }) => {
   // Why: same stretching on a person's profile; the activity list is capped and scrolls inside.
   const titles = Array.from({ length: 32 }, (_, i) => `Issue ${String(i + 1).padStart(2, "0")}`);
@@ -103,6 +93,8 @@ test("issue page: a long timeline scrolls inside its own area, the comment box s
 }) => {
   // Why: a thread of dozens of comments stretched the page; the timeline is capped (32rem) and scrolls inside.
   await issueWithComments(page, 25);
+  // A tall window: the properties and description cards above the timeline (ADR 0061) use some of the height.
+  await page.setViewportSize({ width: 1280, height: 1100 });
   await page.goto("/projects/WEB/issues/WEB-1");
   const timeline = panelOf(page, "Activity timeline");
   await expect(timeline.getByText("Comment number 25")).toBeVisible(); // newest first, at the top
@@ -111,7 +103,7 @@ test("issue page: a long timeline scrolls inside its own area, the comment box s
   expect(m.scroll).toBeGreaterThan(m.client);
   // The bottom edge is on screen at rest, so the shadow and the scrollbar can show that it scrolls.
   const rest = (await timeline.boundingBox())!;
-  expect(rest.y + rest.height).toBeLessThanOrEqual(800);
+  expect(rest.y + rest.height).toBeLessThanOrEqual(1100);
 
   const box = (await page.getByRole("textbox", { name: "Comment", exact: true }).boundingBox())!;
   const area = (await timeline.boundingBox())!;

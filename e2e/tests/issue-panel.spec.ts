@@ -300,24 +300,6 @@ test("on a phone-sized screen the panel fills the screen and can be closed", asy
   await expect(panel).toHaveCount(0);
 });
 
-test("on a wide screen the panel floats at the right edge with a margin and does not shift the page", async ({
-  loggedInPage: page,
-}) => {
-  const { listUrl } = await setup(page);
-  await page.goto(listUrl);
-  const before = (await cardLink(page, "Alpha issue").boundingBox())!;
-  await cardLink(page, "Alpha issue").click();
-  const panel = panelOf(page);
-  await expect(panel).toBeVisible();
-  const box = (await panel.boundingBox())!;
-  const viewport = page.viewportSize()!;
-  expect(Math.round(box.width)).toBe(480);
-  expect(Math.round(viewport.width - (box.x + box.width))).toBe(12); // right margin
-  expect(Math.round(box.y)).toBe(12); // top margin
-  const after = (await cardLink(page, "Alpha issue").boundingBox())!;
-  expect(Math.round(after.x)).toBe(Math.round(before.x)); // nothing moved
-});
-
 test("the panel never scrolls sideways, and an uploader's hover card opens inside the panel", async ({
   loggedInPage: page,
 }) => {

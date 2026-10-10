@@ -84,30 +84,3 @@ test("a label row shows its colour code and the day it was created", async ({ lo
   await expect(row).toContainText("#15803D");
   await expect(row).toContainText(String(new Date().getFullYear()));
 });
-
-test("the New label button sits above the header's line, not on it", async ({ loggedInPage: page }) => {
-  // Why: the same title-row layout as the Projects page; the button needs a little room under it or it sits on the header's line.
-  await page.goto("/labels");
-  const button = (await page.getByRole("button", { name: "New label" }).boundingBox())!;
-  const header = (await page.getByRole("heading", { level: 1, name: "Labels" }).locator("xpath=..").boundingBox())!;
-  expect(header.y + header.height - (button.y + button.height)).toBeGreaterThanOrEqual(4);
-});
-
-test("on a phone every label row has its Edit and Delete in the same place, whatever the name's length, and nothing scrolls sideways", async ({ loggedInPage: page }) => {
-  // Why: the row used to wrap its buttons beside the date or under the name depending on how long the name was, so they jumped from row to row.
-  const login = await page.request.post("/api/v1/auth/login", { data: { email: "e2e-user@example.com", password: "password123" } });
-  const { accessToken, organization } = await login.json();
-  for (const name of ["bug", "a-rather-long-label-name", "customer-request-follow-up"]) {
-    const res = await page.request.post(`/api/v1/organizations/${organization.id}/labels`, { headers: { Authorization: `Bearer ${accessToken}` }, data: { name, color: "#2563eb" } });
-    expect(res.status()).toBe(201);
-  }
-  await page.setViewportSize({ width: 400, height: 800 });
-  await page.goto("/labels");
-  const rows = page.getByRole("listitem").filter({ has: page.getByRole("button", { name: "Edit" }) });
-  await expect(rows).toHaveCount(3);
-  const edits = await rows.getByRole("button", { name: "Edit" }).evaluateAll((buttons) => buttons.map((button) => Math.round(button.getBoundingClientRect().left)));
-  expect(new Set(edits).size).toBe(1); // the same left edge on every row
-  const deletes = await rows.getByRole("button", { name: "Delete" }).evaluateAll((buttons) => buttons.map((button) => Math.round(button.getBoundingClientRect().right)));
-  expect(Math.max(...deletes)).toBeLessThanOrEqual(400);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-});

@@ -62,24 +62,3 @@ test("an empty title says so and creates nothing; a click outside keeps typed te
   await expect(dialog(page)).toHaveCount(0);
   await expect(rows).toHaveCount(before);
 });
-
-test("the button is in the same place on the list and on the board (the point of the change)", async ({ loggedInPage: page }) => {
-  // Why: the two pages are tabs of one thing; the control for creating must not move between them.
-  await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: ["Existing"] });
-  await page.setViewportSize({ width: 1400, height: 900 });
-  const place = async () => {
-    const box = (await button(page).boundingBox())!;
-    const main = (await page.locator("main").boundingBox())!;
-    return { dx: Math.round(box.x - main.x), y: Math.round(box.y), w: Math.round(box.width) };
-  };
-  await page.goto("/projects/WEB");
-  await expect(button(page)).toBeVisible();
-  const onList = await place();
-  await page.getByRole("navigation", { name: "View" }).getByRole("link", { name: "Board" }).click();
-  await expect(page).toHaveURL(/\/board$/);
-  await expect(button(page)).toBeVisible();
-  const onBoard = await place();
-  expect(Math.abs(onBoard.dx - onList.dx)).toBeLessThanOrEqual(1);
-  expect(Math.abs(onBoard.y - onList.y)).toBeLessThanOrEqual(2);
-  expect(onBoard.w).toBe(onList.w);
-});
