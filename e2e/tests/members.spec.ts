@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect, logInThroughForm, TEST_USER } from "../support/fixtures";
 import { addOrgMember } from "../support/db";
-import { inviteRole, pick } from "../support/dropdown";
+import { combobox, inviteRole, pick } from "../support/dropdown";
 
 const membersList = (page: Page) => page.getByRole("list", { name: "Members", exact: true });
 const pendingList = (page: Page) => page.getByRole("list", { name: "Pending invitations" });
@@ -157,4 +157,22 @@ test("a broken or missing invitation link shows one plain message and no form", 
   await page.goto("/invite");
   await expect(page.getByText("This invitation link is incomplete.")).toBeVisible();
   await expect(page.getByLabel("Password", { exact: true })).toHaveCount(0);
+});
+
+test("the list is grouped by role with the owner first, and changing someone's role moves them to their group", async ({ loggedInPage: page }) => {
+  // Why: the grouping is the point of the page (ADR 0060). A group with nobody in it is not drawn, and a role change must move the person, not just relabel them.
+  await addOrgMember(TEST_USER.email, { email: "e2e-second@example.com", name: "Second Person" });
+  await page.goto("/members");
+  const text = async () => (await membersList(page).innerText()).toLowerCase();
+  let t = await text();
+  expect(t.indexOf("owner and admins")).toBeGreaterThanOrEqual(0);
+  expect(t.indexOf("e2e user")).toBeGreaterThan(t.indexOf("owner and admins"));
+  expect(t.indexOf("second person")).toBeGreaterThan(t.indexOf("members", t.indexOf("e2e user")));
+  expect(t).not.toContain("viewers"); // nobody is a viewer yet
+
+  await pick(combobox(page, "Role of Second Person"), "Viewer");
+  await expect(membersList(page)).toContainText(/viewers/i);
+  t = await text();
+  expect(t.indexOf("viewers")).toBeLessThan(t.indexOf("second person"));
+  expect(t.indexOf("members", t.indexOf("e2e user"))).toBe(-1); // the Members group is empty now, so it is gone
 });

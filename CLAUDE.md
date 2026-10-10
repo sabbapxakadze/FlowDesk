@@ -127,6 +127,7 @@ Issues have an optional due date (a calendar day, ADR 0032): a chip with an "Ove
 Overdue / No due date filter on the Issues page.
 Comments support @mentions (ADR 0033): type `@` and pick a member; the mentioned person is notified (also by an edit that adds them) and shown as a profile link.
 Board and sprint cards show label pills; the Account page has a "Sign out of all devices" button.
+The Members page lists people grouped by role (Owner and admins, Members, Viewers; ADR 0060) with the invitation list in the same style.
 A project's Issues and Board pages share List / Board tabs in their headers (ADR 0034; one "Issues" sidebar link); merging them into one page is step 2.
 Issues are created with a "New issue" button and popup on both pages (the C key too; ADR 0035); the inline form is gone.
 The Projects page (ADR 0059) is a grid of cards with their numbers (done bar, open / in progress / overdue, the running sprint) from one read, `GET .../projects/summary`; "New project" is a popup for owners and admins.

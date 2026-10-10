@@ -30,16 +30,20 @@ export function LabelRow({
   return (
     <li ref={ref} style={style} className={`px-3.5 py-2.5 ${className}`}>
       {editing ?? (
-        <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 @2xl:grid ${LABEL_COLUMNS}`}>
+        // Narrow (a phone): the pill on the left with Edit and Delete on the right, always on the same line, and the colour and date as a small line under the pill.
+        // Wide: the four columns of the header strip. The meta wrapper becomes `contents` there, so the colour and the date are grid columns of their own.
+        <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 ${LABEL_COLUMNS}`}>
           <div className="min-w-0">
             <LabelBadge label={label} />
           </div>
-          <span className="flex items-center gap-2 font-mono text-xs text-[var(--color-text-muted)]">
-            <span aria-hidden="true" className="h-3 w-3 rounded-full border border-[var(--color-border-default)]" style={{ backgroundColor: label.color }} />
-            {label.color.toUpperCase()}
-          </span>
-          <span className="text-xs text-[var(--color-text-muted)]">{created}</span>
-          <div className="flex items-start gap-2">{actions}</div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[var(--color-text-muted)] @2xl:contents">
+            <span className="flex items-center gap-2 font-mono">
+              <span aria-hidden="true" className="h-3 w-3 rounded-full border border-[var(--color-border-default)]" style={{ backgroundColor: label.color }} />
+              {label.color.toUpperCase()}
+            </span>
+            <span>{created}</span>
+          </div>
+          <div className="col-start-2 row-span-2 row-start-1 flex items-start gap-2 self-start @2xl:col-auto @2xl:row-auto @2xl:row-span-1 @2xl:self-center">{actions}</div>
         </div>
       )}
     </li>

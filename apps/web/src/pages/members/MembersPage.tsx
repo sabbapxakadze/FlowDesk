@@ -1,25 +1,27 @@
+import type { OrganizationMember } from "@flowdesk/contracts";
 import { useInvitations, useRevokeInvitation } from "../../entities/invitation";
-import { PersonName, ROLE_LABELS, useMembers, useMyRole } from "../../entities/member";
-import { InviteMemberForm, ResendInvitation } from "../../features/invite-member";
-import { MemberControls } from "../../features/manage-member";
+import { useMembers, useMyRole } from "../../entities/member";
+import { InviteMemberForm } from "../../features/invite-member";
 import { useAuth } from "../../shared/auth/useAuth";
-import {
-  Button,
-  Card,
-  EmptyState,
-  ErrorText,
-  Page,
-  PageHeader,
-  Skeleton,
-  Time,
-  useAnimatedList,
-} from "../../shared/ui";
+import { EmptyState, ErrorText, Page, PageHeader, Skeleton, useAnimatedList } from "../../shared/ui";
+import { InvitationRow } from "./ui/InvitationRow";
+import { MemberRow } from "./ui/MemberRow";
+
+/** The groups of the list, in order; a person is in the one that holds their role. Empty groups are not drawn. */
+const GROUPS: { title: string; roles: OrganizationMember["role"][] }[] = [
+  { title: "Owner and admins", roles: ["owner", "admin"] },
+  { title: "Members", roles: ["member"] },
+  { title: "Viewers", roles: ["viewer"] },
+];
+
+const SURFACE = "overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)]";
 
 /**
- * The organization's people and, for owners and admins, who has been invited. Everyone
- * in the organization can see the member list; the invite form and the pending list are
- * for owners and admins only (the API enforces it with manage_members; hiding them here
- * is just so nobody is offered a button that would be refused).
+ * The organization's people, grouped by role (owner's pick C of four mockups, 2026-10-11, ADR 0060), and, for owners and admins, who has been invited.
+ * Everyone in the organization can see the member list; the invite form and the pending list are for owners and admins only (the API enforces it with
+ * manage_members; hiding them here is just so nobody is offered a button that would be refused). No data changed: the same two reads as before.
+ *
+ * One list ("Members") in one bordered surface; each group has a heading row (a presentation row, not a list item, so the list holds only people).
  */
 export function MembersPage() {
   const { organization, user } = useAuth();
@@ -35,47 +37,45 @@ export function MembersPage() {
 
   return (
     <Page>
-      <PageHeader title="Members" />
-      <p className="mb-4 text-sm text-[var(--color-text-muted)]">People in {organization!.name}.</p>
+      <PageHeader title="Members" eyebrow={organization!.name} />
+      <p className="mb-4 text-sm text-[var(--color-text-muted)]">
+        People in {organization!.name}.{members.isSuccess && ` ${members.data.length} ${members.data.length === 1 ? "person" : "people"}.`}
+      </p>
 
       {canManage && <InviteMemberForm organizationId={organizationId} />}
 
       {members.isPending ? (
-        <Skeleton className="h-16 w-full" />
+        <div className={SURFACE}>
+          <Skeleton className="m-4 h-10" />
+          <Skeleton className="m-4 h-10" />
+        </div>
       ) : members.isError ? (
         <ErrorText>Failed to load members: {members.error.message}</ErrorText>
       ) : (
-        <ul aria-label="Members" className="flex flex-col gap-2">
-          {memberRows.map(({ key, item: member, state, index }) => (
-            <Card key={key} as="li" rowState={state} rowIndex={index} className="flex flex-wrap items-center gap-3">
-              <PersonName organizationId={organizationId} userId={member.userId} name={member.name} avatarOnly avatarSize="md" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">
-                  <PersonName organizationId={organizationId} userId={member.userId} name={member.name} />
-                  {member.userId === user?.id && (
-                    <span className="ml-2 text-xs font-normal text-[var(--color-text-muted)]">(you)</span>
-                  )}
-                </p>
-                <p className="truncate text-xs text-[var(--color-text-muted)]">{member.email}</p>
-              </div>
-              <span className="shrink-0 text-xs font-medium">{ROLE_LABELS[member.role]}</span>
-              <span className="hidden shrink-0 text-xs text-[var(--color-text-muted)] sm:inline">
-                Joined <Time iso={member.joinedAt} />
-              </span>
-              {/* Not for yourself and never for the owner: the API refuses both (ADR 0024). */}
-              {canManage && member.userId !== user?.id && member.role !== "owner" && (
-                <div className="w-full">
-                  <MemberControls organizationId={organizationId} member={member} />
-                </div>
-              )}
-            </Card>
-          ))}
+        <ul aria-label="Members" className={`${SURFACE} divide-y divide-[var(--color-border-default)]`}>
+          {GROUPS.map((group) => {
+            const rows = memberRows
+              .filter((row) => group.roles.includes(row.item.role))
+              .sort((a, b) => Number(b.item.role === "owner") - Number(a.item.role === "owner"));
+            if (rows.length === 0) return null;
+            return [
+              <li key={`group-${group.title}`} role="presentation" className="bg-[var(--color-border-default)]/30 px-4 py-1.5 text-xs font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
+                {group.title} <span className="font-normal">{rows.length}</span>
+              </li>,
+              ...rows.map(({ key, item: member, state, index }) => (
+                <MemberRow key={key} organizationId={organizationId} member={member} isMe={member.userId === user?.id} canManage={canManage} state={state} index={index} />
+              )),
+            ];
+          })}
         </ul>
       )}
 
       {canManage && (
         <section className="mt-8">
-          <h2 className="mb-2 text-lg font-semibold">Pending invitations</h2>
+          <h2 className="mb-2 flex items-baseline gap-2 text-sm font-semibold">
+            Pending invitations
+            {invitations.isSuccess && <span className="font-normal text-[var(--color-text-muted)]">{invitations.data.length}</span>}
+          </h2>
           {invitations.isPending ? (
             <Skeleton className="h-12 w-full" />
           ) : invitations.isError ? (
@@ -83,35 +83,18 @@ export function MembersPage() {
           ) : invitationRows.length === 0 ? (
             <EmptyState block>No pending invitations.</EmptyState>
           ) : (
-            <ul aria-label="Pending invitations" className="flex flex-col gap-2">
+            // Rows are keyed by email, not id: a re-send replaces the row with a new id, and the new link it shows must survive that refetch.
+            <ul aria-label="Pending invitations" className={`${SURFACE} divide-y divide-[var(--color-border-default)]`}>
               {invitationRows.map(({ item: invitation, state, index }) => (
-                // Keyed by email, not id: a re-send replaces the row with a new id, and the
-                // new link it shows must survive that refetch.
-                <Card key={invitation.email} as="li" rowState={state} rowIndex={index} className="flex flex-wrap items-center gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{invitation.email}</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      Invited by {invitation.invitedByName} <Time iso={invitation.createdAt} />
-                      {invitation.expired && (
-                        <span className="ml-2 font-medium text-[var(--color-text-warning)]">Expired</span>
-                      )}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-xs font-medium">{ROLE_LABELS[invitation.role]}</span>
-                  <ResendInvitation
-                    organizationId={organizationId}
-                    invitationId={invitation.id}
-                    email={invitation.email}
-                  />
-                  <Button
-                    type="button"
-                    variant="link"
-                    disabled={revoke.isPending}
-                    onClick={() => revoke.mutate(invitation.id)}
-                  >
-                    Revoke
-                  </Button>
-                </Card>
+                <InvitationRow
+                  key={invitation.email}
+                  organizationId={organizationId}
+                  invitation={invitation}
+                  state={state}
+                  index={index}
+                  revoking={revoke.isPending}
+                  onRevoke={() => revoke.mutate(invitation.id)}
+                />
               ))}
             </ul>
           )}
