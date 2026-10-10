@@ -28,14 +28,15 @@
      (chroma 0), like the rest of the neutral scale. */
   --color-neutral-450: oklch(0.64 0 0);
 
-  /* Dark-theme stops Tailwind's neutral scale does not have (ADR 0017, amended 2026-10-10: the dark theme was lifted from near black to a soft
-     charcoal). Pure gray like the rest. 925 is the sidebar, 775 the panels (lanes, the selected sidebar row), 750 the sidebar's own border, 725
-     borders and chart grid lines (a gray 800 grid would vanish on 800 cards), 475 the borders of controls (3.8:1 against a card). */
+  /* Dark-theme stops Tailwind's neutral scale does not have (ADR 0017, amended twice on 2026-10-10: lifted from near black to a soft charcoal, then
+     pulled back down a little because the lighter page looked hazy). Pure gray like the rest. 925 is the page, 850 the cards, 790 the panels (lanes,
+     the selected sidebar row), 750 borders and chart grid lines (a gray 800 grid would vanish on the cards), 475 the borders of controls (4.2:1
+     against a card). The sidebar is Tailwind's 950 and the sidebar's own border its 800. */
   --color-neutral-475: oklch(0.6 0 0);
-  --color-neutral-725: oklch(0.35 0 0);
   --color-neutral-750: oklch(0.3 0 0);
-  --color-neutral-775: oklch(0.32 0 0);
-  --color-neutral-925: oklch(0.16 0 0);
+  --color-neutral-790: oklch(0.285 0 0);
+  --color-neutral-850: oklch(0.235 0 0);
+  --color-neutral-925: oklch(0.17 0 0);
 
   /* Display serif for page titles and big numbers only (ADR 0013). */
   --font-display: "Newsreader Variable", Georgia, "Times New Roman", serif;

@@ -83,3 +83,26 @@ Five new gray stops were added to `primitives.css`; both dark blocks of `semanti
 **Not checked:** how it looks to a person on real screens in every part of the app (only the browser tests of the dark theme were run), and whether any screen draws a gray straight from the neutral scale instead of a semantic token (none was found by search).
 
 **Follow-up the same day: the public pages keep the old black.** The landing page and the log in and create account pages draw soft coloured ribbons behind them. They glow against near black but look hazy ("foggy", the owner noticed) on the lighter gray. They now use a new token, `--color-bg-backdrop`: the same as the page in the light theme, and the previous near black (neutral-950) in the dark theme (both dark blocks). The app inside is unchanged. Checked: the landing page root and the log in page use the near black (computed colour, and the log in page by eye: deep black with the vivid teal, magenta and indigo glows); the landing page was NOT seen by eye after the change, because the browser tab was in use. The five dark-theme browser specs passed (71) while the change was being made.
+
+## Amended again 2026-10-10 (later the same day): pulled back down a little
+
+The soft charcoal above looked slightly hazy across the whole logged-in app ("a bit fog on the full screen", the owner). Nothing was layered over the page: a scan of every element and its
+`::before` / `::after` in the real app found no overlay, filter, blur or gradient covering the screen, and the only `blur` rules are the login page's glass card and the aurora ribbons. It was
+the colour itself: a lifted black reads as haze. Three versions were rendered side by side on the real board and My work pages (today's, a deeper one, and the colours from before the first
+amendment); the owner saw the haze in today's and not in the deeper one, and chose it. Measured from the screenshots (sRGB levels of 255): page 23 / 15 / 10, card 38 / 30 / 23, lane 51 / 42 / 38.
+
+| Token | First amendment | Now |
+|---|---|---|
+| page | neutral-900 (0.205) | neutral-925 (0.17, was the sidebar's stop) |
+| card (surface) | neutral-800 (0.269) | neutral-850 (0.235, new) |
+| lane, selected sidebar row | neutral-775 (0.32) | neutral-790 (0.285, new) |
+| sidebar | neutral-925 (0.16) | neutral-950 (0.145), still darker than the page |
+| default border, chart grid | neutral-725 (0.35) | neutral-750 (0.30) |
+| sidebar border | neutral-750 (0.30) | neutral-800 (0.269) |
+
+`neutral-725` and `neutral-775` are gone from `primitives.css`; `925` changed value. Every dark background got darker and no text colour changed, so every text contrast can only have risen
+(card against page is 1.19 before and about 1.15 now; the control border against a card goes from 3.8 to about 4.2). The new numbers were calculated, not re-measured in a browser.
+The login, create account and landing pages are unchanged (`--color-bg-backdrop` is still `neutral-950`).
+
+**Not done / not verified:** the landing page's product screenshots (`public/landing/*.jpg`, `pnpm landing:shots`) were taken in the previous charcoal and have not been retaken; whether the
+haze is gone on every screen was judged by the owner on two pages (board, My work) only.

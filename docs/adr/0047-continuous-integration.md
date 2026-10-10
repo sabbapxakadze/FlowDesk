@@ -42,3 +42,8 @@ The first two CI runs each failed one browser test that passes on the owner's ma
 Verified by me: the workflow file is valid YAML, and every command it runs was run from a clean copy of the tracked files (no `.env`, no `node_modules`) with only the environment the workflow sets. Results: install with the frozen lockfile, typecheck, lint, contracts build, the API suite (50 files, 492 tests), `pnpm test:e2e:prod` (4 tests) and e2e shard 1 of 4 (66 tests in 4.8 minutes) all passed. The shard run logs a Resend 401 for every email: that is the dummy key doing its job. The other three shards were not run (shard 1 only proves the command and environment work without a .env).
 
 **Not verified: that GitHub accepts and runs the workflow.** It can only run once the repository is on GitHub, which the owner pushes. Things I could not check here: GitHub's hosted machines having enough memory for the e2e run, Playwright's `--with-deps` install on that image, the service container's health check timing, the real wall time.
+
+## Amended 2026-10-10: the runner is pinned
+
+All jobs of `ci.yml` and the uptime and backup workflows now say `runs-on: ubuntu-24.04` instead of `ubuntu-latest`. GitHub shows a notice that `ubuntu-latest` moves to Ubuntu 26 on 2026-10-19 (the owner saw the notice; the date was not re-checked against GitHub's own announcement). Pinning means a change of machine
+is a commit we make and can revert, not something that happens to a green pipeline overnight. Cost: 24.04 will be retired one day and has to be bumped by hand. Not verified: that the next CI run is green on the pinned label (the label is a documented GitHub-hosted runner name, but the run has not happened yet).

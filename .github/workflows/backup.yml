@@ -20,7 +20,8 @@ permissions:
 jobs:
   dump:
     name: Dump, encrypt, keep
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: GitHub moves that label to a newer Ubuntu on its own schedule, and a CI machine that changes under us is a hard failure to read. Revisit when 24.04 is retired.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       # pg_dump must be at least as new as the server. Neon runs Postgres 18 (set when the project was made); the runner's own client is older.

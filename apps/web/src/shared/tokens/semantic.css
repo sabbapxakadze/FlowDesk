@@ -118,12 +118,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg-page: var(--color-neutral-900);
+    --color-bg-page: var(--color-neutral-925);
     --color-bg-backdrop: var(--color-neutral-950);
-    --color-bg-surface: var(--color-neutral-800);
+    --color-bg-surface: var(--color-neutral-850);
     /* Dark: lighter than the cards (they sit in it like wells), because a lane between the page and the cards
        would be almost the same shade as both. */
-    --color-bg-lane: var(--color-neutral-775);
+    --color-bg-lane: var(--color-neutral-790);
 
     --color-text-default: var(--color-neutral-100);
     --color-text-muted: var(--color-neutral-400);
@@ -150,7 +150,7 @@
     --color-bg-action-danger-strong-hover: var(--color-red-700);
     --color-ring-action-hover: oklch(1 0 0 / 0.5);
 
-    --color-border-default: var(--color-neutral-725);
+    --color-border-default: var(--color-neutral-750);
     --color-border-input: var(--color-neutral-475);
 
     --color-border-focus: var(--color-accent-400);
@@ -164,25 +164,25 @@
     --color-event-changed: var(--color-accent-400);
 
     --color-chart-primary: var(--color-accent-400);
-    --color-chart-grid: var(--color-neutral-725);
+    --color-chart-grid: var(--color-neutral-750);
     --color-chart-axis: var(--color-neutral-400);
 
-    --color-bg-sidebar: var(--color-neutral-925);
+    --color-bg-sidebar: var(--color-neutral-950);
     --color-text-sidebar: var(--color-neutral-400);
     --color-text-sidebar-active: var(--color-neutral-100);
-    --color-bg-sidebar-active: var(--color-neutral-775);
-    --color-border-sidebar: var(--color-neutral-750);
+    --color-bg-sidebar-active: var(--color-neutral-790);
+    --color-border-sidebar: var(--color-neutral-800);
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-bg-page: var(--color-neutral-900);
+  --color-bg-page: var(--color-neutral-925);
 
   --color-bg-backdrop: var(--color-neutral-950);
-  --color-bg-surface: var(--color-neutral-800);
-  --color-bg-lane: var(--color-neutral-775);
+  --color-bg-surface: var(--color-neutral-850);
+  --color-bg-lane: var(--color-neutral-790);
 
   --color-text-default: var(--color-neutral-100);
   --color-text-muted: var(--color-neutral-400);
@@ -209,7 +209,7 @@
   --color-bg-action-danger-strong-hover: var(--color-red-700);
   --color-ring-action-hover: oklch(1 0 0 / 0.5);
 
-  --color-border-default: var(--color-neutral-725);
+  --color-border-default: var(--color-neutral-750);
   --color-border-input: var(--color-neutral-475);
 
   --color-border-focus: var(--color-accent-400);
@@ -223,12 +223,12 @@
   --color-event-changed: var(--color-accent-400);
 
   --color-chart-primary: var(--color-accent-400);
-  --color-chart-grid: var(--color-neutral-725);
+  --color-chart-grid: var(--color-neutral-750);
   --color-chart-axis: var(--color-neutral-400);
 
-  --color-bg-sidebar: var(--color-neutral-925);
+  --color-bg-sidebar: var(--color-neutral-950);
   --color-text-sidebar: var(--color-neutral-400);
   --color-text-sidebar-active: var(--color-neutral-100);
-  --color-bg-sidebar-active: var(--color-neutral-775);
-  --color-border-sidebar: var(--color-neutral-750);
+  --color-bg-sidebar-active: var(--color-neutral-790);
+  --color-border-sidebar: var(--color-neutral-800);
 }
