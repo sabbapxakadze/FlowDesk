@@ -55,5 +55,7 @@ export const issueKeys = {
   // Org-scoped, not project-scoped — see issues.routes.ts's search route
   // and the Phase 7 slice 1 plan's "Decisions". Keyed by query too, so
   // typing a new search term is a distinct cache entry, not a stale hit.
+  // Everything on the My work page (the assigned list and the week ring): one prefix, so one invalidation refreshes both.
+  myWork: (organizationId: string) => ["organizations", organizationId, "my-work"] as const,
   search: (organizationId: string, query: string) => [...issueKeys.all, "search", organizationId, query] as const,
 };

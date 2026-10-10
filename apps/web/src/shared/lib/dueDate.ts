@@ -25,3 +25,10 @@ export function formatDueDate(dueDate: string, today: string): string {
     new Date(`${dueDate}T00:00:00Z`),
   );
 }
+
+/** The calendar day `days` after (or before, if negative) a "YYYY-MM-DD" day, as "YYYY-MM-DD". Done in UTC, so no timezone or daylight-saving change can move it. */
+export function addDays(day: string, days: number): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}

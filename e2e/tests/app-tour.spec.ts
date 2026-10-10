@@ -184,3 +184,27 @@ test("a whole tour changes no data", async ({ loggedInPage: page }) => {
   await expect(card(page)).toHaveCount(0);
   expect(writes).toEqual([]);
 });
+
+test("the tour visits My work's week and its overdue list, on My work", async ({ loggedInPage: page }) => {
+  // Why: the Tutorial must describe the page people actually land on. The two My work steps point at the agenda and the overdue card, so they
+  // need something assigned to be on screen; the tour goes to `/` for them by itself.
+  const { projectId, issueIds } = await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: ["Mine to tour"] });
+  const login = await page.request.post("/api/v1/auth/login", { data: { email: TEST_USER.email, password: TEST_USER.password } });
+  const { accessToken, user, organization } = await login.json();
+  const assigned = await page.request.patch(`/api/v1/organizations/${organization.id}/projects/${projectId}/issues/${issueIds[0]}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    data: { version: 1, assigneeId: user.id },
+  });
+  expect(assigned.status()).toBe(200);
+
+  await page.goto("/projects/WEB");
+  await expect(page.getByRole("button", { name: /New issue/ })).toBeVisible();
+  await startTour(page);
+  await advanceTo(page, "Your week");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(spot(page)).toHaveCount(1);
+  await expect(card(page)).toContainText("Click an issue to open it beside the page");
+  await nextButton(page).click();
+  await expect(title(page)).toHaveText("What needs you");
+  await expect(spot(page)).toHaveCount(1);
+});

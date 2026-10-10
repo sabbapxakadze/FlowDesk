@@ -84,3 +84,8 @@ image preview. Esc closes only the dialog.
 ## Amended 2026-10-10: a press that began inside is not a click outside
 
 Dragging a text selection out of the panel (for example out of the comment box) and letting go over the page closed the panel, because the browser reports that click on a shared parent of the two spots, which is outside the panel. `SidePanel` now remembers where the current press began (capture-phase `pointerdown`, forgotten right after `pointerup`) and ignores the click when it began inside. A press and release both outside still close it. Found by the owner while writing a comment; covered by a browser test that drags out of the comment box. Checked and found NOT affected: the New issue dialog (a drag from its title box onto the backdrop leaves it open), the notification bell and dropdowns (they close on the press, not the click). Not checked: the command palette, which uses the same backdrop test as the dialog.
+
+## Amended 2026-10-10 (ADR 0057)
+
+- My work opens issues in the panel too (tiles, the overdue card, "Recently updated"). The page spans projects, so `MyWorkIssuePanel` finds the project from the key in `?issue=`.
+  Notifications still open the full page, as above.

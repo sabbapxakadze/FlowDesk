@@ -23,7 +23,8 @@ async function actAs(page: Page, baseURL: string, profile: Profile) {
  * test waits for the page to know who the person is before it goes anywhere else.
  */
 async function signedInAs(page: Page, name: string) {
-  await expect(page.getByText(`Hello, ${name}`)).toBeVisible();
+  // My work greets by first name ("Good morning, Gina"), in the person's own time of day.
+  await expect(page.getByText(new RegExp(`^Good (morning|afternoon|evening), ${name.split(" ")[0]}$`))).toBeVisible();
 }
 
 test("both provider buttons are on Login and on Create account", async ({ page }) => {

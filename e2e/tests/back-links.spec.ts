@@ -24,10 +24,12 @@ test("an issue opened from My work says Back and returns there; opened straight 
   expect(assigned.status()).toBe(200);
 
   await page.goto("/");
-  await page.getByRole("link", { name: /Mine to do/ }).click();
+  await page.getByRole("region", { name: "Assigned to me" }).getByRole("link", { name: /Mine to do/ }).click(); // opens the side panel (ADR 0025)
+  await expect(page).toHaveURL(/\/\?issue=WEB-1$/);
+  await page.getByRole("dialog", { name: "Issue", exact: true }).getByRole("link", { name: /Open full page/ }).click();
   await expect(page).toHaveURL(/\/projects\/WEB\/issues\/WEB-1$/);
   await page.getByRole("link", { name: "Back", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/\?issue=WEB-1$/); // back where it came from, the panel still open
   await expect(page.getByRole("heading", { level: 1, name: "My work" })).toBeVisible();
 
   // No previous page (a bookmark, a new tab): the project is named and opened instead.

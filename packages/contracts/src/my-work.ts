@@ -31,3 +31,19 @@ export const listAssignedIssuesResponseSchema = z.object({
   total: z.number().int(),
 });
 export type ListAssignedIssuesResponse = z.infer<typeof listAssignedIssuesResponseSchema>;
+
+/**
+ * The week ring on My work: of the issues assigned to me that are due from `from` to `to` (calendar days, both included,
+ * the person's own Monday to Sunday), how many are done and how many there are in all. Done issues do not show in the
+ * open list, so this is the only place they are counted. Issues without a due date are not counted (ADR 0057).
+ */
+export const weekProgressQuerySchema = z
+  .object({ from: z.iso.date(), to: z.iso.date() })
+  .refine((q) => q.from <= q.to, { message: "from must not be after to", path: ["to"] });
+export type WeekProgressQuery = z.infer<typeof weekProgressQuerySchema>;
+
+export const weekProgressResponseSchema = z.object({
+  done: z.number().int(),
+  total: z.number().int(),
+});
+export type WeekProgressResponse = z.infer<typeof weekProgressResponseSchema>;

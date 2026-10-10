@@ -112,3 +112,55 @@ describe("my work: open issues assigned to me, across projects", () => {
     await mine(owner, "?limit=500").expect(400);
   });
 });
+
+describe("my work: the week ring", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  async function dueOn(s: Session, projectId: string, title: string, dueDate: string | null, assigneeId: string, status?: string) {
+    const id = await makeIssue(s, projectId, title, assigneeId);
+    const got = await request(app).get(`${org(s)}/projects/${projectId}/issues/${id}`).set(as(s)).expect(200);
+    await request(app)
+      .patch(`${org(s)}/projects/${projectId}/issues/${id}`)
+      .set(as(s))
+      .send({ version: got.body.data.version, ...(dueDate ? { dueDate } : {}), ...(status ? { status } : {}) })
+      .expect(200);
+    return id;
+  }
+  const week = (s: Session, from: string, to: string) => request(app).get(`${org(s)}/my-work/week?from=${from}&to=${to}`).set(as(s));
+
+  it("counts my issues due in the range, done and all, with both end days included", async () => {
+    // Why: the ring's numbers. The edges are the usual off-by-one: Monday and Sunday count, the Sunday before and the
+    // Monday after do not. A done issue counts in both numbers (it is gone from the open list, so this is its only
+    // place); one with no due date is in neither.
+    const owner = await registerAndLogIn("owner@example.com", "Org A");
+    const web = await makeProject(owner, "Website", "WEB");
+    await dueOn(owner, web, "Before", "2026-10-11", owner.userId);
+    await dueOn(owner, web, "Monday", "2026-10-12", owner.userId, "done");
+    await dueOn(owner, web, "Wednesday", "2026-10-14", owner.userId);
+    await dueOn(owner, web, "Sunday", "2026-10-18", owner.userId, "done");
+    await dueOn(owner, web, "After", "2026-10-19", owner.userId);
+    await dueOn(owner, web, "No date", null, owner.userId, "done");
+    const res = await week(owner, "2026-10-12", "2026-10-18").expect(200);
+    expect(res.body).toEqual({ done: 2, total: 3 });
+  });
+
+  it("only my issues, only my organization, and a bad range is a 400", async () => {
+    // Why: tenant and person scoping, as for the list, plus the input checks (a range written backwards, a bad date).
+    const a = await registerAndLogIn("a@example.com", "Org A", "Olivia Owner");
+    const b = await registerAndLogIn("b@example.com", "Org B", "Bob Owner");
+    const other = await addPerson(a, "member@example.com", "member", "Mia Member");
+    await db.insert(organizationMembers).values({ organizationId: b.organizationId, userId: a.userId, role: "member" });
+    const inA = await makeProject(a, "Plans A", "PLA");
+    const inB = await makeProject(b, "Plans B", "PLB");
+    await dueOn(a, inA, "Mine", "2026-10-13", a.userId);
+    await dueOn(a, inA, "Mia's", "2026-10-13", other.userId);
+    await dueOn(b, inB, "Mine, other organization", "2026-10-13", a.userId);
+    expect((await week(a, "2026-10-12", "2026-10-18").expect(200)).body).toEqual({ done: 0, total: 1 });
+    await request(app).get(`${org(b)}/my-work/week?from=2026-10-12&to=2026-10-18`).set(as(a)).expect(200);
+    await week(a, "2026-10-18", "2026-10-12").expect(400);
+    await week(a, "nope", "2026-10-12").expect(400);
+    await request(app).get(`${org(a)}/my-work/week?from=2026-10-12&to=2026-10-18`).expect(401);
+  });
+});

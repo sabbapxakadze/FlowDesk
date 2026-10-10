@@ -32,7 +32,23 @@ export function buildTourSteps(projectKey: string | undefined): TourStep[] {
       target: "my-work",
       placement: "right",
       title: "My work",
-      body: "The open issues assigned to you, from every project, and your unread notifications, on one page. This is your home.",
+      body: "Your home: what is assigned to you across all projects, week by week, with what is overdue and your unread notifications. The next two steps look at it.",
+    },
+    {
+      id: "my-week",
+      target: "my-week",
+      path: "/",
+      placement: "bottom",
+      title: "Your week",
+      body: "One row per day, with Previous, Next and Today to move through the weeks. Anything overdue also shows on the day it was due, with a red chip. Click an issue to open it beside the page.",
+    },
+    {
+      id: "my-needs-you",
+      target: "my-needs-you",
+      path: "/",
+      placement: "left",
+      title: "What needs you",
+      body: "Everything overdue, earliest first, then your unread notifications and what changed lately. This side scrolls on its own, so the page itself never has to.",
     },
   ];
 

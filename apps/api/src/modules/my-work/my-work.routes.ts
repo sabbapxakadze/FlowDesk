@@ -13,3 +13,10 @@ myWorkRouter.get(
   requireOrgMembership,
   myWorkController.listAssigned,
 );
+
+myWorkRouter.get(
+  "/organizations/:organizationId/my-work/week",
+  requireAuth,
+  requireOrgMembership,
+  myWorkController.weekProgress,
+);

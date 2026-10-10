@@ -17,6 +17,7 @@ import { cn } from "./lib/cn";
  * `fitWindow`: the cap is also limited to the room left in the window below the box's own top (never under
  * 16rem), so the bottom edge, its shadow and the scrollbar are on screen at rest instead of below the fold,
  * where nothing would show that the list scrolls. Re-measured when the window or the page above changes.
+ * `bottomGap` (default 24px) is the room kept under the box; a page that must not scroll at all passes more than its own bottom padding.
  *
  * `footer` (edges look): content pinned to the bottom of the box, always fully visible however far the list is
  * scrolled (the "Load more" button). The rows scroll underneath it. It sticks at -0.5rem (the box's own bottom
@@ -27,6 +28,7 @@ export function ScrollPanel({
   look = "edges",
   onSurface = false,
   fitWindow = false,
+  bottomGap = 24,
   footer,
   className,
   children,
@@ -35,6 +37,7 @@ export function ScrollPanel({
   look?: "edges";
   onSurface?: boolean;
   fitWindow?: boolean;
+  bottomGap?: number;
   footer?: ReactNode;
   className?: string;
   children: ReactNode;
@@ -48,7 +51,7 @@ export function ScrollPanel({
     function fit() {
       if (!node) return;
       const top = node.getBoundingClientRect().top + window.scrollY;
-      const room = Math.max(window.innerHeight - top - 24, 256);
+      const room = Math.max(window.innerHeight - top - bottomGap, 256);
       node.style.maxHeight = `${Number.isFinite(cap) ? Math.min(cap, room) : room}px`;
     }
     node.style.maxHeight = "";
@@ -61,7 +64,7 @@ export function ScrollPanel({
       observer.disconnect();
       node.style.maxHeight = "";
     };
-  }, [fitWindow]);
+  }, [fitWindow, bottomGap]);
 
   const style: CSSProperties | undefined =
     look === "edges" && onSurface ? ({ "--edge-bg": "var(--color-bg-surface)" } as CSSProperties) : undefined;

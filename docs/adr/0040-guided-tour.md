@@ -9,7 +9,7 @@ library, or a guided tour written in our own code. The owner chose the tour in o
 
 ## Decision
 
-- **A "Tutorial" row in the sidebar footer** (above Design system) starts a tour of 14 steps: a welcome, the project list, search (Ctrl K), My work, creating an issue (New issue, and the C key),
+- **A "Tutorial" row in the sidebar footer** (above Design system) starts a tour of 16 steps (14 until ADR 0057, which added two on My work): a welcome, the project list, search (Ctrl K), My work, creating an issue (New issue, and the C key),
   the filters, the List / Board tabs, the board and dragging, opening an issue (comments and @mentions), Sprints, Analytics, notifications, the theme switch and a goodbye that points back at the button.
   Each step dims the page, highlights one part and shows a card beside it: "Step 3 of 14", a title, two sentences, Back, Next and Skip tour (Done on the last).
   Esc ends it, the arrow keys step, Tab stays inside the card, and focus goes back to the button when it ends.
@@ -42,3 +42,9 @@ library, or a guided tour written in our own code. The owner chose the tour in o
 ## Amended 2026-10-09: the tour starts by itself on a first visit (ADR 0052)
 
 The "no automatic offer to new people" limit above is lifted for one case: a person's first visit to the app. See ADR 0052.
+
+## Amended 2026-10-10 (ADR 0057)
+
+- Two steps follow "My work": "Your week" and "What needs you". They go to `/` by themselves (`path: "/"`) and point at `data-tour="my-week"` (the agenda) and
+  `data-tour="my-needs-you"` (the overdue card). Like every step, they are skipped when their part is not on screen (nothing assigned), and the My work step's text
+  describes the new page. One e2e test walks to them.

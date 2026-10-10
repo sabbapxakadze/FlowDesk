@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ne } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte, ne, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { issues, projects } from "../../db/schema/index.js";
 
@@ -31,4 +31,20 @@ export async function listAssignedTo(organizationId: string, userId: string, lim
     db.select({ total: count() }).from(issues).innerJoin(projects, eq(projects.id, issues.projectId)).where(where),
   ]);
   return { items, total: totals[0]?.total ?? 0 };
+}
+
+/**
+ * Of my issues due from `from` to `to` (calendar days, both included): how many are done, and how many in all. Same
+ * tenant scoping as the list (through the project's organization). Issues with no due date never match the range.
+ */
+export async function weekProgress(organizationId: string, userId: string, from: string, to: string) {
+  const [row] = await db
+    .select({
+      total: count(),
+      done: sql<number>`count(*) filter (where ${issues.status} = 'done')`.mapWith(Number),
+    })
+    .from(issues)
+    .innerJoin(projects, eq(projects.id, issues.projectId))
+    .where(and(eq(projects.organizationId, organizationId), eq(issues.assigneeId, userId), gte(issues.dueDate, from), lte(issues.dueDate, to)));
+  return { done: row?.done ?? 0, total: row?.total ?? 0 };
 }

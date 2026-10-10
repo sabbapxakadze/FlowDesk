@@ -80,7 +80,7 @@ test.describe("with animations on", () => {
     await page.getByLabel("Password", { exact: true }).fill(TEST_USER.password);
     await page.getByRole("button", { name: "Log in" }).click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByText(`Hello, ${TEST_USER.name}`)).toBeVisible();
+    await expect(page.getByText(new RegExp(`^Good (morning|afternoon|evening), ${TEST_USER.name.split(" ")[0]}$`))).toBeVisible();
     expect(await page.evaluate(() => (window as unknown as { __viewTransitions: number }).__viewTransitions)).toBe(1);
   });
 
@@ -151,12 +151,12 @@ test.describe("with animations on", () => {
     await page.context().addCookies([{ name: "flowdesk_fake_oauth", value: encodeURIComponent(JSON.stringify(profile)), url: baseURL! }]);
     await page.goto("/login");
     await page.getByRole("button", { name: "Continue with Google" }).click();
-    await expect(page.getByText("Hello, Motion Person")).toBeVisible();
+    await expect(page.getByText(/^Good (morning|afternoon|evening), Motion$/)).toBeVisible();
     await page.waitForTimeout(500);
     expect((await viewTransitionLog(page)).at(-1)).toBe("/ | My work");
 
     await page.reload();
-    await expect(page.getByText("Hello, Motion Person")).toBeVisible();
+    await expect(page.getByText(/^Good (morning|afternoon|evening), Motion$/)).toBeVisible();
     await page.waitForTimeout(500);
     expect(await viewTransitionLog(page)).toEqual([]);
   });
