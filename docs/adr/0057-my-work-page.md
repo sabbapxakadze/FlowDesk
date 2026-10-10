@@ -69,6 +69,6 @@ dropped), the page must not scroll (its lists scroll inside their own areas), an
 - The ring ignores done issues that never had a due date.
 - Checked in the test browser only (Chromium: screenshots at 1440x900 in dark and light, and the no-scroll test at 1440x700). Not checked: Safari, Firefox, a phone-sized screen by eye
   (the tests run one at 420 px for the tour only), and the owner's real data beyond one look.
-- The e2e run logs "ResizeObserver loop completed with undelivered notifications" from Vite's client. It did not fail any test; its cause (likely the
-  `fitWindow` observer on the document body changing sizes inside its own callback, which `ScrollPanel` already did on other pages) was not isolated.
+- The e2e run logged "ResizeObserver loop completed with undelivered notifications" from Vite's client. **Fixed later the same day:** `ScrollPanel`'s re-fit now runs in the next animation frame
+  instead of inside the observer's own callback (its likely cause, not isolated by a separate test). A 4.3 minute run of 57 tests that used to show the message several times showed it none.
 - Behind the panel the page still scrolls its own lists; keyboard focus handling is the panel's (ADR 0025).

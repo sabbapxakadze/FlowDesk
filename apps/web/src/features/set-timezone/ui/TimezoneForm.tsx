@@ -7,8 +7,8 @@ import { browserTimezone, setTimezone } from "../../../shared/lib/timezone";
 import { Dropdown, ErrorText } from "../../../shared/ui";
 
 /**
- * Choose the timezone times are shown in (the exact time you see when you point at "5 minutes ago"). The first choice is
- * the browser's own, which is the default. Saved at once; the rest of the app picks it up through the timezone store.
+ * Choose the timezone times are shown in (the date and time next to anything older than a day, and the exact time when you point at "5 minutes
+ * ago"). The first choice is the browser's own, which is the default. Saved at once; the rest of the app picks it up through the timezone store.
  */
 export function TimezoneForm({ current }: { current: string | null }) {
   const queryClient = useQueryClient();

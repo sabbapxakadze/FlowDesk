@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect, logInThroughForm, TEST_USER } from "../support/fixtures";
-import { createIssueViaApi } from "../support/api";
+import { createIssueViaApi, setTimezoneViaApi } from "../support/api";
+import { backdateAuditEvents } from "../support/db";
 import { issueEmailChangeToken } from "../support/db";
 import { combobox } from "../support/dropdown";
 
@@ -206,4 +207,23 @@ test("the sidebar has an Account settings link below Design system that opens th
   await account.click();
   await expect(page).toHaveURL(/\/account$/);
   await expect(account).toHaveAttribute("aria-current", "page");
+});
+
+test("a time older than a day is written as a date and time in the chosen timezone, and changes with it", async ({ loggedInPage: page }) => {
+  // Why: "see your own time": after the first day the page shows the actual date and time (not only "3 days ago"), in the account's timezone, or the browser's.
+  await createIssueViaApi(page.request, { projectName: "Website", projectKey: "WEB", titles: [] }); // writes an audit row
+  await backdateAuditEvents(3);
+  await page.goto("/audit-log");
+  const time = page.locator("time").first();
+  await expect(time).toBeVisible();
+  const browserText = (await time.innerText()).trim();
+  expect(browserText).not.toMatch(/ago|just now/);
+  expect(browserText).toMatch(/\d{1,2}:\d{2}/); // a clock time
+
+  await setTimezoneViaApi(page.request, "Pacific/Kiritimati"); // UTC+14: far from any test machine's zone
+  await page.goto("/audit-log");
+  const inKiritimati = (await page.locator("time").first().innerText()).trim();
+  expect(inKiritimati).not.toBe(browserText); // same instant, another zone
+  expect(inKiritimati).toMatch(/\d{1,2}:\d{2}/);
+  await setTimezoneViaApi(page.request, null);
 });

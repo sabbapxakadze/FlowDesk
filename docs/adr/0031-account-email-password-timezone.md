@@ -40,3 +40,16 @@ flow existed), or choose a timezone. The owner asked for all three, on a private
 - Change the email at once with the password: a typo locks the person out of resets, and nobody confirms the address.
 - Keep every session after a password change: if the reason is that someone else has the password, they would stay in.
 - Put it all on Edit profile: public fields and a security change on one form.
+
+## Amended 2026-10-10: times are written in the person's own timezone, not only on hover
+
+The timezone was only used for the exact time that showed when pointing at "5 minutes ago" (and for due dates' "today"); everything visible stayed relative ("3 weeks ago"), so on a touch screen or without hovering a
+person never saw their own date and time. Now `Time` (`shared/ui`) writes a moment through `formatTime`: relative for the first day ("5 minutes ago", it reads live), then the actual date and time in the
+account's timezone, else the browser's: "Oct 9, 3:42 PM", with the year only when it is not the current year there. The day is the person's own day (23:30 UTC on the 4th is the 5th in Warsaw and the 4th in
+Los Angeles; tested). The hover shows the full date and time with the zone's name. Used by comments, the activity timeline, the audit log, the members page, profiles and My work's "Recently updated".
+The relative wording stays English whatever the browser's language (as before); the absolute form follows the browser's language.
+
+**Not changed, on purpose:** the analytics charts bucket by week in UTC (ADR 0009 to 0012) and label those weeks in UTC; a person far from UTC sees events near a week's edge counted in the neighbouring week.
+Moving that to the person's timezone would change the API's queries and is not part of this. Calendar days (due dates, sprint dates) were never moments and are unchanged. Emails and exports use UTC / ISO.
+**Tests:** 4 unit tests for `formatTime` (relative for the first day in both directions, the same instant in two zones, the person's own day, the year rule) and 1 e2e (an audit row made 3 days older shows a date
+and clock time, and the text changes when the timezone does). **Not verified:** a browser whose language is not English by eye.

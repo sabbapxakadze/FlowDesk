@@ -27,6 +27,11 @@ export async function resetDatabase() {
   );
 }
 
+/** Makes every audit row `days` days older, so a test can see how an old time is written (rows are otherwise "just now"). */
+export async function backdateAuditEvents(days: number) {
+  await pool.query("UPDATE audit_events SET created_at = created_at - make_interval(days => $1)", [days]);
+}
+
 /**
  * Marks a person's guided tour as already started (ADR 0052). A new account gets the tour on its own on its first visit, and its overlay
  * would sit over the page in every test that is not about the tour, so the fixtures call this for the people they make.

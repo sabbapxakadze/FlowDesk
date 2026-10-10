@@ -56,11 +56,19 @@ export function ScrollPanel({
     }
     node.style.maxHeight = "";
     fit();
-    window.addEventListener("resize", fit);
-    const observer = new ResizeObserver(fit);
+    // Re-fitting changes this box's height, which can resize the page, which the observer reports again, inside its own callback: the browser then
+    // logs "ResizeObserver loop completed with undelivered notifications". Doing the re-fit in the next animation frame breaks that loop.
+    let frame = 0;
+    const refit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(fit);
+    };
+    window.addEventListener("resize", refit);
+    const observer = new ResizeObserver(refit);
     observer.observe(document.body);
     return () => {
-      window.removeEventListener("resize", fit);
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", refit);
       observer.disconnect();
       node.style.maxHeight = "";
     };
